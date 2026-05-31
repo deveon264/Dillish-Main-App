@@ -13,7 +13,7 @@ import { useInsets } from "@/hooks/useInsets";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
-type Phase = "overview" | "active" | "done";
+type Phase = "active" | "done";
 
 export default function WorkoutPlayer() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -22,9 +22,9 @@ export default function WorkoutPlayer() {
   const { completeWorkout } = useData();
   const workout = getWorkout(id);
 
-  const [phase, setPhase] = useState<Phase>("overview");
+  const [phase, setPhase] = useState<Phase>("active");
   const [index, setIndex] = useState(0);
-  const [remaining, setRemaining] = useState(0);
+  const [remaining, setRemaining] = useState(() => workout?.exercises[0]?.seconds ?? 0);
   const [paused, setPaused] = useState(false);
   const [tab, setTab] = useState<"exercises" | "guidance" | "progress">("exercises");
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -72,12 +72,6 @@ export default function WorkoutPlayer() {
     );
   }
 
-  const start = () => {
-    setIndex(0);
-    setRemaining(workout.exercises[0].seconds);
-    setPhase("active");
-  };
-
   const goNext = () => {
     if (index + 1 < total) {
       const ni = index + 1;
@@ -105,64 +99,6 @@ export default function WorkoutPlayer() {
     if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setPhase("done");
   };
-
-  if (phase === "overview") {
-    return (
-      <GradientBackground>
-        <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 100 }} showsVerticalScrollIndicator={false}>
-          <ImageBackground source={workout.image} style={[styles.cover, { paddingTop: insets.top }]}>
-            <LinearGradient colors={["rgba(44,36,34,0.2)", "rgba(44,36,34,0.95)"]} style={StyleSheet.absoluteFill} />
-            <Pressable style={[styles.closeBtn, { top: insets.top + 8 }]} onPress={() => router.back()} hitSlop={10}>
-              <Ionicons name="close" size={24} color={colors.foreground} />
-            </Pressable>
-            <View style={styles.coverContent}>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{workout.level}</Text>
-              </View>
-              <Text style={styles.coverCat}>{workout.category}</Text>
-              <Text style={styles.coverTitle}>{workout.title}</Text>
-              <View style={styles.coverMeta}>
-                <View style={styles.metaItem}>
-                  <Ionicons name="time-outline" size={16} color={colors.foreground} />
-                  <Text style={styles.metaText}>{workout.durationMin} min</Text>
-                </View>
-                <View style={styles.metaItem}>
-                  <Ionicons name="flame-outline" size={16} color={colors.foreground} />
-                  <Text style={styles.metaText}>{workout.kcal} kcal</Text>
-                </View>
-                <View style={styles.metaItem}>
-                  <Ionicons name="list-outline" size={16} color={colors.foreground} />
-                  <Text style={styles.metaText}>{total} moves</Text>
-                </View>
-              </View>
-            </View>
-          </ImageBackground>
-
-          <View style={styles.body}>
-            <Text style={styles.desc}>{workout.description}</Text>
-            <Text style={styles.sectionTitle}>The flow</Text>
-            <View style={{ gap: 10 }}>
-              {workout.exercises.map((e, i) => (
-                <View key={e.id} style={styles.exRow}>
-                  <View style={styles.exNum}>
-                    <Text style={styles.exNumText}>{i + 1}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.exName}>{e.name}</Text>
-                    <Text style={styles.exDetail}>{e.detail}</Text>
-                  </View>
-                  <Text style={styles.exTime}>{e.seconds}s</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        </ScrollView>
-        <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
-          <Button label="Begin Workout" icon="play" onPress={start} />
-        </View>
-      </GradientBackground>
-    );
-  }
 
   if (phase === "active" && current) {
     const totalSeconds = workout.exercises.reduce((s, e) => s + e.seconds, 0);
