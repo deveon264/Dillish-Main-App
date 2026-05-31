@@ -149,6 +149,57 @@ export async function POST(request: Request): Promise<Response> {
   }
 }
 
+// Updates only the text metadata of an existing exercise (title, description,
+// cues, duration, category, level). The video bytes and poster are untouched —
+// the fields arrive as a small JSON body so coaches can fix typos or tweak cues
+// without re-uploading the video. Poster swaps stay on /api/exercise-poster.
+export async function PATCH(request: Request): Promise<Response> {
+  try {
+    const email = await requireAdmin(request);
+    if (!email) {
+      return Response.json({ error: "Not authorized" }, { status: 403 });
+    }
+
+    const id = new URL(request.url).searchParams.get("id");
+    if (!id) return Response.json({ error: "Missing id" }, { status: 400 });
+
+    let body: any;
+    try {
+      body = await request.json();
+    } catch {
+      return Response.json({ error: "Invalid request body" }, { status: 400 });
+    }
+
+    const title = String(body?.title ?? "").trim();
+    const description = String(body?.description ?? "").trim();
+    const cues = String(body?.cues ?? "").trim();
+    const duration = String(body?.duration ?? "").trim();
+    let category = String(body?.category ?? "Strength").trim();
+    let level = String(body?.level ?? "Beginner").trim();
+
+    if (!title) return Response.json({ error: "Title is required" }, { status: 400 });
+    if (!CATEGORIES.includes(category)) category = "Strength";
+    if (!LEVELS.includes(level)) level = "Beginner";
+
+    await ensureSchema();
+    const pool = getPool();
+    const { rows } = await pool.query(
+      `UPDATE exercises
+         SET title = $1, description = $2, cues = $3, category = $4, level = $5, duration = $6
+       WHERE id = $7
+       RETURNING id, title, description, cues, category, level, duration, video_mime, video_size, poster_object_path, created_at`,
+      [title, description, cues, category, level, duration, id]
+    );
+    if (rows.length === 0) {
+      return Response.json({ error: "Exercise not found" }, { status: 404 });
+    }
+    return Response.json({ item: mapRow(rows[0]) });
+  } catch (e: any) {
+    console.error("exercises PATCH error:", e?.message ?? e);
+    return Response.json({ error: "Failed to update exercise" }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: Request): Promise<Response> {
   try {
     const email = await requireAdmin(request);

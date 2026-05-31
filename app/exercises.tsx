@@ -189,6 +189,26 @@ export default function ExerciseLibrary() {
                       hitSlop={8}
                       onPress={() =>
                         router.push({
+                          pathname: "/admin/edit-exercise",
+                          params: {
+                            id: item.id,
+                            title: item.title,
+                            description: item.description,
+                            cues: item.cues,
+                            duration: item.duration,
+                            category: item.category,
+                            level: item.level,
+                          },
+                        })
+                      }
+                    >
+                      <Ionicons name="create-outline" size={18} color={colors.muted} />
+                    </Pressable>
+                    <Pressable
+                      style={styles.iconBtn}
+                      hitSlop={8}
+                      onPress={() =>
+                        router.push({
                           pathname: "/admin/edit-poster",
                           params: { id: item.id, title: item.title, hasPoster: item.hasPoster ? "1" : "" },
                         })

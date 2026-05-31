@@ -194,6 +194,31 @@ export async function updateExercisePoster(params: {
   }
 }
 
+// Updates the text metadata of an existing exercise (no video/poster re-upload).
+// The fields travel as a small JSON body to the PATCH handler, which saves them
+// to the existing row so the changes are reflected for all members.
+export async function updateExercise(params: {
+  id: string;
+  title: string;
+  description: string;
+  cues: string;
+  category: string;
+  level: string;
+  duration: string;
+  token: string;
+}): Promise<UploadedExercise> {
+  const { id, token, ...fields } = params;
+  const resp = await fetch(`${getApiUrl()}/api/exercises?id=${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(fields),
+  });
+  if (!resp.ok) {
+    throw new Error(errorFrom(await resp.text(), "Could not save changes"));
+  }
+  return (JSON.parse(await resp.text()) as { item: UploadedExercise }).item;
+}
+
 export async function deleteExercise(id: string, token: string): Promise<void> {
   const resp = await fetch(`${getApiUrl()}/api/exercises?id=${encodeURIComponent(id)}`, {
     method: "DELETE",
