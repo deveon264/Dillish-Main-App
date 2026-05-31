@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, Image, Platform, ActivityIndicator, TextInput } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, Image, Platform, ActivityIndicator, TextInput, Modal } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
@@ -34,6 +35,9 @@ export default function Calories() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<LogTab>("photo");
+  const [qty, setQty] = useState(1);
+  const [mealType, setMealType] = useState("Lunch");
+  const [mealMenu, setMealMenu] = useState(false);
   const [mName, setMName] = useState("");
   const [mKcal, setMKcal] = useState("");
   const [mProtein, setMProtein] = useState("");
@@ -124,18 +128,22 @@ export default function Calories() {
     setBase64(null);
     setResult(null);
     setError(null);
+    setQty(1);
+    setMealMenu(false);
   };
 
   const save = async () => {
     if (!result) return;
     await addCalorie({
       name: result.name,
-      kcal: result.kcal,
-      protein: result.protein,
-      carbs: result.carbs,
-      fats: result.fats,
+      kcal: result.kcal * qty,
+      protein: result.protein * qty,
+      carbs: result.carbs * qty,
+      fats: result.fats * qty,
       photoUri: image ?? undefined,
+      mealType,
     });
+    if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     reset();
   };
 
@@ -242,7 +250,7 @@ export default function Calories() {
 
         {image ? (
           <Card style={{ marginTop: 14 }}>
-            <Image source={{ uri: image }} style={styles.preview} />
+            {!result ? <Image source={{ uri: image }} style={styles.preview} /> : null}
             {analyzing ? (
               <View style={styles.analyzing}>
                 <ActivityIndicator color={colors.accent} />
@@ -250,18 +258,66 @@ export default function Calories() {
               </View>
             ) : result ? (
               <View style={styles.resultBox}>
-                <Text style={styles.resultName}>{result.name}</Text>
-                <View style={styles.resultKcalRow}>
-                  <Ionicons name="flame-outline" size={18} color={colors.accent} />
-                  <Text style={styles.resultKcal}>{result.kcal} kcal</Text>
+                <View style={styles.heroWrap}>
+                  <Image source={{ uri: image }} style={styles.heroImg} />
+                  <LinearGradient
+                    colors={["transparent", "rgba(20,15,14,0.82)"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                  <View style={styles.aiBadge}>
+                    <Ionicons name="sparkles" size={12} color={colors.onPrimary} />
+                    <Text style={styles.aiBadgeText}>AI Detected</Text>
+                  </View>
+                  <View style={styles.heroText}>
+                    <Text style={styles.heroTitle} numberOfLines={2}>{result.name}</Text>
+                    <View style={styles.heroKcalRow}>
+                      <Ionicons name="flame" size={15} color={colors.accent} />
+                      <Text style={styles.heroKcal}>{result.kcal * qty} kcal</Text>
+                    </View>
+                  </View>
                 </View>
+
                 <View style={styles.resultMacros}>
-                  <ResultMacro label="Protein" value={result.protein} />
-                  <ResultMacro label="Carbs" value={result.carbs} />
-                  <ResultMacro label="Fats" value={result.fats} />
+                  <ResultMacro label="Protein" value={result.protein * qty} />
+                  <ResultMacro label="Carbs" value={result.carbs * qty} />
+                  <ResultMacro label="Fats" value={result.fats * qty} />
                 </View>
-                <Button label="Add to Diary" icon="add" onPress={save} style={{ marginTop: 16 }} />
-                <Button label="Retake" variant="ghost" onPress={reset} style={{ marginTop: 4 }} />
+
+                <View style={styles.ctrlRow}>
+                  <Pressable style={styles.mealSelect} onPress={() => setMealMenu(true)}>
+                    <Text style={styles.mealSelectText}>{mealType}</Text>
+                    <Ionicons name="chevron-down" size={16} color={colors.muted} />
+                  </Pressable>
+                  <View style={styles.qtyBox}>
+                    <Pressable hitSlop={8} onPress={() => setQty((q) => Math.max(1, q - 1))}>
+                      <Ionicons name="remove" size={18} color={colors.muted} />
+                    </Pressable>
+                    <Text style={styles.qtyText}>{qty}</Text>
+                    <Pressable hitSlop={8} onPress={() => setQty((q) => Math.min(20, q + 1))}>
+                      <Ionicons name="add" size={18} color={colors.accent} />
+                    </Pressable>
+                  </View>
+                </View>
+
+                <View style={styles.btnRow}>
+                  <Pressable style={styles.retakeBtn} onPress={reset}>
+                    <Ionicons name="refresh" size={16} color={colors.foreground} />
+                    <Text style={styles.retakeText}>Retake</Text>
+                  </Pressable>
+                  <Pressable style={styles.logBtn} onPress={save}>
+                    <LinearGradient
+                      colors={colors.gradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.logBtnGrad}
+                    >
+                      <Ionicons name="add" size={18} color={colors.onPrimary} />
+                      <Text style={styles.logBtnText}>Log This Meal</Text>
+                    </LinearGradient>
+                  </Pressable>
+                </View>
               </View>
             ) : error ? (
               <View style={styles.errorBox}>
@@ -362,9 +418,35 @@ export default function Calories() {
           </View>
         )}
       </ScrollView>
+
+      <Modal visible={mealMenu} transparent animationType="fade" onRequestClose={() => setMealMenu(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setMealMenu(false)}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>Meal type</Text>
+            {MEALS.map((m) => {
+              const active = m === mealType;
+              return (
+                <Pressable
+                  key={m}
+                  style={styles.modalItem}
+                  onPress={() => {
+                    setMealType(m);
+                    setMealMenu(false);
+                  }}
+                >
+                  <Text style={[styles.modalItemText, active && styles.modalItemActive]}>{m}</Text>
+                  {active ? <Ionicons name="checkmark" size={18} color={colors.accent} /> : null}
+                </Pressable>
+              );
+            })}
+          </View>
+        </Pressable>
+      </Modal>
     </GradientBackground>
   );
 }
+
+const MEALS = ["Breakfast", "Lunch", "Dinner", "Snack"];
 
 function Macro({ label, value, goal, color }: { label: string; value: number; goal: number; color: string }) {
   return (
@@ -486,20 +568,97 @@ const styles = StyleSheet.create({
   preview: { width: "100%", height: 200, borderRadius: colors.radius, marginBottom: 8 },
   analyzing: { alignItems: "center", paddingVertical: 20, gap: 12 },
   analyzingText: { fontFamily: fonts.sansMedium, fontSize: 15, color: colors.muted },
-  resultBox: { paddingTop: 8 },
-  resultName: { fontFamily: fonts.serifSemibold, fontSize: 24, color: colors.foreground },
-  resultKcalRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 },
-  resultKcal: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.accent },
-  resultMacros: { flexDirection: "row", gap: 12, marginTop: 16 },
+  resultBox: { paddingTop: 2 },
+  heroWrap: { height: 188, borderRadius: colors.radius, overflow: "hidden", justifyContent: "center" },
+  heroImg: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, width: "100%", height: "100%" },
+  aiBadge: {
+    position: "absolute",
+    top: 12,
+    left: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: colors.accent,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  aiBadgeText: { fontFamily: fonts.sansSemibold, fontSize: 11, color: colors.onPrimary },
+  heroText: { position: "absolute", right: 16, left: 16, bottom: 16, alignItems: "flex-end" },
+  heroTitle: { fontFamily: fonts.serifSemibold, fontSize: 24, color: "#FFFFFF", textAlign: "right" },
+  heroKcalRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 6 },
+  heroKcal: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.accent },
+  resultMacros: { flexDirection: "row", gap: 12, marginTop: 14 },
   rMacro: {
     flex: 1,
     alignItems: "center",
     backgroundColor: colors.cardElevated,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
     borderRadius: 14,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
-  rMacroVal: { fontFamily: fonts.sansSemibold, fontSize: 18, color: colors.foreground },
-  rMacroLabel: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, marginTop: 2 },
+  rMacroVal: { fontFamily: fonts.sansSemibold, fontSize: 20, color: colors.foreground },
+  rMacroLabel: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, marginTop: 3 },
+  ctrlRow: { flexDirection: "row", gap: 12, marginTop: 14 },
+  mealSelect: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.cardElevated,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  mealSelectText: { fontFamily: fonts.sansMedium, fontSize: 15, color: colors.foreground },
+  qtyBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    backgroundColor: colors.cardElevated,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+  },
+  qtyText: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.foreground, minWidth: 16, textAlign: "center" },
+  btnRow: { flexDirection: "row", gap: 12, marginTop: 16 },
+  retakeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    paddingHorizontal: 20,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.card,
+  },
+  retakeText: { fontFamily: fonts.sansMedium, fontSize: 15, color: colors.foreground },
+  logBtn: { flex: 1, borderRadius: 14, overflow: "hidden" },
+  logBtnGrad: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    height: 52,
+  },
+  logBtnText: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.onPrimary },
+  modalBackdrop: { flex: 1, backgroundColor: "rgba(20,15,14,0.6)", justifyContent: "center", paddingHorizontal: 40 },
+  modalSheet: {
+    backgroundColor: "#2C2422",
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: colors.radiusLg,
+    padding: 12,
+  },
+  modalTitle: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.muted, paddingHorizontal: 8, paddingTop: 6, paddingBottom: 8 },
+  modalItem: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 12, paddingVertical: 14, borderRadius: 12 },
+  modalItemText: { fontFamily: fonts.sansMedium, fontSize: 16, color: colors.foreground },
+  modalItemActive: { color: colors.accent, fontFamily: fonts.sansSemibold },
   errorBox: { alignItems: "center", paddingVertical: 16 },
   errorText: { fontFamily: fonts.sans, fontSize: 14, color: colors.muted, textAlign: "center", marginTop: 8 },
   inlineError: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12 },

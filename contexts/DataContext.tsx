@@ -27,6 +27,7 @@ export type CalorieLog = {
   fats: number;
   ts: number;
   photoUri?: string;
+  mealType?: string;
 };
 export type WorkoutCompletion = {
   id: string;
