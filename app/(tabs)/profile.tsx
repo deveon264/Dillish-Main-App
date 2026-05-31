@@ -252,12 +252,7 @@ export default function Profile() {
           </>
         ) : (
         <>
-        <LinearGradient
-          colors={["#EADDD6", "#C6A697"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.lightPanel}
-        >
+        <View style={styles.headerPanel}>
           <Card style={styles.profileCard}>
             {editing ? (
               <View style={{ flex: 1 }}>
@@ -338,7 +333,7 @@ export default function Profile() {
               <Text style={styles.statLbl}>BMI</Text>
             </Card>
           </View>
-        </LinearGradient>
+        </View>
 
         <Text style={styles.label}>FITNESS GOAL</Text>
         <View style={styles.goalRow}>
@@ -506,22 +501,26 @@ const styles = StyleSheet.create({
   toggleThumb: { width: 24, height: 24, borderRadius: 12, backgroundColor: "#FFFFFF" },
   toggleThumbOn: { alignSelf: "flex-end" },
   toggleThumbOff: { alignSelf: "flex-start" },
-  lightPanel: {
+  headerPanel: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
     borderRadius: colors.radiusLg,
     padding: 14,
     overflow: "hidden",
   },
   profileCard: {
-    backgroundColor: "rgba(245,235,228,0.5)",
-    borderColor: "rgba(124,94,86,0.2)",
+    backgroundColor: "transparent",
+    borderWidth: 0,
+    padding: 0,
   },
   editName: {
     fontFamily: fonts.sans,
     fontSize: 16,
-    color: palette.charcoal,
-    backgroundColor: "rgba(250,243,238,0.8)",
+    color: colors.foreground,
+    backgroundColor: colors.track,
     borderWidth: 1,
-    borderColor: "rgba(124,94,86,0.28)",
+    borderColor: colors.cardBorder,
     borderRadius: colors.radius,
     paddingHorizontal: 14,
     paddingVertical: 14,
@@ -538,10 +537,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: colors.radius,
     borderWidth: 1,
-    borderColor: "rgba(124,94,86,0.32)",
-    backgroundColor: "rgba(245,235,228,0.55)",
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.track,
   },
-  editCancelText: { fontFamily: fonts.sansSemibold, fontSize: 15, color: palette.charcoal },
+  editCancelText: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
   profileRow: { flexDirection: "row", alignItems: "center", gap: 16 },
   avatarWrap: { width: 64, height: 64 },
   avatar: {
@@ -568,43 +567,43 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  profileName: { fontFamily: fonts.serifSemibold, fontSize: 22, color: palette.charcoal },
-  profileEmail: { fontFamily: fonts.sans, fontSize: 14, color: palette.mauve, marginTop: 2 },
+  profileName: { fontFamily: fonts.serifSemibold, fontSize: 22, color: colors.foreground },
+  profileEmail: { fontFamily: fonts.sans, fontSize: 14, color: colors.mutedForeground, marginTop: 2 },
   badgeRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 },
   badge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: "rgba(245,235,228,0.6)",
+    backgroundColor: colors.track,
     borderWidth: 1,
-    borderColor: "rgba(124,94,86,0.2)",
+    borderColor: colors.cardBorder,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
   },
   badgePremium: {
-    backgroundColor: "rgba(201,137,122,0.9)",
+    backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
-  badgeText: { fontFamily: fonts.sansMedium, fontSize: 12, color: palette.charcoal },
-  badgeTextPremium: { color: palette.petal },
+  badgeText: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.foreground },
+  badgeTextPremium: { color: colors.onPrimary },
   statsRow: { flexDirection: "row", gap: 10, marginTop: 12 },
   statCard: {
     flex: 1,
     alignItems: "center",
     paddingVertical: 16,
     paddingHorizontal: 4,
-    backgroundColor: "rgba(245,235,228,0.55)",
-    borderColor: "rgba(124,94,86,0.18)",
+    backgroundColor: colors.cardElevated,
+    borderColor: colors.cardBorder,
     borderRadius: colors.radius,
   },
   statCardAccent: {
-    backgroundColor: "rgba(201,137,122,0.26)",
-    borderColor: "rgba(201,137,122,0.4)",
+    backgroundColor: "rgba(201,137,122,0.22)",
+    borderColor: "rgba(201,137,122,0.45)",
   },
-  statNum: { fontFamily: fonts.serifSemibold, fontSize: 24, color: palette.charcoal },
+  statNum: { fontFamily: fonts.serifSemibold, fontSize: 24, color: colors.foreground },
   statNumAccent: { color: colors.primary },
-  statLbl: { fontFamily: fonts.sans, fontSize: 11, color: palette.mauve, marginTop: 2, textAlign: "center" },
+  statLbl: { fontFamily: fonts.sans, fontSize: 11, color: colors.mutedForeground, marginTop: 2, textAlign: "center" },
   label: {
     fontFamily: fonts.sansSemibold,
     fontSize: 11,

@@ -1,21 +1,21 @@
 ---
-name: Profile light blush panel
-description: Why the Profile header card + stats block is light-themed while the rest of the app is dark
+name: Profile header panel theming
+description: The Profile header (avatar/name/badges + 4-stat row) is dark "glass", matching the rest of the app
 ---
 
-The Profile tab's profile card + 4-stat (Age/kg/cm/BMI) row are intentionally
-rendered inside a light blush LinearGradient panel (light translucent cards,
-charcoal text, mauve labels, rose-tinted BMI, filled rose Premium badge),
-even though the rest of the app — including the rest of the Profile screen —
-is dark charcoal.
+The Profile tab's header block — profile card (avatar, name, email, Premium +
+streak badges) and the 4-stat row (Age/kg/cm/BMI) — is rendered inside a single
+dark translucent "glass pill" (`styles.headerPanel`: `colors.card` bg +
+`colors.cardBorder`), consistent with the dark charcoal theme used across the
+rest of the app. The inner profile `Card` is transparent (no bg/border) so the
+pill is the only surface; the BMI stat keeps a rose accent tint.
 
-**Why:** The original HTML mockup (`design_mockups/12`) was dark, and the
-current app matched it. The user later provided a new light-blush reference
-for this specific block and explicitly chose scope = "just the header + stats
-block shown in the image" (not the whole screen, not the whole app).
+**Why:** It was briefly a light blush LinearGradient panel matching a one-off
+reference image, but the user reverted it back to the original dark color and
+asked only for the glass-pill container. Do not reintroduce the light/blush
+panel.
 
-**How to apply:** Do not "fix" this as a dark/light inconsistency by darkening
-the panel. The inline name-edit state inside this panel uses custom
-light-themed controls (TextInput + gradient Save / outline Cancel) instead of
-the shared dark-theme `Input`/`Button` components — keep any future edits to
-this block on light surfaces.
+**How to apply:** Keep this block on dark tokens (`colors.foreground`,
+`colors.mutedForeground`, `colors.track`, `colors.cardElevated`). The inline
+name-edit controls (TextInput + gradient Save / outline Cancel) are also dark —
+keep future edits to this block dark, not light.
