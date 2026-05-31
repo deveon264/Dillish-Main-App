@@ -62,6 +62,9 @@ type DataContextType = {
   progressPhotos: ProgressPhoto[];
   calorieLogs: CalorieLog[];
   completions: WorkoutCompletion[];
+  favorites: string[];
+  toggleFavorite: (workoutId: string) => Promise<void>;
+  isFavorite: (workoutId: string) => boolean;
   updateProfile: (patch: Partial<Profile>) => Promise<void>;
   addWater: (amountMl: number) => Promise<void>;
   removeWater: (id: string) => Promise<void>;
@@ -103,6 +106,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [progressPhotos, setProgressPhotos] = useState<ProgressPhoto[]>([]);
   const [calorieLogs, setCalorieLogs] = useState<CalorieLog[]>([]);
   const [completions, setCompletions] = useState<WorkoutCompletion[]>([]);
+  const [favorites, setFavorites] = useState<string[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -114,17 +118,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         setProgressPhotos([]);
         setCalorieLogs([]);
         setCompletions([]);
+        setFavorites([]);
         setReady(false);
         return;
       }
       setReady(false);
-      const [p, w, wt, ph, c, wk] = await Promise.all([
+      const [p, w, wt, ph, c, wk, fav] = await Promise.all([
         getJSON<Profile>(keyFor(uid, "profile"), DEFAULT_PROFILE),
         getJSON<WaterLog[]>(keyFor(uid, "water"), []),
         getJSON<WeightLog[]>(keyFor(uid, "weight"), []),
         getJSON<ProgressPhoto[]>(keyFor(uid, "photos"), []),
         getJSON<CalorieLog[]>(keyFor(uid, "calories"), []),
         getJSON<WorkoutCompletion[]>(keyFor(uid, "workouts"), []),
+        getJSON<string[]>(keyFor(uid, "favorites"), []),
       ]);
       if (!active) return;
       const mergedProfile = { ...DEFAULT_PROFILE, ...p };
@@ -143,6 +149,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setProgressPhotos([...ph].sort((a, b) => b.ts - a.ts));
       setCalorieLogs(c);
       setCompletions(wk);
+      setFavorites(fav);
       setReady(true);
     })();
     return () => {
@@ -273,6 +280,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     [uid]
   );
 
+  const toggleFavorite = useCallback(
+    async (workoutId: string) => {
+      if (!uid) return;
+      setFavorites((prev) => {
+        const next = prev.includes(workoutId) ? prev.filter((id) => id !== workoutId) : [...prev, workoutId];
+        setJSON(keyFor(uid, "favorites"), next);
+        return next;
+      });
+    },
+    [uid]
+  );
+
+  const isFavorite = useCallback((workoutId: string) => favorites.includes(workoutId), [favorites]);
+
   const completeWorkout = useCallback(
     async (c: Omit<WorkoutCompletion, "id" | "ts">) => {
       if (!uid) return;
@@ -294,6 +315,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       progressPhotos,
       calorieLogs,
       completions,
+      favorites,
+      toggleFavorite,
+      isFavorite,
       updateProfile,
       addWater,
       removeWater,
@@ -305,7 +329,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       deleteCalorie,
       completeWorkout,
     }),
-    [ready, profile, waterLogs, weightLogs, progressPhotos, calorieLogs, completions, updateProfile, addWater, removeWater, addWeight, removeWeight, addPhoto, removePhoto, addCalorie, deleteCalorie, completeWorkout]
+    [ready, profile, waterLogs, weightLogs, progressPhotos, calorieLogs, completions, favorites, toggleFavorite, isFavorite, updateProfile, addWater, removeWater, addWeight, removeWeight, addPhoto, removePhoto, addCalorie, deleteCalorie, completeWorkout]
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

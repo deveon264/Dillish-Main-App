@@ -3,3 +3,4 @@
 - [Profile header panel theming](profile-light-panel.md) — Profile header is dark "glass" matching the rest of the app.
 - [Streak/week math duplication](streak-week-math.md) — weekly-streak/week-day computation has copies that must stay in sync.
 - [Weight tracking derivation](weight-tracking-derivation.md) — how current/start weight are computed for Progress + Profile; logs decoupled from profile.
+- [Workout favorites](workout-favorites.md) — DataContext favorites slice powers the library Saved filter; home "saved" still uses w.featured.
