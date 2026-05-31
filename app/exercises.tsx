@@ -10,12 +10,13 @@ import {
   Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { useRouter, useFocusEffect } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
 import { useInsets } from "@/hooks/useInsets";
 import { useAuth } from "@/contexts/AuthContext";
 import { AdminUnlock } from "@/components/AdminUnlock";
-import { listExercises, deleteExercise, UploadedExercise } from "@/lib/exercises";
+import { listExercises, deleteExercise, posterUrl, UploadedExercise } from "@/lib/exercises";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
@@ -147,12 +148,23 @@ export default function ExerciseLibrary() {
                         category: item.category,
                         level: item.level,
                         duration: item.duration,
+                        hasPoster: item.hasPoster ? "1" : "",
                       },
                     })
                   }
                 >
                   <View style={styles.thumb}>
-                    <Ionicons name="play" size={22} color={colors.onPrimary} />
+                    {item.hasPoster && (
+                      <Image
+                        source={{ uri: posterUrl(item.id) }}
+                        style={styles.thumbImg}
+                        contentFit="cover"
+                        transition={200}
+                      />
+                    )}
+                    <View style={[styles.playBadge, item.hasPoster && styles.playBadgeOnImage]}>
+                      <Ionicons name="play" size={16} color={colors.onPrimary} />
+                    </View>
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.cardCat}>{item.category.toUpperCase()}</Text>
@@ -247,6 +259,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
+  },
+  thumbImg: { ...StyleSheet.absoluteFillObject },
+  playBadge: { alignItems: "center", justifyContent: "center" },
+  playBadgeOnImage: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "rgba(0,0,0,0.45)",
   },
   cardCat: { fontFamily: fonts.sansSemibold, fontSize: 11, color: colors.accent, letterSpacing: 0.5 },
   cardTitle: { fontFamily: fonts.serifSemibold, fontSize: 18, color: colors.foreground, marginTop: 2 },

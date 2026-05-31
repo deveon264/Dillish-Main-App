@@ -13,12 +13,14 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
+import { Image } from "expo-image";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Button } from "@/components/Button";
 import { useInsets } from "@/hooks/useInsets";
 import { useAuth } from "@/contexts/AuthContext";
 import { AdminUnlock } from "@/components/AdminUnlock";
-import { uploadExercise, VideoAsset } from "@/lib/exercises";
+import { uploadExercise, VideoAsset, PosterAsset } from "@/lib/exercises";
+import { generatePosterFromVideo } from "@/lib/posterFromVideo";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
@@ -43,6 +45,9 @@ export default function UploadExercise() {
   const [category, setCategory] = useState("Strength");
   const [level, setLevel] = useState("Beginner");
   const [asset, setAsset] = useState<(VideoAsset & { size?: number }) | null>(null);
+  const [poster, setPoster] = useState<PosterAsset | null>(null);
+  const [posterCustom, setPosterCustom] = useState(false);
+  const [posterBusy, setPosterBusy] = useState(false);
   const [busy, setBusy] = useState(false);
 
   if (!isAdmin) {
@@ -103,8 +108,55 @@ export default function UploadExercise() {
         return;
       }
       setAsset({ uri: a.uri, fileName: a.fileName, mimeType: a.mimeType, size: a.fileSize ?? undefined });
+
+      // Auto-generate a poster frame unless the coach already chose a custom one.
+      if (!posterCustom) {
+        setPosterBusy(true);
+        try {
+          const generated = await generatePosterFromVideo(a.uri);
+          setPoster(generated);
+        } finally {
+          setPosterBusy(false);
+        }
+      }
     } catch {
       notify("Could not open library", "Something went wrong picking a video.");
+    }
+  };
+
+  const pickPoster = async () => {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        notify("Permission needed", "Please allow library access to choose an image.");
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        quality: 0.9,
+        allowsMultipleSelection: false,
+      });
+      if (result.canceled || !result.assets?.length) return;
+      const a = result.assets[0];
+      setPoster({ uri: a.uri, mimeType: a.mimeType || "image/jpeg" });
+      setPosterCustom(true);
+    } catch {
+      notify("Could not open library", "Something went wrong picking an image.");
+    }
+  };
+
+  const regeneratePoster = async () => {
+    if (!asset?.uri) return;
+    setPosterCustom(false);
+    setPosterBusy(true);
+    try {
+      const generated = await generatePosterFromVideo(asset.uri);
+      setPoster(generated);
+      if (!generated) {
+        notify("Couldn't generate a frame", "Try choosing a custom poster image instead.");
+      }
+    } finally {
+      setPosterBusy(false);
     }
   };
 
@@ -127,6 +179,7 @@ export default function UploadExercise() {
         level,
         duration: duration.trim(),
         asset,
+        poster,
         token: adminToken ?? "",
       });
       if (Platform.OS !== "web") Alert.alert("Uploaded", "Your exercise video is now live for all members.");
@@ -225,6 +278,40 @@ export default function UploadExercise() {
         </Pressable>
         <Text style={styles.hint}>MP4 recommended · up to {MAX_MB}MB · visible to all members</Text>
 
+        <Text style={styles.label}>Poster image</Text>
+        <View style={styles.posterRow}>
+          <View style={styles.posterPreview}>
+            {posterBusy ? (
+              <ActivityIndicator color={colors.accent} />
+            ) : poster?.uri ? (
+              <Image source={{ uri: poster.uri }} style={styles.posterImg} contentFit="cover" />
+            ) : (
+              <Ionicons name="image-outline" size={24} color={colors.muted} />
+            )}
+          </View>
+          <View style={styles.posterActions}>
+            <Pressable style={styles.posterBtn} onPress={pickPoster}>
+              <Ionicons name="images-outline" size={16} color={colors.foreground} />
+              <Text style={styles.posterBtnText}>Choose image</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.posterBtn, (!asset || posterBusy) && { opacity: 0.5 }]}
+              onPress={regeneratePoster}
+              disabled={!asset || posterBusy}
+            >
+              <Ionicons name="refresh-outline" size={16} color={colors.foreground} />
+              <Text style={styles.posterBtnText}>From video</Text>
+            </Pressable>
+          </View>
+        </View>
+        <Text style={styles.hint}>
+          {poster
+            ? posterCustom
+              ? "Custom poster selected."
+              : "Auto-captured from your video. Tap to override."
+            : "Pick a video to auto-generate a poster, or choose your own."}
+        </Text>
+
         <Pressable
           style={[styles.submit, busy && { opacity: 0.7 }]}
           onPress={submit}
@@ -298,6 +385,32 @@ const styles = StyleSheet.create({
   },
   videoPickText: { flex: 1, fontFamily: fonts.sansMedium, fontSize: 14, color: colors.foreground },
   hint: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, marginTop: 10 },
+  posterRow: { flexDirection: "row", gap: 14, alignItems: "stretch" },
+  posterPreview: {
+    width: 104,
+    height: 78,
+    borderRadius: colors.radius,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.card,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  posterImg: { width: "100%", height: "100%" },
+  posterActions: { flex: 1, justifyContent: "center", gap: 10 },
+  posterBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: colors.radius,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  posterBtnText: { fontFamily: fonts.sansMedium, fontSize: 14, color: colors.foreground },
   submit: {
     flexDirection: "row",
     alignItems: "center",

@@ -1,16 +1,18 @@
-import React from "react";
+import React, { useState } from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
+import { useEventListener } from "expo";
 import { GradientBackground } from "@/components/GradientBackground";
 import { useInsets } from "@/hooks/useInsets";
-import { videoUrl } from "@/lib/exercises";
+import { videoUrl, posterUrl } from "@/lib/exercises";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
 export default function ExercisePlayer() {
-  const { id, title, description, cues, category, level, duration } = useLocalSearchParams<{
+  const { id, title, description, cues, category, level, duration, hasPoster } = useLocalSearchParams<{
     id: string;
     title?: string;
     description?: string;
@@ -18,13 +20,20 @@ export default function ExercisePlayer() {
     category?: string;
     level?: string;
     duration?: string;
+    hasPoster?: string;
   }>();
   const router = useRouter();
   const insets = useInsets();
+  const [showPoster, setShowPoster] = useState(!!hasPoster);
 
   const player = useVideoPlayer(id ? videoUrl(id) : null, (p) => {
     p.loop = false;
     p.play();
+  });
+
+  // Keep the poster visible until the first frame is ready, then reveal the video.
+  useEventListener(player, "statusChange", ({ status }) => {
+    if (status === "readyToPlay") setShowPoster(false);
   });
 
   return (
@@ -50,6 +59,15 @@ export default function ExercisePlayer() {
             contentFit="contain"
             nativeControls
           />
+          {showPoster && !!hasPoster && (
+            <Image
+              source={{ uri: posterUrl(id) }}
+              style={styles.poster}
+              contentFit="cover"
+              transition={150}
+              pointerEvents="none"
+            />
+          )}
         </View>
 
         <View style={styles.info}>
@@ -107,6 +125,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#000",
   },
   video: { width: "100%", aspectRatio: 16 / 9 },
+  poster: { ...StyleSheet.absoluteFillObject },
   info: { paddingHorizontal: 20, marginTop: 24, gap: 8 },
   cat: { fontFamily: fonts.sansSemibold, fontSize: 12, color: colors.accent, letterSpacing: 0.6 },
   title: { fontFamily: fonts.serifSemibold, fontSize: 28, color: colors.foreground },

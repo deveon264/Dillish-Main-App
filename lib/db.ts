@@ -15,7 +15,8 @@ export function getPool(): Pool {
 // stored here.
 export function ensureSchema(): Promise<void> {
   if (!schemaReady) {
-    schemaReady = getPool()
+    const pool = getPool();
+    schemaReady = pool
       .query(
         `CREATE TABLE IF NOT EXISTS exercises (
           id TEXT PRIMARY KEY,
@@ -31,6 +32,15 @@ export function ensureSchema(): Promise<void> {
           created_by TEXT NOT NULL DEFAULT '',
           created_at BIGINT NOT NULL
         )`
+      )
+      // Posters were added after the initial release; backfill the columns so
+      // existing environments pick them up without a manual migration.
+      .then(() =>
+        pool.query(
+          `ALTER TABLE exercises
+             ADD COLUMN IF NOT EXISTS poster_object_path TEXT,
+             ADD COLUMN IF NOT EXISTS poster_mime TEXT`
+        )
       )
       .then(() => undefined)
       .catch((e) => {

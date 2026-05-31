@@ -11,6 +11,7 @@ export type UploadedExercise = {
   duration: string;
   videoMime: string;
   videoSize: number;
+  hasPoster: boolean;
   createdAt: number;
 };
 
@@ -20,8 +21,17 @@ export type VideoAsset = {
   mimeType?: string | null;
 };
 
+export type PosterAsset = {
+  uri: string;
+  mimeType?: string | null;
+};
+
 export function videoUrl(id: string): string {
   return `${getApiUrl()}/api/exercise-video?id=${encodeURIComponent(id)}`;
+}
+
+export function posterUrl(id: string): string {
+  return `${getApiUrl()}/api/exercise-poster?id=${encodeURIComponent(id)}`;
 }
 
 export async function listExercises(): Promise<UploadedExercise[]> {
@@ -39,9 +49,10 @@ export async function uploadExercise(params: {
   level: string;
   duration: string;
   asset: VideoAsset;
+  poster?: PosterAsset | null;
   token: string;
 }): Promise<UploadedExercise> {
-  const { title, description, cues, category, level, duration, asset, token } = params;
+  const { title, description, cues, category, level, duration, asset, poster, token } = params;
   const name = asset.fileName || `exercise-${Date.now()}.mp4`;
   const type = asset.mimeType || "video/mp4";
 
@@ -59,6 +70,22 @@ export async function uploadExercise(params: {
   } else {
     // React Native FormData accepts a file descriptor object.
     form.append("video", { uri: asset.uri, name, type } as any);
+  }
+
+  if (poster?.uri) {
+    const posterType = poster.mimeType || "image/jpeg";
+    const ext = posterType.includes("png") ? "png" : "jpg";
+    const posterName = `poster-${Date.now()}.${ext}`;
+    try {
+      if (Platform.OS === "web") {
+        const blob = await (await fetch(poster.uri)).blob();
+        form.append("poster", blob, posterName);
+      } else {
+        form.append("poster", { uri: poster.uri, name: posterName, type: posterType } as any);
+      }
+    } catch {
+      // A poster is optional; never block the video upload on it.
+    }
   }
 
   const resp = await fetch(`${getApiUrl()}/api/exercises`, {

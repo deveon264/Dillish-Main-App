@@ -64,6 +64,23 @@ export async function uploadExerciseVideo(buffer: Buffer, contentType: string): 
   return fullPath;
 }
 
+// Uploads a poster image under the private exercise-posters folder via a signed
+// PUT URL. Returns the full object path stored in the database.
+export async function uploadExercisePoster(buffer: Buffer, contentType: string): Promise<string> {
+  const fullPath = `${getPrivateDir()}/exercise-posters/${uuid()}`;
+  const putUrl = await signObjectURL(fullPath, "PUT", 900);
+  const res = await fetch(putUrl, {
+    method: "PUT",
+    headers: { "Content-Type": contentType || "image/jpeg" },
+    body: new Uint8Array(buffer),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(`Poster upload failed (${res.status}) ${detail.slice(0, 200)}`);
+  }
+  return fullPath;
+}
+
 // Returns a short-lived signed GET URL clients can stream from (GCS supports Range).
 export async function getVideoSignedUrl(objectPath: string, ttlSec = 3600): Promise<string> {
   return signObjectURL(objectPath, "GET", ttlSec);

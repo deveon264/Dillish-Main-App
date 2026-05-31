@@ -5,7 +5,13 @@ description: Decisions/constraints for the exercise video feature (object-storag
 
 # Exercise video uploads & streaming
 
-Video **bytes live in Replit Object Storage**; Postgres `exercises` stores only the object path + metadata (title, description, cues, category, level, duration, video_mime, video_size). This is a hard architectural requirement — never put video bytes in Postgres.
+Video **bytes live in Replit Object Storage**; Postgres `exercises` stores only the object path + metadata (title, description, cues, category, level, duration, video_mime, video_size). This is a hard architectural requirement — never put video bytes in Postgres. Poster images follow the same pattern (separate `exercise-posters/` folder + `poster_object_path`/`poster_mime` columns, served by `/api/exercise-poster` with the same 302→signed-GET redirect).
+
+## Posters (generated or coach-chosen)
+- Poster generation happens **client-side** in the upload screen, never on the server: native uses `expo-video-thumbnails` (lazy `await import` so web never loads it); web draws a video frame to a `<canvas>` and exports a JPEG data URL (`lib/posterFromVideo.ts`). Both return a `{uri, mimeType}` that's appended to the upload FormData as `poster`.
+- **Why client-side:** keeps ffmpeg/native decoders out of the Metro server bundle (same spirit as keeping `@google-cloud/storage` out). A failed/missing poster must never block the video upload — server treats poster as fully optional.
+- expo-video player has **no built-in poster prop**: the player screen overlays the poster `<Image>` absolutely over `VideoView` and hides it on the `statusChange`→`readyToPlay` event (`useEventListener` from `expo`).
+- `poster_object_path`/`poster_mime` are added via `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` in `ensureSchema` (CREATE TABLE IF NOT EXISTS won't backfill existing tables).
 
 ## Object storage via sidecar (NOT the @google-cloud/storage SDK)
 - **The `@google-cloud/storage` SDK does NOT bundle in Metro's Expo Router server runtime** — it fails at bundle time with `Cannot read properties of undefined (reading 'v1')`. Do not import it in `+api.ts` (or anything they import).
