@@ -4,7 +4,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 import { getJSON, setJSON, genId } from "@/lib/storage";
 import { isAdminEmail } from "@/constants/admin";
-import { getAdminToken, unlockAdmin as unlockAdminRequest, clearAdminToken } from "@/lib/adminSession";
+import {
+  getAdminToken,
+  unlockAdmin as unlockAdminRequest,
+  clearAdminToken,
+  changeAdminPasscode,
+} from "@/lib/adminSession";
 
 export type User = {
   id: string;
@@ -29,6 +34,7 @@ type AuthContextType = {
   logout: () => Promise<void>;
   unlockAdmin: (passcode: string) => Promise<{ ok: boolean; error?: string }>;
   lockAdmin: () => Promise<void>;
+  changePasscode: (current: string, next: string) => Promise<{ ok: boolean; error?: string }>;
   completeOnboarding: () => Promise<void>;
   updateUser: (patch: UserUpdate) => Promise<{ ok: boolean; error?: string }>;
 };
@@ -152,6 +158,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAdminToken(null);
   }, []);
 
+  const changePasscode = useCallback(
+    async (current: string, next: string) => {
+      if (!adminToken) return { ok: false, error: "Unlock coach tools first" };
+      return changeAdminPasscode(adminToken, current.trim(), next.trim());
+    },
+    [adminToken]
+  );
+
   const persistPatch = useCallback(async (patch: Partial<StoredUser>) => {
     setUser((prev) => (prev ? { ...prev, ...patch } : prev));
     const id = userIdRef.current ?? (await getSession());
@@ -201,6 +215,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         unlockAdmin,
         lockAdmin,
+        changePasscode,
         completeOnboarding,
         updateUser,
       }}

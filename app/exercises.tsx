@@ -16,6 +16,7 @@ import { GradientBackground } from "@/components/GradientBackground";
 import { useInsets } from "@/hooks/useInsets";
 import { useAuth } from "@/contexts/AuthContext";
 import { AdminUnlock } from "@/components/AdminUnlock";
+import { AdminControls } from "@/components/AdminControls";
 import { listExercises, deleteExercise, posterUrl, UploadedExercise } from "@/lib/exercises";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
@@ -103,14 +104,7 @@ export default function ExerciseLibrary() {
           </View>
         )}
 
-        {adminUnlocked && (
-          <View style={styles.adminNote}>
-            <Ionicons name="shield-checkmark" size={15} color={colors.accent} />
-            <Text style={styles.adminNoteText}>
-              You're verified as the coach. Anything you upload here is visible to every member.
-            </Text>
-          </View>
-        )}
+        {adminUnlocked && <AdminControls />}
 
         {loading ? (
           <View style={styles.center}>
@@ -226,18 +220,6 @@ const styles = StyleSheet.create({
   eyebrow: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.muted, letterSpacing: 3 },
   title: { fontFamily: fonts.serif, fontSize: 30, color: colors.foreground, marginTop: 2 },
   titleItalic: { fontFamily: fonts.serifItalic, fontStyle: "italic", color: colors.foreground },
-  adminNote: {
-    flexDirection: "row",
-    gap: 10,
-    alignItems: "center",
-    backgroundColor: "rgba(201,137,122,0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(201,137,122,0.3)",
-    borderRadius: colors.radius,
-    padding: 14,
-    marginTop: 18,
-  },
-  adminNoteText: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: colors.foreground, lineHeight: 18 },
   center: { alignItems: "center", justifyContent: "center", paddingVertical: 80, gap: 12 },
   muted: { fontFamily: fonts.sans, fontSize: 14, color: colors.muted, textAlign: "center", paddingHorizontal: 20 },
   emptyTitle: { fontFamily: fonts.serifSemibold, fontSize: 20, color: colors.foreground },

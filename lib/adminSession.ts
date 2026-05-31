@@ -84,3 +84,35 @@ export async function unlockAdmin(
     return { ok: false, error: "Network error. Please try again." };
   }
 }
+
+// Rotates the coach passcode. Requires the active admin token plus the current
+// passcode (re-verified server-side). The stored token stays valid afterward.
+export async function changeAdminPasscode(
+  token: string,
+  currentPasscode: string,
+  newPasscode: string
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const resp = await fetch(`${getApiUrl()}/api/admin-passcode`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ currentPasscode, newPasscode }),
+    });
+    if (!resp.ok) {
+      let error = "Could not change passcode";
+      try {
+        const j = await resp.json();
+        if (j?.error) error = j.error;
+      } catch {
+        // ignore
+      }
+      return { ok: false, error };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Network error. Please try again." };
+  }
+}

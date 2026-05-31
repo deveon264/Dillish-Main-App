@@ -42,6 +42,17 @@ export function ensureSchema(): Promise<void> {
              ADD COLUMN IF NOT EXISTS poster_mime TEXT`
         )
       )
+      // Small key/value table for server settings the coach can change in-app,
+      // such as a rotated admin passcode that overrides the ADMIN_PASSCODE env.
+      .then(() =>
+        pool.query(
+          `CREATE TABLE IF NOT EXISTS app_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at BIGINT NOT NULL
+          )`
+        )
+      )
       .then(() => undefined)
       .catch((e) => {
         schemaReady = null;
@@ -49,4 +60,25 @@ export function ensureSchema(): Promise<void> {
       });
   }
   return schemaReady;
+}
+
+// Reads a single app setting, or null if it has never been set.
+export async function getSetting(key: string): Promise<string | null> {
+  await ensureSchema();
+  const { rows } = await getPool().query<{ value: string }>(
+    `SELECT value FROM app_settings WHERE key = $1`,
+    [key]
+  );
+  return rows[0]?.value ?? null;
+}
+
+// Inserts or updates a single app setting.
+export async function setSetting(key: string, value: string): Promise<void> {
+  await ensureSchema();
+  await getPool().query(
+    `INSERT INTO app_settings (key, value, updated_at)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at`,
+    [key, value, Date.now()]
+  );
 }

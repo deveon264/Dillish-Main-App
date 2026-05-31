@@ -14,7 +14,7 @@ export async function POST(request: Request): Promise<Response> {
       passcode = "";
     }
 
-    if (!verifyPasscode(passcode)) {
+    if (!(await verifyPasscode(passcode))) {
       return Response.json({ error: "Incorrect coach passcode" }, { status: 401 });
     }
 

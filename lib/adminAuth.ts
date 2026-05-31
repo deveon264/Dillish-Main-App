@@ -1,4 +1,10 @@
 import { ADMIN_EMAIL, isAdminEmail } from "@/constants/admin";
+import { getSetting, setSetting } from "@/lib/db";
+
+// Key under which a coach-rotated passcode is stored. When present it overrides
+// the ADMIN_PASSCODE env var so the coach can change the passcode in-app
+// without editing a server secret.
+const PASSCODE_SETTING_KEY = "admin_passcode";
 
 // Server-side admin authentication.
 //
@@ -14,10 +20,23 @@ const SIGN_INFO = "florish-admin-session-v1";
 
 const enc = new TextEncoder();
 
-function getPasscode(): string {
+function getEnvPasscode(): string {
   const p = process.env.ADMIN_PASSCODE;
   if (!p) throw new Error("ADMIN_PASSCODE is not set");
   return p;
+}
+
+// Returns the passcode currently in effect: a coach-rotated value if one has
+// been saved, otherwise the ADMIN_PASSCODE env var. If the DB is unreachable we
+// fall back to the env var so the coach is never locked out.
+async function getEffectivePasscode(): Promise<string> {
+  try {
+    const override = await getSetting(PASSCODE_SETTING_KEY);
+    if (override) return override;
+  } catch (e: any) {
+    console.error("admin passcode lookup failed, falling back to env:", e?.message ?? e);
+  }
+  return getEnvPasscode();
 }
 
 function getSessionSecret(): string {
@@ -84,9 +103,30 @@ function timingSafeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-export function verifyPasscode(input: string | null | undefined): boolean {
+export async function verifyPasscode(input: string | null | undefined): Promise<boolean> {
   if (!input) return false;
-  return timingSafeEqual(input, getPasscode());
+  return timingSafeEqual(input, await getEffectivePasscode());
+}
+
+// Rotates the coach passcode after confirming the current one. The new value is
+// persisted to the DB and immediately overrides the ADMIN_PASSCODE env var.
+// Existing signed tokens stay valid because they are independent of the passcode.
+export async function rotatePasscode(
+  current: string | null | undefined,
+  next: string | null | undefined
+): Promise<{ ok: boolean; error?: string }> {
+  if (!(await verifyPasscode(current))) {
+    return { ok: false, error: "Current passcode is incorrect" };
+  }
+  const trimmed = (next ?? "").trim();
+  if (trimmed.length < 6) {
+    return { ok: false, error: "New passcode must be at least 6 characters" };
+  }
+  if (timingSafeEqual(trimmed, (current ?? "").trim())) {
+    return { ok: false, error: "New passcode must be different from the current one" };
+  }
+  await setSetting(PASSCODE_SETTING_KEY, trimmed);
+  return { ok: true };
 }
 
 export async function mintAdminToken(): Promise<{ token: string; expiresAt: number }> {
