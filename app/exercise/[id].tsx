@@ -25,6 +25,7 @@ export default function ExercisePlayer() {
   const router = useRouter();
   const insets = useInsets();
   const [showPoster, setShowPoster] = useState(!!hasPoster);
+  const [posterError, setPosterError] = useState(false);
 
   const player = useVideoPlayer(id ? videoUrl(id) : null, (p) => {
     p.loop = false;
@@ -59,13 +60,14 @@ export default function ExercisePlayer() {
             contentFit="contain"
             nativeControls
           />
-          {showPoster && !!hasPoster && (
+          {showPoster && !!hasPoster && !posterError && (
             <Image
               source={{ uri: posterUrl(id) }}
               style={styles.poster}
               contentFit="cover"
               transition={150}
               pointerEvents="none"
+              onError={() => setPosterError(true)}
             />
           )}
         </View>

@@ -33,6 +33,7 @@ export default function ExerciseLibrary() {
   const [items, setItems] = useState<UploadedExercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [posterErrors, setPosterErrors] = useState<Record<string, boolean>>({});
 
   const load = useCallback(async () => {
     try {
@@ -154,17 +155,25 @@ export default function ExerciseLibrary() {
                   }
                 >
                   <View style={styles.thumb}>
-                    {item.hasPoster && (
-                      <Image
-                        source={{ uri: posterUrl(item.id) }}
-                        style={styles.thumbImg}
-                        contentFit="cover"
-                        transition={200}
-                      />
-                    )}
-                    <View style={[styles.playBadge, item.hasPoster && styles.playBadgeOnImage]}>
-                      <Ionicons name="play" size={16} color={colors.onPrimary} />
-                    </View>
+                    {(() => {
+                      const showPoster = item.hasPoster && !posterErrors[item.id];
+                      return (
+                        <>
+                          {showPoster && (
+                            <Image
+                              source={{ uri: posterUrl(item.id) }}
+                              style={styles.thumbImg}
+                              contentFit="cover"
+                              transition={200}
+                              onError={() => setPosterErrors((prev) => ({ ...prev, [item.id]: true }))}
+                            />
+                          )}
+                          <View style={[styles.playBadge, showPoster && styles.playBadgeOnImage]}>
+                            <Ionicons name="play" size={16} color={colors.onPrimary} />
+                          </View>
+                        </>
+                      );
+                    })()}
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.cardCat}>{item.category.toUpperCase()}</Text>
