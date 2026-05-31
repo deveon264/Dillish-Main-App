@@ -183,9 +183,23 @@ export default function ExerciseLibrary() {
                   </View>
                 </Pressable>
                 {adminUnlocked && (
-                  <Pressable style={styles.delBtn} hitSlop={8} onPress={() => confirmDelete(item)}>
-                    <Ionicons name="trash-outline" size={18} color={colors.muted} />
-                  </Pressable>
+                  <View style={styles.cardActions}>
+                    <Pressable
+                      style={styles.iconBtn}
+                      hitSlop={8}
+                      onPress={() =>
+                        router.push({
+                          pathname: "/admin/edit-poster",
+                          params: { id: item.id, title: item.title, hasPoster: item.hasPoster ? "1" : "" },
+                        })
+                      }
+                    >
+                      <Ionicons name="image-outline" size={18} color={colors.muted} />
+                    </Pressable>
+                    <Pressable style={styles.iconBtn} hitSlop={8} onPress={() => confirmDelete(item)}>
+                      <Ionicons name="trash-outline" size={18} color={colors.muted} />
+                    </Pressable>
+                  </View>
                 )}
               </View>
             ))}
@@ -273,5 +287,6 @@ const styles = StyleSheet.create({
   },
   pillText: { fontFamily: fonts.sansMedium, fontSize: 11, color: colors.muted },
   metaText: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.muted },
-  delBtn: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
+  cardActions: { flexDirection: "row", alignItems: "center" },
+  iconBtn: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
 });

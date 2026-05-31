@@ -137,6 +137,27 @@ export async function uploadExercise(params: {
   return item;
 }
 
+// Replaces the poster for an existing exercise. Reuses the same streaming
+// poster endpoint the upload flow uses (raw body, keyed by id) so the server can
+// stream straight to storage and swap/clean up the old poster object.
+export async function updateExercisePoster(params: {
+  id: string;
+  poster: PosterAsset;
+  token: string;
+}): Promise<void> {
+  const { id, poster, token } = params;
+  const posterType = poster.mimeType || "image/jpeg";
+  const { status, body } = await postBinary(
+    `${getApiUrl()}/api/exercise-poster?id=${encodeURIComponent(id)}`,
+    poster.uri,
+    posterType,
+    token
+  );
+  if (status < 200 || status >= 300) {
+    throw new Error(errorFrom(body, "Could not update poster"));
+  }
+}
+
 export async function deleteExercise(id: string, token: string): Promise<void> {
   const resp = await fetch(`${getApiUrl()}/api/exercises?id=${encodeURIComponent(id)}`, {
     method: "DELETE",
