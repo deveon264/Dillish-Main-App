@@ -32,5 +32,10 @@ A `react-native-svg` bar chart (`<Svg>` with `<Defs>/<LinearGradient>/<Rect>/<Li
 **Why:** SVG on this RN 0.85 / react-native-web stack is fragile beyond just the Animated.View combo; debugging is painful because the error minifies to `{}`.
 **How to apply:** For charts/decorative shapes, reach for layout primitives first — flex `View` bars, `expo-linear-gradient` for fills, `borderStyle:"dashed"` for dashed lines (see `components/BarChart.tsx`). Only use SVG if there is no View-based alternative, and test the render immediately.
 
+## Date.toLocaleTimeString with extra Intl options crashes under SSR
+`new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true })` crashed the screen at render (same ErrorBoundary + minified `{}` signature). The plainer `{ hour: "2-digit", minute: "2-digit" }` worked, but adding `hour:"numeric"`/`hour12` broke it.
+**Why:** web target server-renders (`web.output: "server"`, Node render.js) and that Node has limited ICU, so richer `Intl`/`toLocale*` option combos throw during SSR. The `{}` minified error makes it look like the SVG crashes — check recent date/Intl formatting too.
+**How to apply:** Don't rely on `Intl`/`toLocale*` option combos for user-facing formatting on this stack (also better for native/Hermes). Hand-roll formatters (see `fmtTime`/12h AM-PM in `app/(tabs)/water.tsx`).
+
 ## Benign workflow noise
 "React Native DevTools ... libglib-2.0.so.0: cannot open shared object file" is an environment lib gap, not an app error — ignore it.

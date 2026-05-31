@@ -31,6 +31,24 @@ const TABS = [
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+const fmtTime = (ts: number) => {
+  const d = new Date(ts);
+  let h = d.getHours();
+  const m = d.getMinutes();
+  const ampm = h >= 12 ? "PM" : "AM";
+  h = h % 12;
+  if (h === 0) h = 12;
+  return `${h}:${String(m).padStart(2, "0")} ${ampm}`;
+};
+
+const amountLabel = (ml: number) => {
+  if (ml <= 150) return "Small glass";
+  if (ml <= 250) return "Glass of water";
+  if (ml <= 400) return "Water bottle";
+  if (ml <= 600) return "Large bottle";
+  return "Big refill";
+};
+
 export default function Water() {
   const insets = useInsets();
   const router = useRouter();
@@ -225,7 +243,14 @@ export default function Water() {
               </View>
             </Card>
 
-            <Text style={styles.section}>TODAY'S LOG</Text>
+            <View style={styles.logHead}>
+              <Text style={styles.logHeadTitle}>TODAY'S LOG</Text>
+              {todayLogs.length > 0 ? (
+                <Text style={styles.entryCount}>
+                  {todayLogs.length} {todayLogs.length === 1 ? "entry" : "entries"}
+                </Text>
+              ) : null}
+            </View>
             {todayLogs.length === 0 ? (
               <Card style={{ alignItems: "center", paddingVertical: 28 }}>
                 <Ionicons name="water-outline" size={32} color={colors.mutedForeground} />
@@ -239,16 +264,17 @@ export default function Water() {
                       <View style={styles.logIcon}>
                         <Ionicons name="water" size={18} color={colors.accent} />
                       </View>
-                      <View>
+                      <View style={{ flex: 1 }}>
                         <Text style={styles.logMl}>{l.amountMl} ml</Text>
-                        <Text style={styles.logTime}>
-                          {new Date(l.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </Text>
+                        <Text style={styles.logLabel}>{amountLabel(l.amountMl)}</Text>
                       </View>
                     </View>
-                    <Pressable onPress={() => removeWater(l.id)} hitSlop={10}>
-                      <Ionicons name="close-circle-outline" size={22} color={colors.mutedForeground} />
-                    </Pressable>
+                    <View style={styles.logRight}>
+                      <Text style={styles.logTime}>{fmtTime(l.ts)}</Text>
+                      <Pressable onPress={() => removeWater(l.id)} hitSlop={10}>
+                        <Ionicons name="close-circle-outline" size={22} color={colors.mutedForeground} />
+                      </Pressable>
+                    </View>
                   </Card>
                 ))}
               </View>
@@ -392,7 +418,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   logMl: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
-  logTime: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, marginTop: 1 },
+  logLabel: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, marginTop: 2 },
+  logRight: { flexDirection: "row", alignItems: "center", gap: 10 },
+  logTime: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted },
+  logHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 28,
+    marginBottom: 14,
+  },
+  logHeadTitle: { fontFamily: fonts.sansSemibold, fontSize: 12, letterSpacing: 1.4, color: colors.muted },
+  entryCount: { fontFamily: fonts.sansSemibold, fontSize: 12, color: colors.primary },
   comingSoon: { marginTop: 18, alignItems: "center", paddingVertical: 48, gap: 8 },
   comingTitle: { fontFamily: fonts.serifSemibold, fontSize: 20, color: colors.foreground, marginTop: 6 },
   comingDesc: { fontFamily: fonts.sans, fontSize: 14, color: colors.muted },
