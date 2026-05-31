@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, Switch } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { View, Text, StyleSheet, ScrollView, Pressable, Switch, TextInput } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -15,13 +15,19 @@ import { todayKey } from "@/lib/storage";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
-const GOAL_LABELS: Record<string, string> = {
-  "lose-weight": "Lose Weight",
-  tone: "Tone & Sculpt",
-  strength: "Build Strength",
-  flexibility: "Improve Flexibility",
-  wellness: "Mindful Wellness",
-  energy: "Boost Energy",
+const FITNESS_GOALS = [
+  { id: "lose-weight", label: "Lose Weight", icon: "flame" as const },
+  { id: "build-muscle", label: "Build Muscle", icon: "barbell" as const },
+  { id: "stay-fit", label: "Stay Fit", icon: "pulse" as const },
+];
+
+const LEGACY_GOAL_MAP: Record<string, string> = {
+  "lose-weight": "lose-weight",
+  tone: "stay-fit",
+  strength: "build-muscle",
+  flexibility: "stay-fit",
+  wellness: "stay-fit",
+  energy: "stay-fit",
 };
 
 export default function Profile() {
@@ -33,6 +39,14 @@ export default function Profile() {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(user?.name ?? "");
   const [notifications, setNotifications] = useState(true);
+  const [goalWeightInput, setGoalWeightInput] = useState(
+    profile.goalWeight != null ? String(profile.goalWeight) : ""
+  );
+  const [goalWeightError, setGoalWeightError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setGoalWeightInput(profile.goalWeight != null ? String(profile.goalWeight) : "");
+  }, [profile.goalWeight]);
 
   const totalWorkouts = completions.length;
   const totalMeals = calorieLogs.length;
@@ -80,6 +94,32 @@ export default function Profile() {
 
   const fmtStat = (n: number | null, digits = 0) =>
     n == null ? "—" : Number.isInteger(n) ? String(n) : n.toFixed(digits);
+
+  const kgToGo = useMemo(() => {
+    if (currentWeight == null || profile.goalWeight == null) return null;
+    return Math.abs(currentWeight - profile.goalWeight);
+  }, [currentWeight, profile.goalWeight]);
+
+  const selectedGoal = useMemo(() => {
+    const raw = profile.goals[0];
+    if (raw && FITNESS_GOALS.some((g) => g.id === raw)) return raw;
+    return (raw && LEGACY_GOAL_MAP[raw]) || "lose-weight";
+  }, [profile.goals]);
+
+  const selectGoal = (id: string) => {
+    if (id !== selectedGoal || profile.goals[0] !== id) updateProfile({ goals: [id] });
+  };
+
+  const saveGoalWeight = async () => {
+    const trimmed = goalWeightInput.trim().replace(",", ".");
+    const val = Number(trimmed);
+    if (!trimmed || !Number.isFinite(val) || val <= 0) {
+      setGoalWeightError("Enter a valid goal weight.");
+      return;
+    }
+    setGoalWeightError(null);
+    await updateProfile({ goalWeight: val });
+  };
 
   const saveName = async () => {
     if (name.trim()) await updateUser({ name: name.trim() });
@@ -181,31 +221,78 @@ export default function Profile() {
           </Card>
         </View>
 
+        <Text style={styles.label}>FITNESS GOAL</Text>
+        <View style={styles.goalRow}>
+          {FITNESS_GOALS.map((g) => {
+            const active = g.id === selectedGoal;
+            return (
+              <Pressable
+                key={g.id}
+                onPress={() => selectGoal(g.id)}
+                style={[styles.goalCard, active && styles.goalCardActive]}
+              >
+                <Ionicons
+                  name={g.icon}
+                  size={22}
+                  color={active ? colors.primary : colors.mutedForeground}
+                />
+                <Text style={[styles.goalCardText, active && styles.goalCardTextActive]}>
+                  {g.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <View style={styles.goalWeightHead}>
+          <Text style={styles.label}>GOAL WEIGHT</Text>
+          {kgToGo != null ? (
+            <Text style={styles.toGo}>
+              {fmtStat(kgToGo, 1)} {profile.weightUnit} to go
+            </Text>
+          ) : null}
+        </View>
+        <View style={styles.goalWeightRow}>
+          <View style={styles.goalWeightField}>
+            <TextInput
+              value={goalWeightInput}
+              onChangeText={(t) => {
+                setGoalWeightInput(t);
+                if (goalWeightError) setGoalWeightError(null);
+              }}
+              keyboardType="decimal-pad"
+              placeholder="—"
+              placeholderTextColor={colors.mutedForeground}
+              style={styles.goalWeightInput}
+            />
+            <Text style={styles.goalWeightUnit}>{profile.weightUnit}</Text>
+          </View>
+          <Pressable onPress={saveGoalWeight} style={({ pressed }) => [styles.updateBtn, { opacity: pressed ? 0.9 : 1 }]}>
+            <LinearGradient
+              colors={colors.gradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.updateBtnInner}
+            >
+              <Text style={styles.updateBtnText}>Update</Text>
+            </LinearGradient>
+          </Pressable>
+        </View>
+        {goalWeightError ? <Text style={styles.goalWeightError}>{goalWeightError}</Text> : null}
+
         {weightProgress != null ? (
-          <Card style={{ marginTop: 16 }}>
-            <View style={styles.weightHead}>
-              <Text style={styles.cardTitle}>Weight goal</Text>
-              <Text style={styles.weightVals}>
-                {currentWeight}{profile.weightUnit} → {profile.goalWeight}{profile.weightUnit}
+          <>
+            <ProgressBar progress={weightProgress} height={8} style={{ marginTop: 16 }} />
+            <View style={styles.goalScaleRow}>
+              <Text style={styles.goalScaleText}>
+                Start: {fmtStat(startWeight, 1)} {profile.weightUnit}
+              </Text>
+              <Text style={styles.goalScaleText}>
+                Goal: {fmtStat(profile.goalWeight, 1)} {profile.weightUnit}
               </Text>
             </View>
-            <ProgressBar progress={weightProgress} height={8} style={{ marginTop: 14 }} />
-            <Text style={styles.weightPct}>{Math.round(weightProgress * 100)}% of the way there</Text>
-          </Card>
+          </>
         ) : null}
-
-        <Text style={styles.section}>Your goals</Text>
-        <View style={styles.goalChips}>
-          {profile.goals.length === 0 ? (
-            <Text style={styles.emptyText}>No goals selected</Text>
-          ) : (
-            profile.goals.map((g) => (
-              <View key={g} style={styles.goalChip}>
-                <Text style={styles.goalChipText}>{GOAL_LABELS[g] ?? g}</Text>
-              </View>
-            ))
-          )}
-        </View>
 
         <Text style={styles.section}>Hydration goal</Text>
         <Card>
@@ -345,21 +432,56 @@ const styles = StyleSheet.create({
   statNum: { fontFamily: fonts.serifSemibold, fontSize: 24, color: colors.accent },
   statLbl: { fontFamily: fonts.sans, fontSize: 11, color: colors.muted, marginTop: 2, textAlign: "center" },
   cardTitle: { fontFamily: fonts.serifSemibold, fontSize: 18, color: colors.foreground },
-  weightHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  weightVals: { fontFamily: fonts.sansMedium, fontSize: 14, color: colors.accent },
-  weightPct: { fontFamily: fonts.sans, fontSize: 13, color: colors.muted, marginTop: 8 },
   section: { fontFamily: fonts.serif, fontSize: 22, color: colors.foreground, marginTop: 26, marginBottom: 14 },
-  goalChips: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  goalChip: {
-    backgroundColor: colors.cardElevated,
+  label: {
+    fontFamily: fonts.sansSemibold,
+    fontSize: 11,
+    letterSpacing: 2,
+    color: colors.mutedForeground,
+    marginTop: 26,
+    marginBottom: 12,
+  },
+  goalRow: { flexDirection: "row", gap: 10 },
+  goalCard: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 18,
+    paddingHorizontal: 6,
+    borderRadius: colors.radius,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 16,
+    backgroundColor: colors.card,
   },
-  goalChipText: { fontFamily: fonts.sansMedium, fontSize: 14, color: colors.foreground },
-  emptyText: { fontFamily: fonts.sans, fontSize: 14, color: colors.muted },
+  goalCardActive: {
+    borderColor: colors.primary,
+    backgroundColor: "rgba(201,137,122,0.16)",
+  },
+  goalCardText: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.muted, textAlign: "center" },
+  goalCardTextActive: { fontFamily: fonts.sansSemibold, color: colors.foreground },
+  goalWeightHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  toGo: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.primary, marginTop: 26, marginBottom: 12 },
+  goalWeightRow: { flexDirection: "row", alignItems: "stretch", gap: 10 },
+  goalWeightField: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: colors.radius,
+    paddingHorizontal: 16,
+    minHeight: 54,
+  },
+  goalWeightInput: { flex: 1, fontFamily: fonts.sansSemibold, fontSize: 18, color: colors.foreground, paddingVertical: 12 },
+  goalWeightUnit: { fontFamily: fonts.sansMedium, fontSize: 14, color: colors.mutedForeground, marginLeft: 8 },
+  updateBtn: { borderRadius: colors.radius, overflow: "hidden" },
+  updateBtnInner: { paddingHorizontal: 24, minHeight: 54, alignItems: "center", justifyContent: "center", borderRadius: colors.radius },
+  updateBtnText: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.onPrimary },
+  goalWeightError: { fontFamily: fonts.sans, fontSize: 13, color: colors.danger, marginTop: 8 },
+  goalScaleRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 10 },
+  goalScaleText: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted },
   stepRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   stepper: { flexDirection: "row", alignItems: "center", gap: 14 },
   stepBtn: {
