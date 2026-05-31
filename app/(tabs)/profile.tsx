@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, Switch, TextInput } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -37,7 +37,6 @@ export default function Profile() {
 
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(user?.name ?? "");
-  const [notifications, setNotifications] = useState(true);
   const [goalWeightInput, setGoalWeightInput] = useState(
     profile.goalWeight != null ? String(profile.goalWeight) : ""
   );
@@ -321,49 +320,27 @@ export default function Profile() {
           </>
         ) : null}
 
-        <Text style={styles.section}>Hydration goal</Text>
-        <Card>
-          <View style={styles.stepRow}>
-            <Text style={styles.cardTitle}>Daily water</Text>
-            <View style={styles.stepper}>
-              <Pressable
-                style={styles.stepBtn}
-                onPress={() => updateProfile({ waterGoalMl: Math.max(1000, profile.waterGoalMl - 250) })}
-                hitSlop={6}
-              >
-                <Ionicons name="remove" size={18} color={colors.foreground} />
-              </Pressable>
-              <Text style={styles.stepVal}>{(profile.waterGoalMl / 1000).toFixed(2)}L</Text>
-              <Pressable
-                style={styles.stepBtn}
-                onPress={() => updateProfile({ waterGoalMl: Math.min(5000, profile.waterGoalMl + 250) })}
-                hitSlop={6}
-              >
-                <Ionicons name="add" size={18} color={colors.foreground} />
-              </Pressable>
-            </View>
-          </View>
-        </Card>
-
-        <Text style={styles.section}>Settings</Text>
-        <Card style={{ paddingVertical: 4 }}>
-          <View style={styles.settingRow}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="notifications-outline" size={20} color={colors.accent} />
-              <Text style={styles.settingLabel}>Reminders</Text>
-            </View>
-            <Switch
-              value={notifications}
-              onValueChange={setNotifications}
-              trackColor={{ false: colors.track, true: colors.primary }}
-              thumbColor={colors.foreground}
-            />
-          </View>
-          <View style={styles.settingDivider} />
-          <SettingLink icon="shield-checkmark-outline" label="Privacy" />
-          <View style={styles.settingDivider} />
-          <SettingLink icon="help-circle-outline" label="Help & Support" />
-        </Card>
+        <View style={styles.goalWeightHead}>
+          <Text style={styles.label}>HYDRATION GOAL</Text>
+          <Text style={styles.toGo}>{(profile.waterGoalMl / 1000).toFixed(2)} L / day</Text>
+        </View>
+        <View style={styles.waterField}>
+          <Pressable
+            style={styles.waterBtn}
+            onPress={() => updateProfile({ waterGoalMl: Math.max(1000, profile.waterGoalMl - 250) })}
+            hitSlop={6}
+          >
+            <Ionicons name="remove" size={20} color={colors.foreground} />
+          </Pressable>
+          <Text style={styles.waterVal}>{(profile.waterGoalMl / 1000).toFixed(2)} L</Text>
+          <Pressable
+            style={styles.waterBtn}
+            onPress={() => updateProfile({ waterGoalMl: Math.min(5000, profile.waterGoalMl + 250) })}
+            hitSlop={6}
+          >
+            <Ionicons name="add" size={20} color={colors.foreground} />
+          </Pressable>
+        </View>
 
         <Button
           label="Log Out"
@@ -378,18 +355,6 @@ export default function Profile() {
         <Text style={styles.version}>Florish · v1.0</Text>
       </ScrollView>
     </GradientBackground>
-  );
-}
-
-function SettingLink({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label: string }) {
-  return (
-    <Pressable style={styles.settingRow}>
-      <View style={styles.settingLeft}>
-        <Ionicons name={icon} size={20} color={colors.accent} />
-        <Text style={styles.settingLabel}>{label}</Text>
-      </View>
-      <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
-    </Pressable>
   );
 }
 
@@ -511,8 +476,6 @@ const styles = StyleSheet.create({
   statNum: { fontFamily: fonts.serifSemibold, fontSize: 24, color: palette.charcoal },
   statNumAccent: { color: colors.primary },
   statLbl: { fontFamily: fonts.sans, fontSize: 11, color: palette.mauve, marginTop: 2, textAlign: "center" },
-  cardTitle: { fontFamily: fonts.serifSemibold, fontSize: 18, color: colors.foreground },
-  section: { fontFamily: fonts.serif, fontSize: 22, color: colors.foreground, marginTop: 26, marginBottom: 14 },
   label: {
     fontFamily: fonts.sansSemibold,
     fontSize: 11,
@@ -562,22 +525,27 @@ const styles = StyleSheet.create({
   goalWeightError: { fontFamily: fonts.sans, fontSize: 13, color: colors.danger, marginTop: 8 },
   goalScaleRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 10 },
   goalScaleText: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted },
-  stepRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  stepper: { flexDirection: "row", alignItems: "center", gap: 14 },
-  stepBtn: {
+  waterField: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: colors.radius,
+    paddingHorizontal: 14,
+    minHeight: 54,
+  },
+  waterBtn: {
     width: 38,
     height: 38,
     borderRadius: 19,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    backgroundColor: colors.card,
+    backgroundColor: colors.cardElevated,
     alignItems: "center",
     justifyContent: "center",
   },
-  stepVal: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.foreground, width: 64, textAlign: "center" },
-  settingRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 16, paddingHorizontal: 14 },
-  settingLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
-  settingLabel: { fontFamily: fonts.sansMedium, fontSize: 15, color: colors.foreground },
-  settingDivider: { height: 1, backgroundColor: colors.cardBorder, marginHorizontal: 14 },
+  waterVal: { fontFamily: fonts.sansSemibold, fontSize: 18, color: colors.foreground },
   version: { fontFamily: fonts.sans, fontSize: 12, color: colors.mutedForeground, textAlign: "center", marginTop: 18 },
 });
