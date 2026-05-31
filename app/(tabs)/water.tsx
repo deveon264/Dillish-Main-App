@@ -88,6 +88,20 @@ export default function Water() {
     });
   }, [waterLogs]);
 
+  const weekRange = useMemo(() => {
+    const now = new Date();
+    const monday = new Date(now);
+    const day = (now.getDay() + 6) % 7;
+    monday.setDate(now.getDate() - day);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    const M = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const sameMonth = monday.getMonth() === sunday.getMonth();
+    return sameMonth
+      ? `${M[monday.getMonth()]} ${monday.getDate()} – ${sunday.getDate()}`
+      : `${M[monday.getMonth()]} ${monday.getDate()} – ${M[sunday.getMonth()]} ${sunday.getDate()}`;
+  }, []);
+
   const addCustom = () => {
     const ml = parseInt(custom, 10);
     if (ml && ml > 0) {
@@ -202,8 +216,11 @@ export default function Water() {
             </View>
 
             <Card style={{ marginTop: 24 }}>
-              <Text style={styles.cardTitle}>This week</Text>
-              <View style={{ marginTop: 16, alignItems: "center" }}>
+              <View style={styles.weekHead}>
+                <Text style={styles.weekEyebrow}>WEEKLY HYDRATION</Text>
+                <Text style={styles.weekRange}>{weekRange}</Text>
+              </View>
+              <View style={{ marginTop: 18 }}>
                 <BarChart data={weekly} goal={goal / 1000} unit="L" />
               </View>
             </Card>
@@ -360,6 +377,9 @@ const styles = StyleSheet.create({
   addBtn: { borderRadius: 16, overflow: "hidden" },
   addBtnGrad: { width: 52, height: 52, alignItems: "center", justifyContent: "center" },
   cardTitle: { fontFamily: fonts.serifSemibold, fontSize: 18, color: colors.foreground },
+  weekHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  weekEyebrow: { fontFamily: fonts.sansSemibold, fontSize: 12, letterSpacing: 1.4, color: colors.muted },
+  weekRange: { fontFamily: fonts.sans, fontSize: 12, color: colors.mutedForeground },
   emptyText: { fontFamily: fonts.sans, fontSize: 14, color: colors.muted, marginTop: 10 },
   logRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 14 },
   logLeft: { flexDirection: "row", alignItems: "center", gap: 12 },

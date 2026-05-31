@@ -27,5 +27,10 @@ Wrapping `react-native-svg` (`<Svg>`/`<Path>`) inside an `Animated.View` crashed
 **Why:** continuous water/wave animations are easy to reach for with animated SVG paths, but that combo is fragile in this RN 0.85 / react-native-web stack.
 **How to apply:** Build animated effects from plain `View`s with `Animated` transforms (e.g. the flowing-water look in `components/WaterCircle.tsx` uses two rotating rounded-squircle Views clipped to a circle, `useNativeDriver:false`). Reserve SVG for static shapes.
 
+## react-native-svg is crash-prone here even when static — prefer pure Views for charts
+A `react-native-svg` bar chart (`<Svg>` with `<Defs>/<LinearGradient>/<Rect>/<Line>`, including returning `null` among Svg children) crashed the screen at render on web (ErrorBoundary, minified `{}` error). Rebuilding the same chart with pure `View`s + `expo-linear-gradient` bars + a dashed-border View for the goal line rendered cleanly.
+**Why:** SVG on this RN 0.85 / react-native-web stack is fragile beyond just the Animated.View combo; debugging is painful because the error minifies to `{}`.
+**How to apply:** For charts/decorative shapes, reach for layout primitives first — flex `View` bars, `expo-linear-gradient` for fills, `borderStyle:"dashed"` for dashed lines (see `components/BarChart.tsx`). Only use SVG if there is no View-based alternative, and test the render immediately.
+
 ## Benign workflow noise
 "React Native DevTools ... libglib-2.0.so.0: cannot open shared object file" is an environment lib gap, not an app error — ignore it.
