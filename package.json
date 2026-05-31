@@ -8,6 +8,7 @@
     "@expo/ui": "~56.0.15",
     "@expo/vector-icons": "^15.1.1",
     "@react-native-async-storage/async-storage": "^2.2.0",
+    "@react-navigation/bottom-tabs": "^7.16.2",
     "@tanstack/react-query": "^5.100.14",
     "drizzle-zod": "^0.8.3",
     "expo": "~56.0.8",

@@ -1,1 +1,2 @@
-- [Streak/week math duplication](streak-week-math.md) — weekly streak + Mon-start week-marks logic is copy-pasted in home and workout player; keep both in sync.
+- [Expo on Replit quirks](expo-replit-quirks.md) — SecureStore web no-op, API routes need server output + absolute URL on native, OpenAI integration env/model rules.
+- [Streak/week math duplication](streak-week-math.md) — weekly streak + Mon-start week-marks logic is copy-pasted in home and workout player; keep both in sync or extract a shared helper.
