@@ -362,6 +362,44 @@ export default function Profile() {
 
         <View style={styles.sectionDivider} />
 
+        {bmi != null ? (
+          <>
+            <Card style={styles.bmiCard}>
+              <View style={styles.bmiHeader}>
+                <Text style={styles.bmiCardLabel}>YOUR BMI</Text>
+                <View style={styles.bmiBadge}>
+                  <Ionicons name="checkmark-circle" size={13} color={colors.primary} />
+                  <Text style={styles.bmiBadgeText}>{bmiCategory(bmi)}</Text>
+                </View>
+              </View>
+              <View style={styles.bmiValueRow}>
+                <Text style={styles.bmiValue}>{fmtStat(bmi, 1)}</Text>
+                <Text style={styles.bmiValueUnit}>BMI</Text>
+              </View>
+              <Text style={styles.bmiSub}>
+                Height: {fmtStat(profile.height)} {profile.heightUnit} · Weight: {fmtStat(currentWeight, 1)} {profile.weightUnit}
+              </Text>
+              <View style={styles.bmiBarWrap}>
+                <LinearGradient
+                  colors={["#5BC0BE", "#8FB69B", "#E2B07F", "#D9806B"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.bmiBar}
+                />
+                <View style={[styles.bmiThumb, { left: `${bmiToPercent(bmi)}%` }]} />
+              </View>
+              <View style={styles.bmiScaleLabels}>
+                <Text style={[styles.bmiScaleLabel, { color: "#5BC0BE" }]}>Under</Text>
+                <Text style={[styles.bmiScaleLabel, { color: colors.success }]}>Normal</Text>
+                <Text style={[styles.bmiScaleLabel, { color: colors.carbs }]}>Over</Text>
+                <Text style={[styles.bmiScaleLabel, { color: "#D9806B" }]}>Obese</Text>
+              </View>
+            </Card>
+
+            <View style={styles.sectionDivider} />
+          </>
+        ) : null}
+
         <View style={styles.goalWeightHead}>
           <Text style={styles.label}>GOAL WEIGHT</Text>
           {kgToGo != null ? (
@@ -456,6 +494,22 @@ export default function Profile() {
   );
 }
 
+function bmiCategory(b: number) {
+  if (b < 18.5) return "Underweight";
+  if (b < 25) return "Normal";
+  if (b < 30) return "Overweight";
+  return "Obese";
+}
+
+function bmiToPercent(b: number) {
+  let pct: number;
+  if (b < 18.5) pct = ((b - 15) / (18.5 - 15)) * 25;
+  else if (b < 25) pct = 25 + ((b - 18.5) / (25 - 18.5)) * 25;
+  else if (b < 30) pct = 50 + ((b - 25) / (30 - 25)) * 25;
+  else pct = 75 + ((b - 30) / (40 - 30)) * 25;
+  return Math.max(2, Math.min(98, pct));
+}
+
 function Toggle({ value, onValueChange }: { value: boolean; onValueChange: (v: boolean) => void }) {
   return (
     <Pressable
@@ -495,6 +549,40 @@ const styles = StyleSheet.create({
   settingsCard: { paddingVertical: 4 },
   settingsDivider: { height: 1, backgroundColor: colors.cardBorder, marginHorizontal: 14 },
   sectionDivider: { height: 1, backgroundColor: colors.cardBorder, marginTop: 24 },
+  bmiCard: { marginTop: 24 },
+  bmiHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  bmiCardLabel: { fontFamily: fonts.sansSemibold, fontSize: 11, letterSpacing: 2, color: colors.mutedForeground },
+  bmiBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(201,137,122,0.18)",
+    borderWidth: 1,
+    borderColor: "rgba(201,137,122,0.4)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  bmiBadgeText: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.primary },
+  bmiValueRow: { flexDirection: "row", alignItems: "flex-end", gap: 6, marginTop: 12 },
+  bmiValue: { fontFamily: fonts.serifSemibold, fontSize: 40, lineHeight: 44, color: colors.foreground },
+  bmiValueUnit: { fontFamily: fonts.sansMedium, fontSize: 14, color: colors.mutedForeground, marginBottom: 6 },
+  bmiSub: { fontFamily: fonts.sans, fontSize: 13, color: colors.mutedForeground, marginTop: 4 },
+  bmiBarWrap: { height: 16, justifyContent: "center", marginTop: 16 },
+  bmiBar: { height: 8, borderRadius: 4, width: "100%" },
+  bmiThumb: {
+    position: "absolute",
+    top: 0,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 2,
+    borderColor: "rgba(44,36,34,0.25)",
+    transform: [{ translateX: -8 }],
+  },
+  bmiScaleLabels: { flexDirection: "row", justifyContent: "space-between", marginTop: 8 },
+  bmiScaleLabel: { fontFamily: fonts.sansMedium, fontSize: 11 },
   prefRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 14, paddingHorizontal: 14 },
   prefLeft: { flex: 1, paddingRight: 12 },
   prefTitle: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
