@@ -58,6 +58,36 @@ export default function Calories() {
   const goalCarbs = Math.round((profile.calorieGoal * 0.4) / 4);
   const goalFats = Math.round((profile.calorieGoal * 0.3) / 9);
 
+  const proteinLeft = Math.max(0, goalProtein - totals.protein);
+
+  const week = useMemo(() => {
+    const base = new Date();
+    base.setHours(0, 0, 0, 0);
+    const mondayOffset = (base.getDay() + 6) % 7;
+    const monday = new Date(base);
+    monday.setDate(base.getDate() - mondayOffset);
+    const labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const todayMs = base.getTime();
+    const days = labels.map((label, i) => {
+      const start = new Date(monday);
+      start.setDate(monday.getDate() + i);
+      const startMs = start.getTime();
+      const endMs = startMs + 86400000;
+      const total = calorieLogs
+        .filter((l) => l.ts >= startMs && l.ts < endMs)
+        .reduce((a, l) => a + l.kcal, 0);
+      return { label, total, isToday: startMs === todayMs };
+    });
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    const mShort = (d: Date) => d.toLocaleDateString("en-US", { month: "short" });
+    const range =
+      monday.getMonth() === sunday.getMonth()
+        ? `${mShort(monday)} ${monday.getDate()} – ${sunday.getDate()}`
+        : `${mShort(monday)} ${monday.getDate()} – ${mShort(sunday)} ${sunday.getDate()}`;
+    return { days, range };
+  }, [calorieLogs]);
+
   const now = new Date();
   const dateStr = `${now.toLocaleDateString("en-US", { weekday: "short" })}, ${now.getDate()} ${now.toLocaleDateString("en-US", { month: "short" })}`;
 
@@ -449,6 +479,76 @@ export default function Calories() {
             ))}
           </View>
         )}
+
+        <Card style={styles.insightCard}>
+          <View style={styles.insightHead}>
+            <View style={styles.insightIcon}>
+              <Ionicons name="bulb" size={15} color={colors.accent} />
+            </View>
+            <Text style={styles.insightEyebrow}>AI INSIGHT</Text>
+          </View>
+          {proteinLeft > 0 ? (
+            <Text style={styles.insightText}>
+              You're doing great! You still need{" "}
+              <Text style={styles.insightStrong}>{proteinLeft}g of protein</Text> to hit your daily
+              goal. Consider adding a protein-rich dinner like salmon or lentils.
+            </Text>
+          ) : (
+            <Text style={styles.insightText}>
+              Excellent work — you've hit your{" "}
+              <Text style={styles.insightStrong}>protein goal</Text> for today. Keep your meals
+              balanced to stay on track.
+            </Text>
+          )}
+          <View style={styles.insightChips}>
+            <View style={styles.insightChip}>
+              <Ionicons name="fish" size={14} color={colors.accent} />
+              <Text style={styles.insightChipName}>Salmon fillet</Text>
+              <Text style={styles.insightChipVal}>+35g</Text>
+            </View>
+            <View style={styles.insightChip}>
+              <Ionicons name="restaurant" size={14} color={colors.accent} />
+              <Text style={styles.insightChipName}>Lentil soup</Text>
+              <Text style={styles.insightChipVal}>+18g</Text>
+            </View>
+          </View>
+        </Card>
+
+        <Card style={styles.weekCard}>
+          <View style={styles.weekHead}>
+            <Text style={styles.weekEyebrow}>WEEKLY OVERVIEW</Text>
+            <Text style={styles.weekRange}>{week.range}</Text>
+          </View>
+          <View style={styles.chartWrap}>
+            <View style={styles.chartYAxis}>
+              <Text style={styles.chartYLabel}>{(profile.calorieGoal / 1000).toFixed(1)}k</Text>
+              <Text style={styles.chartYLabel}>{(profile.calorieGoal / 2000).toFixed(1)}k</Text>
+              <Text style={styles.chartYLabel}>0</Text>
+            </View>
+            <View style={styles.chartArea}>
+              <View style={styles.chartGoalLine} />
+              <View style={styles.chartBars}>
+                {week.days.map((d) => {
+                  const h = Math.max(0.02, Math.min(1, d.total / profile.calorieGoal));
+                  return (
+                    <View key={d.label} style={styles.chartCol}>
+                      <View style={styles.chartBarTrack}>
+                        <View
+                          style={[
+                            styles.chartBar,
+                            { height: `${h * 100}%` },
+                            d.isToday && styles.chartBarToday,
+                          ]}
+                        />
+                      </View>
+                      <Text style={styles.chartXLabel}>{d.label}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        </Card>
       </ScrollView>
 
       <Modal visible={mealMenu} transparent animationType="fade" onRequestClose={() => setMealMenu(false)}>
@@ -753,4 +853,42 @@ const styles = StyleSheet.create({
   logKcal: { fontFamily: fonts.sansBold, fontSize: 20, color: colors.foreground },
   logKcalUnit: { fontFamily: fonts.sans, fontSize: 11, color: colors.mutedForeground, marginTop: 1 },
   logTrash: { width: 30, height: 30, borderRadius: 15, backgroundColor: colors.cardElevated, alignItems: "center", justifyContent: "center", marginTop: 6 },
+
+  insightCard: { marginTop: 14, padding: 18 },
+  insightHead: { flexDirection: "row", alignItems: "center", gap: 9, marginBottom: 12 },
+  insightIcon: { width: 30, height: 30, borderRadius: 15, backgroundColor: "rgba(242,212,204,0.12)", alignItems: "center", justifyContent: "center" },
+  insightEyebrow: { fontFamily: fonts.sansSemibold, fontSize: 12, letterSpacing: 1.2, color: colors.foreground },
+  insightText: { fontFamily: fonts.sans, fontSize: 14, lineHeight: 22, color: colors.muted },
+  insightStrong: { fontFamily: fonts.sansSemibold, color: colors.foreground },
+  insightChips: { flexDirection: "row", gap: 10, marginTop: 14 },
+  insightChip: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: colors.cardElevated,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+  },
+  insightChipName: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.foreground, flex: 1 },
+  insightChipVal: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.primary },
+
+  weekCard: { marginTop: 14, padding: 18, marginBottom: 8 },
+  weekHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 18 },
+  weekEyebrow: { fontFamily: fonts.sansSemibold, fontSize: 12, letterSpacing: 1.2, color: colors.foreground },
+  weekRange: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.muted },
+  chartWrap: { flexDirection: "row", height: 168 },
+  chartYAxis: { justifyContent: "space-between", paddingBottom: 22, paddingRight: 10, alignItems: "flex-end" },
+  chartYLabel: { fontFamily: fonts.sans, fontSize: 11, color: colors.mutedForeground },
+  chartArea: { flex: 1, position: "relative" },
+  chartGoalLine: { position: "absolute", top: 7, left: 0, right: 0, height: 1, borderTopWidth: 1, borderColor: "rgba(242,212,204,0.22)", borderStyle: "dashed" },
+  chartBars: { flex: 1, flexDirection: "row", justifyContent: "space-between" },
+  chartCol: { flex: 1, alignItems: "center" },
+  chartBarTrack: { flex: 1, width: 22, justifyContent: "flex-end", marginBottom: 8 },
+  chartBar: { width: "100%", borderRadius: 7, backgroundColor: "#8A5E59", minHeight: 3 },
+  chartBarToday: { backgroundColor: colors.accent },
+  chartXLabel: { fontFamily: fonts.sans, fontSize: 11, color: colors.muted },
 });
