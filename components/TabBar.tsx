@@ -1,7 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, Pressable, Platform } from "react-native";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useInsets } from "@/hooks/useInsets";
@@ -9,15 +8,15 @@ import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
 type IconConf =
-  | { lib: "ion"; name: keyof typeof Ionicons.glyphMap }
-  | { lib: "mci"; name: keyof typeof MaterialCommunityIcons.glyphMap };
+  | { lib: "ion"; name: keyof typeof Ionicons.glyphMap; nameFocused: keyof typeof Ionicons.glyphMap }
+  | { lib: "mci"; name: keyof typeof MaterialCommunityIcons.glyphMap; nameFocused: keyof typeof MaterialCommunityIcons.glyphMap };
 
-const CONF: Record<string, { label: string; icon: IconConf; center?: boolean }> = {
-  index: { label: "Home", icon: { lib: "ion", name: "home-outline" } },
-  workouts: { label: "Explore", icon: { lib: "mci", name: "dumbbell" } },
-  calories: { label: "AI Scan", icon: { lib: "ion", name: "sparkles" }, center: true },
-  water: { label: "Water", icon: { lib: "ion", name: "water-outline" } },
-  profile: { label: "Profile", icon: { lib: "ion", name: "person-outline" } },
+const CONF: Record<string, { label: string; icon: IconConf }> = {
+  index: { label: "Home", icon: { lib: "ion", name: "home-outline", nameFocused: "home" } },
+  workouts: { label: "Workouts", icon: { lib: "mci", name: "dumbbell", nameFocused: "dumbbell" } },
+  calories: { label: "Calories", icon: { lib: "mci", name: "brain", nameFocused: "brain" } },
+  water: { label: "Water", icon: { lib: "ion", name: "water-outline", nameFocused: "water" } },
+  profile: { label: "Profile", icon: { lib: "ion", name: "person-outline", nameFocused: "person" } },
 };
 
 const ORDER = ["index", "workouts", "calories", "water", "profile"];
@@ -43,25 +42,19 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
             if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
           };
 
-          if (conf.center) {
-            return (
-              <Pressable key={name} style={styles.centerWrap} onPress={onPress}>
-                <LinearGradient colors={colors.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.center}>
-                  <Ionicons name="sparkles" size={24} color={colors.onPrimary} />
-                </LinearGradient>
-              </Pressable>
-            );
-          }
+          const color = focused ? colors.primary : colors.mutedForeground;
+          const iconName = focused ? conf.icon.nameFocused : conf.icon.name;
 
-          const color = focused ? colors.accent : colors.mutedForeground;
           return (
             <Pressable key={name} style={styles.item} onPress={onPress}>
-              {conf.icon.lib === "ion" ? (
-                <Ionicons name={conf.icon.name} size={23} color={color} />
-              ) : (
-                <MaterialCommunityIcons name={conf.icon.name} size={23} color={color} />
-              )}
-              <Text style={[styles.label, { color }]}>{conf.label}</Text>
+              <View style={[styles.itemInner, focused && styles.itemInnerActive]}>
+                {conf.icon.lib === "ion" ? (
+                  <Ionicons name={iconName as keyof typeof Ionicons.glyphMap} size={22} color={color} />
+                ) : (
+                  <MaterialCommunityIcons name={iconName as keyof typeof MaterialCommunityIcons.glyphMap} size={22} color={color} />
+                )}
+                <Text style={[styles.label, { color }, focused && styles.labelActive]}>{conf.label}</Text>
+              </View>
             </Pressable>
           );
         })}
@@ -88,23 +81,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
     borderRadius: 28,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
   },
-  item: { flex: 1, alignItems: "center", gap: 4, paddingVertical: 4 },
-  label: { fontFamily: fonts.sansMedium, fontSize: 10.5 },
-  centerWrap: { flex: 1, alignItems: "center" },
-  center: {
-    width: 54,
-    height: 54,
-    borderRadius: 20,
+  item: { flex: 1, alignItems: "center" },
+  itemInner: {
     alignItems: "center",
     justifyContent: "center",
-    marginTop: -28,
-    shadowColor: colors.primary,
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 8,
+    gap: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    borderRadius: 16,
+    width: "100%",
+    borderWidth: 1,
+    borderColor: "transparent",
   },
+  itemInnerActive: {
+    backgroundColor: "rgba(201,137,122,0.16)",
+    borderColor: "rgba(242,212,204,0.22)",
+  },
+  label: { fontFamily: fonts.sansMedium, fontSize: 10.5 },
+  labelActive: { fontFamily: fonts.sansSemibold },
 });
