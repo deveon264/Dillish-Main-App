@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workout Player</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        * { -webkit-tap-highlight-color: transparent; }
+        .card-glow { box-shadow: 0 4px 24px rgba(201,137,122,0.10); }
+        .nav-tab { transition: all 0.2s ease; }
+        .timeline-thumb { width: 14px; height: 14px; border-radius: 50%; background: linear-gradient(135deg, #F2D4CC 0%, #C9897A 100%); position: absolute; top: 50%; transform: translate(-50%, -50%); cursor: pointer; box-shadow: 0 0 0 3px rgba(201,137,122,0.25); }
+        .timeline-track { height: 3px; border-radius: 99px; background: rgba(247,235,232,0.12); position: relative; cursor: pointer; }
+        .timeline-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #F2D4CC 0%, #C9897A 100%); position: relative; }
+        .exercise-item { transition: all 0.18s ease; }
+        .exercise-item:active { transform: scale(0.97); }
+        .control-btn { transition: all 0.15s ease; }
+        .control-btn:active { transform: scale(0.92); }
+        .tab-pill { transition: all 0.2s ease; }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        serif: ['Cormorant Garamond', 'serif'],
+                        sans: ['DM Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        blush: '#F2D4CC',
+                        rose: '#C9897A',
+                        petal: '#F7EBE8',
+                        mauve: '#9B6E6A',
+                        cream: '#FAF6F3',
+                        charcoal: '#2C2422',
+                        mist: '#E8DDD9',
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-charcoal font-sans flex justify-center items-start min-h-screen">
+
+<div id="workout-player-screen" class="relative w-full max-w-[375px] mx-auto overflow-hidden flex flex-col" style="height: 840px; background: linear-gradient(160deg, #2C2422 0%, #1e1614 60%, #2C2422 100%);">
+
+    <div class="absolute inset-0 pointer-events-none" style="background: radial-gradient(ellipse at 80% 10%, rgba(242,212,204,0.07) 0%, transparent 55%), radial-gradient(ellipse at 10% 90%, rgba(201,137,122,0.05) 0%, transparent 50%);"></div>
+
+    <div id="video-player-section" class="relative z-20 w-full flex-shrink-0" style="height: 248px;">
+        <img class="absolute inset-0 w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/4cb69e23c8-c24a43b750dd57a82aff.png" alt="woman doing reformer pilates workout in luxury studio, warm golden cinematic lighting, premium fitness photography, elegant feminine" />
+        <div class="absolute inset-0" style="background: linear-gradient(to bottom, rgba(44,36,34,0.55) 0%, rgba(44,36,34,0.15) 40%, rgba(30,22,20,0.85) 100%);"></div>
+
+        <div id="video-top-bar" class="absolute top-0 left-0 right-0 flex items-center justify-between px-5 pt-10">
+            <button id="back-btn" class="w-10 h-10 rounded-full flex items-center justify-center control-btn" style="background: rgba(44,36,34,0.6); border: 1px solid rgba(242,212,204,0.15);">
+                <i class="fa-solid fa-chevron-left text-petal text-[13px]"></i>
+            </button>
+            <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style="background: rgba(44,36,34,0.6); border: 1px solid rgba(242,212,204,0.15);">
+                <span class="text-[10px] font-sans font-light tracking-[0.18em] uppercase" style="color: rgba(247,235,232,0.6);">Now Playing</span>
+            </div>
+            <button id="fav-player-btn" class="w-10 h-10 rounded-full flex items-center justify-center control-btn" style="background: rgba(44,36,34,0.6); border: 1px solid rgba(242,212,204,0.15);">
+                <i class="fa-solid fa-heart text-rose text-[13px]"></i>
+            </button>
+        </div>
+
+        <div id="video-center-controls" class="absolute inset-0 flex items-center justify-center gap-8">
+            <button id="prev-btn" class="w-10 h-10 rounded-full flex items-center justify-center control-btn" style="background: rgba(44,36,34,0.5); border: 1px solid rgba(242,212,204,0.12);">
+                <i class="fa-solid fa-backward-step text-petal/70 text-[14px]"></i>
+            </button>
+            <button id="play-pause-btn" class="w-16 h-16 rounded-full flex items-center justify-center control-btn" style="background: linear-gradient(135deg, #F2D4CC 0%, #C9897A 100%); box-shadow: 0 4px 20px rgba(201,137,122,0.45);">
+                <i id="play-icon" class="fa-solid fa-pause text-charcoal text-[20px]"></i>
+            </button>
+            <button id="next-btn" class="w-10 h-10 rounded-full flex items-center justify-center control-btn" style="background: rgba(44,36,34,0.5); border: 1px solid rgba(242,212,204,0.12);">
+                <i class="fa-solid fa-forward-step text-petal/70 text-[14px]"></i>
+            </button>
+        </div>
+
+        <div id="video-timeline-area" class="absolute bottom-0 left-0 right-0 px-5 pb-3">
+            <div class="flex items-center justify-between mb-1.5">
+                <span id="current-time" class="text-petal/50 text-[10px] font-sans font-light">14:22</span>
+                <span class="text-petal/30 text-[10px] font-sans font-light">45:00</span>
+            </div>
+            <div id="timeline-track" class="timeline-track">
+                <div id="timeline-fill" class="timeline-fill" style="width: 32%;">
+                    <div class="timeline-thumb" style="right: -7px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="workout-info-bar" class="relative z-20 px-5 pt-4 pb-3 flex items-start justify-between flex-shrink-0">
+        <div class="flex flex-col gap-1">
+            <div class="flex items-center gap-2 mb-0.5">
+                <span class="text-[9px] font-sans font-medium px-2.5 py-0.5 rounded-full tracking-[0.15em] uppercase" style="background: rgba(201,137,122,0.25); border: 1px solid rgba(201,137,122,0.4); color: #F2D4CC;">Pilates</span>
+                <span class="text-[9px] font-sans font-light tracking-[0.12em] uppercase" style="color: rgba(247,235,232,0.35);">Intermediate</span>
+            </div>
+            <h2 class="font-serif text-petal font-light leading-tight" style="font-size: 22px;">Reformer <em class="italic text-blush">Pilates</em></h2>
+            <div class="flex items-center gap-3 mt-0.5">
+                <div class="flex items-center gap-1.5">
+                    <i class="fa-regular fa-clock text-petal/40 text-[10px]"></i>
+                    <span class="text-petal/55 text-[11px] font-sans font-light">45 min</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <i class="fa-solid fa-fire text-rose/70 text-[10px]"></i>
+                    <span class="text-petal/55 text-[11px] font-sans font-light">320 kcal</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <i class="fa-solid fa-person-running text-petal/40 text-[10px]"></i>
+                    <span class="text-petal/55 text-[11px] font-sans font-light">Dillish</span>
+                </div>
+            </div>
+        </div>
+        <div class="flex flex-col items-end gap-2 mt-1">
+            <button id="share-btn" class="w-9 h-9 rounded-full flex items-center justify-center control-btn" style="background: rgba(247,235,232,0.07); border: 1px solid rgba(242,212,204,0.12);">
+                <i class="fa-solid fa-share-nodes text-petal/50 text-[12px]"></i>
+            </button>
+            <div class="flex items-center gap-1">
+                <i class="fa-solid fa-star text-rose text-[9px]"></i>
+                <span class="text-petal/50 text-[10px] font-sans font-light">4.9</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="session-stats-row" class="relative z-20 px-5 pb-3 flex-shrink-0">
+        <div class="grid grid-cols-3 gap-2.5">
+            <div id="stat-burned" class="flex flex-col items-center gap-1 py-2.5 rounded-2xl" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.09);">
+                <i class="fa-solid fa-fire text-rose text-[13px]"></i>
+                <span class="text-petal text-[15px] font-sans font-medium">128</span>
+                <span class="text-petal/40 text-[9px] font-sans font-light tracking-wide">kcal burned</span>
+            </div>
+            <div id="stat-elapsed" class="flex flex-col items-center gap-1 py-2.5 rounded-2xl" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.09);">
+                <i class="fa-regular fa-clock text-blush/70 text-[13px]"></i>
+                <span class="text-petal text-[15px] font-sans font-medium">14:22</span>
+                <span class="text-petal/40 text-[9px] font-sans font-light tracking-wide">elapsed</span>
+            </div>
+            <div id="stat-exercises" class="flex flex-col items-center gap-1 py-2.5 rounded-2xl" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.09);">
+                <i class="fa-solid fa-list-check text-blush/70 text-[13px]"></i>
+                <span class="text-petal text-[15px] font-sans font-medium">3/8</span>
+                <span class="text-petal/40 text-[9px] font-sans font-light tracking-wide">exercises</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="tabs-row" class="relative z-20 px-5 pb-3 flex-shrink-0">
+        <div class="flex gap-2 p-1 rounded-2xl" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.08);">
+            <button id="tab-exercises" class="tab-pill flex-1 py-2 rounded-xl text-[11px] font-sans font-medium text-charcoal min-h-[36px]" style="background: linear-gradient(135deg, #F2D4CC 0%, #C9897A 100%);">Exercises</button>
+            <button id="tab-guidance" class="tab-pill flex-1 py-2 rounded-xl text-[11px] font-sans font-light min-h-[36px]" style="color: rgba(247,235,232,0.5);">Guidance</button>
+            <button id="tab-progress" class="tab-pill flex-1 py-2 rounded-xl text-[11px] font-sans font-light min-h-[36px]" style="color: rgba(247,235,232,0.5);">Progress</button>
+        </div>
+    </div>
+
+    <div id="main-scroll" class="relative z-10 flex-1 overflow-y-auto px-5 pb-24">
+
+        <div id="exercises-tab-content">
+
+            <div id="current-exercise-highlight" class="mb-3 rounded-2xl p-3.5 flex items-center gap-3.5" style="background: linear-gradient(135deg, rgba(201,137,122,0.18) 0%, rgba(242,212,204,0.08) 100%); border: 1px solid rgba(201,137,122,0.3);">
+                <div class="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 relative">
+                    <img class="w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/329fdf240e-31c4cd3aa9d5bd6548f3.png" alt="woman doing pilates hundred exercise on reformer, close up, warm studio light" />
+                    <div class="absolute inset-0 flex items-center justify-center" style="background: rgba(44,36,34,0.35);">
+                        <i class="fa-solid fa-play text-petal text-[9px] ml-0.5"></i>
+                    </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-0.5">
+                        <span class="text-[9px] font-sans font-medium px-2 py-0.5 rounded-full" style="background: rgba(201,137,122,0.3); color: #F2D4CC;">Now</span>
+                        <span class="text-petal/40 text-[10px] font-sans font-light">Exercise 4</span>
+                    </div>
+                    <p class="text-petal text-[13px] font-sans font-medium truncate">The Hundred</p>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <span class="text-petal/50 text-[10px] font-sans font-light">3 sets · 60 sec</span>
+                        <span class="text-petal/20 text-[9px]">·</span>
+                        <span class="text-rose/80 text-[10px] font-sans font-light">Core focus</span>
+                    </div>
+                </div>
+                <div class="flex flex-col items-end gap-1 flex-shrink-0">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background: linear-gradient(135deg, #F2D4CC 0%, #C9897A 100%);">
+                        <i class="fa-solid fa-pause text-charcoal text-[10px]"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div id="exercises-list" class="space-y-2">
+
+                <div id="ex-1" class="exercise-item flex items-center gap-3 rounded-xl px-3 py-2.5" style="background: rgba(247,235,232,0.04); border: 1px solid rgba(242,212,204,0.07);">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style="background: rgba(201,137,122,0.2); border: 1px solid rgba(201,137,122,0.3);">
+                        <i class="fa-solid fa-check text-rose text-[10px]"></i>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0">
+                        <img class="w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/cd9abfb89d-53116709ae396a831762.png" alt="woman pilates footwork exercise reformer machine studio" />
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-petal/60 text-[12px] font-sans font-medium line-through truncate">Footwork Series</p>
+                        <span class="text-petal/30 text-[10px] font-sans font-light">3 sets · 45 sec</span>
+                    </div>
+                    <span class="text-petal/25 text-[10px] font-sans font-light flex-shrink-0">Done</span>
+                </div>
+
+                <div id="ex-2" class="exercise-item flex items-center gap-3 rounded-xl px-3 py-2.5" style="background: rgba(247,235,232,0.04); border: 1px solid rgba(242,212,204,0.07);">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style="background: rgba(201,137,122,0.2); border: 1px solid rgba(201,137,122,0.3);">
+                        <i class="fa-solid fa-check text-rose text-[10px]"></i>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0">
+                        <img class="w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/7db010456f-c3c8744e86ef7fd416cd.png" alt="woman pilates leg circles exercise mat studio warm light" />
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-petal/60 text-[12px] font-sans font-medium line-through truncate">Leg Circles</p>
+                        <span class="text-petal/30 text-[10px] font-sans font-light">2 sets · 30 sec</span>
+                    </div>
+                    <span class="text-petal/25 text-[10px] font-sans font-light flex-shrink-0">Done</span>
+                </div>
+
+                <div id="ex-3" class="exercise-item flex items-center gap-3 rounded-xl px-3 py-2.5" style="background: rgba(247,235,232,0.04); border: 1px solid rgba(242,212,204,0.07);">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style="background: rgba(201,137,122,0.2); border: 1px solid rgba(201,137,122,0.3);">
+                        <i class="fa-solid fa-check text-rose text-[10px]"></i>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0">
+                        <img class="w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/4825010c66-ecb65e893cee8ed01eec.png" alt="woman pilates rowing exercise on reformer elegant studio" />
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-petal/60 text-[12px] font-sans font-medium line-through truncate">Rowing</p>
+                        <span class="text-petal/30 text-[10px] font-sans font-light">3 sets · 40 sec</span>
+                    </div>
+                    <span class="text-petal/25 text-[10px] font-sans font-light flex-shrink-0">Done</span>
+                </div>
+
+                <div id="ex-4-upcoming" class="exercise-item flex items-center gap-3 rounded-xl px-3 py-2.5" style="background: rgba(247,235,232,0.04); border: 1px solid rgba(242,212,204,0.07);">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style="background: rgba(247,235,232,0.07); border: 1px solid rgba(242,212,204,0.12);">
+                        <span class="text-petal/40 text-[10px] font-sans font-medium">5</span>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0">
+                        <img class="w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/c265db9625-382fa319b7d1d003fbc1.png" alt="woman pilates short spine stretch reformer machine studio" />
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-petal/80 text-[12px] font-sans font-medium truncate">Short Spine</p>
+                        <span class="text-petal/40 text-[10px] font-sans font-light">2 sets · 45 sec</span>
+                    </div>
+                    <span class="text-petal/35 text-[10px] font-sans font-light flex-shrink-0">Up next</span>
+                </div>
+
+                <div id="ex-5-upcoming" class="exercise-item flex items-center gap-3 rounded-xl px-3 py-2.5" style="background: rgba(247,235,232,0.04); border: 1px solid rgba(242,212,204,0.07);">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style="background: rgba(247,235,232,0.07); border: 1px solid rgba(242,212,204,0.12);">
+                        <span class="text-petal/40 text-[10px] font-sans font-medium">6</span>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0">
+                        <img class="w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/740cc7d147-34d019f7110bc0993a07.png" alt="woman pilates elephant stretch reformer studio warm" />
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-petal/80 text-[12px] font-sans font-medium truncate">Elephant</p>
+                        <span class="text-petal/40 text-[10px] font-sans font-light">3 sets · 30 sec</span>
+                    </div>
+                    <span class="text-petal/25 text-[10px] font-sans font-light flex-shrink-0">Later</span>
+                </div>
+
+                <div id="ex-6-upcoming" class="exercise-item flex items-center gap-3 rounded-xl px-3 py-2.5" style="background: rgba(247,235,232,0.04); border: 1px solid rgba(242,212,204,0.07);">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style="background: rgba(247,235,232,0.07); border: 1px solid rgba(242,212,204,0.12);">
+                        <span class="text-petal/40 text-[10px] font-sans font-medium">7</span>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0">
+                        <img class="w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/2800121ccc-5431a31646f78b714526.png" alt="woman pilates long stretch plank reformer studio" />
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-petal/80 text-[12px] font-sans font-medium truncate">Long Stretch</p>
+                        <span class="text-petal/40 text-[10px] font-sans font-light">3 sets · 30 sec</span>
+                    </div>
+                    <span class="text-petal/25 text-[10px] font-sans font-light flex-shrink-0">Later</span>
+                </div>
+
+                <div id="ex-7-upcoming" class="exercise-item flex items-center gap-3 rounded-xl px-3 py-2.5" style="background: rgba(247,235,232,0.04); border: 1px solid rgba(242,212,204,0.07);">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style="background: rgba(247,235,232,0.07); border: 1px solid rgba(242,212,204,0.12);">
+                        <span class="text-petal/40 text-[10px] font-sans font-medium">8</span>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0">
+                        <img class="w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/dbe534f9d4-1bad687aba404cd13684.png" alt="woman pilates cool down stretch mat studio elegant" />
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-petal/80 text-[12px] font-sans font-medium truncate">Cool Down Stretch</p>
+                        <span class="text-petal/40 text-[10px] font-sans font-light">1 set · 5 min</span>
+                    </div>
+                    <span class="text-petal/25 text-[10px] font-sans font-light flex-shrink-0">Later</span>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div id="guidance-tab-content" class="hidden">
+            <div class="mb-3 rounded-2xl p-4" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.09);">
+                <div class="flex items-center gap-2 mb-2">
+                    <i class="fa-solid fa-circle-info text-rose text-[12px]"></i>
+                    <span class="text-petal/60 text-[11px] font-sans font-light tracking-[0.15em] uppercase">Current Exercise</span>
+                </div>
+                <h3 class="font-serif text-petal font-light text-[18px] mb-2">The <em class="italic text-blush">Hundred</em></h3>
+                <p class="text-petal/50 text-[12px] font-sans font-light leading-relaxed">A classical Pilates exercise that warms up the body, builds core strength, and improves breathing coordination. Focus on keeping the lower back imprinted on the mat.</p>
+            </div>
+            <div class="mb-3 rounded-2xl p-4" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.09);">
+                <div class="flex items-center gap-2 mb-3">
+                    <i class="fa-solid fa-list-check text-rose text-[12px]"></i>
+                    <span class="text-petal/60 text-[11px] font-sans font-light tracking-[0.15em] uppercase">Key Cues</span>
+                </div>
+                <div class="space-y-2.5">
+                    <div class="flex items-start gap-2.5">
+                        <div class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style="background: rgba(201,137,122,0.2); border: 1px solid rgba(201,137,122,0.3);">
+                            <span class="text-rose text-[9px] font-sans font-medium">1</span>
+                        </div>
+                        <p class="text-petal/60 text-[12px] font-sans font-light leading-relaxed">Scoop your abs deep and lift your head, neck and shoulders off the mat.</p>
+                    </div>
+                    <div class="flex items-start gap-2.5">
+                        <div class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style="background: rgba(201,137,122,0.2); border: 1px solid rgba(201,137,122,0.3);">
+                            <span class="text-rose text-[9px] font-sans font-medium">2</span>
+                        </div>
+                        <p class="text-petal/60 text-[12px] font-sans font-light leading-relaxed">Pump your arms vigorously up and down in a small range of motion.</p>
+                    </div>
+                    <div class="flex items-start gap-2.5">
+                        <div class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style="background: rgba(201,137,122,0.2); border: 1px solid rgba(201,137,122,0.3);">
+                            <span class="text-rose text-[9px] font-sans font-medium">3</span>
+                        </div>
+                        <p class="text-petal/60 text-[12px] font-sans font-light leading-relaxed">Inhale for 5 counts, exhale for 5 counts. Complete 10 breath cycles.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="rounded-2xl p-4" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.09);">
+                <div class="flex items-center gap-2 mb-2">
+                    <i class="fa-solid fa-triangle-exclamation text-rose/70 text-[12px]"></i>
+                    <span class="text-petal/60 text-[11px] font-sans font-light tracking-[0.15em] uppercase">Modifications</span>
+                </div>
+                <p class="text-petal/50 text-[12px] font-sans font-light leading-relaxed">If you have neck tension, keep your head down. Bend your knees to tabletop position to reduce lower back pressure.</p>
+            </div>
+        </div>
+
+        <div id="progress-tab-content" class="hidden">
+            <div class="mb-3 rounded-2xl p-4" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.09);">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-petal/60 text-[11px] font-sans font-light tracking-[0.15em] uppercase">Session Progress</span>
+                    <span class="text-rose text-[11px] font-sans font-medium">32%</span>
+                </div>
+                <div class="w-full rounded-full mb-2" style="height: 6px; background: rgba(247,235,232,0.1);">
+                    <div class="rounded-full h-full" style="width: 32%; background: linear-gradient(90deg, #F2D4CC 0%, #C9897A 100%);"></div>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-petal/35 text-[10px] font-sans font-light">14:22 elapsed</span>
+                    <span class="text-petal/35 text-[10px] font-sans font-light">30:38 remaining</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2.5 mb-3">
+                <div class="rounded-2xl p-3.5" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.09);">
+                    <div class="flex items-center gap-1.5 mb-1.5">
+                        <i class="fa-solid fa-fire text-rose text-[11px]"></i>
+                        <span class="text-petal/50 text-[10px] font-sans font-light">Calories</span>
+                    </div>
+                    <p class="text-petal text-[20px] font-sans font-medium leading-none">128</p>
+                    <p class="text-petal/35 text-[10px] font-sans font-light mt-1">of 320 kcal</p>
+                    <div class="w-full rounded-full mt-2" style="height: 3px; background: rgba(247,235,232,0.1);">
+                        <div class="rounded-full h-full" style="width: 40%; background: linear-gradient(90deg, #F2D4CC 0%, #C9897A 100%);"></div>
+                    </div>
+                </div>
+                <div class="rounded-2xl p-3.5" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.09);">
+                    <div class="flex items-center gap-1.5 mb-1.5">
+                        <i class="fa-solid fa-heart-pulse text-rose text-[11px]"></i>
+                        <span class="text-petal/50 text-[10px] font-sans font-light">Heart Rate</span>
+                    </div>
+                    <p class="text-petal text-[20px] font-sans font-medium leading-none">118</p>
+                    <p class="text-petal/35 text-[10px] font-sans font-light mt-1">bpm · Moderate</p>
+                    <div class="w-full rounded-full mt-2" style="height: 3px; background: rgba(247,235,232,0.1);">
+                        <div class="rounded-full h-full" style="width: 65%; background: linear-gradient(90deg, #F2D4CC 0%, #C9897A 100%);"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3 rounded-2xl p-4" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.09);">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-petal/60 text-[11px] font-sans font-light tracking-[0.15em] uppercase">Weekly Streak</span>
+                    <div class="flex items-center gap-1">
+                        <i class="fa-solid fa-fire text-rose text-[11px]"></i>
+                        <span class="text-rose text-[11px] font-sans font-medium">5 days</span>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div class="flex flex-col items-center gap-1.5">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background: rgba(201,137,122,0.25); border: 1px solid rgba(201,137,122,0.4);">
+                            <i class="fa-solid fa-check text-rose text-[10px]"></i>
+                        </div>
+                        <span class="text-petal/40 text-[9px] font-sans font-light">Mon</span>
+                    </div>
+                    <div class="flex flex-col items-center gap-1.5">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background: rgba(201,137,122,0.25); border: 1px solid rgba(201,137,122,0.4);">
+                            <i class="fa-solid fa-check text-rose text-[10px]"></i>
+                        </div>
+                        <span class="text-petal/40 text-[9px] font-sans font-light">Tue</span>
+                    </div>
+                    <div class="flex flex-col items-center gap-1.5">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background: rgba(201,137,122,0.25); border: 1px solid rgba(201,137,122,0.4);">
+                            <i class="fa-solid fa-check text-rose text-[10px]"></i>
+                        </div>
+                        <span class="text-petal/40 text-[9px] font-sans font-light">Wed</span>
+                    </div>
+                    <div class="flex flex-col items-center gap-1.5">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background: rgba(201,137,122,0.25); border: 1px solid rgba(201,137,122,0.4);">
+                            <i class="fa-solid fa-check text-rose text-[10px]"></i>
+                        </div>
+                        <span class="text-petal/40 text-[9px] font-sans font-light">Thu</span>
+                    </div>
+                    <div class="flex flex-col items-center gap-1.5">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background: linear-gradient(135deg, #F2D4CC 0%, #C9897A 100%);">
+                            <i class="fa-solid fa-dumbbell text-charcoal text-[10px]"></i>
+                        </div>
+                        <span class="text-rose text-[9px] font-sans font-medium">Fri</span>
+                    </div>
+                    <div class="flex flex-col items-center gap-1.5">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background: rgba(247,235,232,0.06); border: 1px solid rgba(242,212,204,0.1);">
+                            <span class="text-petal/25 text-[9px] font-sans font-light">–</span>
+                        </div>
+                        <span class="text-petal/30 text-[9px] font-sans font-light">Sat</span>
+                    </div>
+                    <div class="flex flex-col items-center gap-1.5">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background: rgba(247,235,232,0.06); border: 1px solid rgba(242,212,204,0.1);">
+                            <span class="text-petal/25 text-[9px] font-sans font-light">–</span>
+                        </div>
+                        <span class="text-petal/30 text-[9px] font-sans font-light">Sun</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="complete-btn-wrap" class="rounded-2xl p-4" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.09);">
+                <p class="text-petal/40 text-[11px] font-sans font-light text-center mb-3">Complete the session to log your progress</p>
+                <button id="mark-complete-btn" class="w-full py-3.5 rounded-2xl font-sans font-medium text-charcoal text-[13px] min-h-[48px]" style="background: linear-gradient(135deg, #F2D4CC 0%, #C9897A 100%); opacity: 0.5;">
+                    <i class="fa-solid fa-flag-checkered mr-2"></i>Mark as Complete
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="bottom-nav" class="absolute bottom-0 left-0 right-0 z-30 px-3 pb-6 pt-2" style="background: linear-gradient(to top, #1e1614 80%, transparent 100%);">
+        <div class="flex items-center justify-around rounded-2xl px-2 py-2" style="background: rgba(247,235,232,0.06); border: 1px solid rgba(242,212,204,0.10);">
+            <button id="nav-dashboard" class="nav-tab flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[56px] min-h-[52px] justify-center">
+                <i class="fa-solid fa-house text-petal/40 text-[15px]"></i>
+                <span class="text-petal/40 text-[9px] font-sans font-light tracking-wide">Home</span>
+            </button>
+            <button id="nav-workout" class="nav-tab flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[56px] min-h-[52px] justify-center" style="background: rgba(201,137,122,0.2); border: 1px solid rgba(201,137,122,0.3);">
+                <i class="fa-solid fa-dumbbell text-rose text-[15px]"></i>
+                <span class="text-rose text-[9px] font-sans font-medium tracking-wide">Workouts</span>
+            </button>
+            <button id="nav-calorie" class="nav-tab flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[56px] min-h-[52px] justify-center">
+                <i class="fa-solid fa-brain text-petal/40 text-[15px]"></i>
+                <span class="text-petal/40 text-[9px] font-sans font-light tracking-wide">Calories</span>
+            </button>
+            <button id="nav-water" class="nav-tab flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[56px] min-h-[52px] justify-center">
+                <i class="fa-solid fa-droplet text-petal/40 text-[15px]"></i>
+                <span class="text-petal/40 text-[9px] font-sans font-light tracking-wide">Water</span>
+            </button>
+            <button id="nav-profile" class="nav-tab flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[56px] min-h-[52px] justify-center">
+                <i class="fa-regular fa-user text-petal/40 text-[15px]"></i>
+                <span class="text-petal/40 text-[9px] font-sans font-light tracking-wide">Profile</span>
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const navButtons = ['nav-dashboard', 'nav-workout', 'nav-calorie', 'nav-water', 'nav-profile'];
+    navButtons.forEach(id => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        btn.addEventListener('click', function() {
+            navButtons.forEach(nid => {
+                const nb = document.getElementById(nid);
+                if (!nb) return;
+                nb.style.background = 'transparent';
+                nb.style.border = 'none';
+                nb.querySelectorAll('i').forEach(i => { i.style.color = 'rgba(247,235,232,0.4)'; });
+                nb.querySelectorAll('span').forEach(s => { s.style.color = 'rgba(247,235,232,0.4)'; s.style.fontWeight = '300'; });
+            });
+            this.style.background = 'rgba(201,137,122,0.2)';
+            this.style.border = '1px solid rgba(201,137,122,0.3)';
+            this.querySelectorAll('i').forEach(i => { i.style.color = '#C9897A'; });
+            this.querySelectorAll('span').forEach(s => { s.style.color = '#C9897A'; s.style.fontWeight = '500'; });
+        });
+    });
+
+    let isPlaying = true;
+    const playIcon = document.getElementById('play-icon');
+    const playPauseBtn = document.getElementById('play-pause-btn');
+
+    playPauseBtn.addEventListener('click', function() {
+        isPlaying = !isPlaying;
+        if (isPlaying) {
+            playIcon.classList.remove('fa-play');
+            playIcon.classList.add('fa-pause');
+        } else {
+            playIcon.classList.remove('fa-pause');
+            playIcon.classList.add('fa-play');
+        }
+    });
+
+    const tabExercises = document.getElementById('tab-exercises');
+    const tabGuidance = document.getElementById('tab-guidance');
+    const tabProgress = document.getElementById('tab-progress');
+    const exercisesContent = document.getElementById('exercises-tab-content');
+    const guidanceContent = document.getElementById('guidance-tab-content');
+    const progressContent = document.getElementById('progress-tab-content');
+
+    function activateTab(activeTab, activeContent) {
+        [tabExercises, tabGuidance, tabProgress].forEach(t => {
+            t.style.background = 'transparent';
+            t.style.color = 'rgba(247,235,232,0.5)';
+            t.style.fontWeight = '300';
+        });
+        [exercisesContent, guidanceContent, progressContent].forEach(c => {
+            c.classList.add('hidden');
+        });
+        activeTab.style.background = 'linear-gradient(135deg, #F2D4CC 0%, #C9897A 100%)';
+        activeTab.style.color = '#2C2422';
+        activeTab.style.fontWeight = '500';
+        activeContent.classList.remove('hidden');
+    }
+
+    tabExercises.addEventListener('click', () => activateTab(tabExercises, exercisesContent));
+    tabGuidance.addEventListener('click', () => activateTab(tabGuidance, guidanceContent));
+    tabProgress.addEventListener('click', () => activateTab(tabProgress, progressContent));
+
+    const timelineTrack = document.getElementById('timeline-track');
+    const timelineFill = document.getElementById('timeline-fill');
+
+    timelineTrack.addEventListener('click', function(e) {
+        const rect = this.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const pct = Math.min(Math.max((x / rect.width) * 100, 0), 100);
+        timelineFill.style.width = pct + '%';
+        const totalSecs = 45 * 60;
+        const elapsed = Math.round((pct / 100) * totalSecs);
+        const mins = Math.floor(elapsed / 60);
+        const secs = elapsed % 60;
+        document.getElementById('current-time').textContent = mins + ':' + (secs < 10 ? '0' : '') + secs;
+    });
+
+    const favBtn = document.getElementById('fav-player-btn');
+    favBtn.addEventListener('click', function() {
+        const icon = this.querySelector('i');
+        if (icon.classList.contains('fa-solid')) {
+            icon.classList.remove('fa-solid');
+            icon.classList.add('fa-regular');
+            icon.style.color = 'rgba(247,235,232,0.5)';
+        } else {
+            icon.classList.remove('fa-regular');
+            icon.classList.add('fa-solid');
+            icon.style.color = '#C9897A';
+        }
+    });
+</script>
+
+</body>
+</html>

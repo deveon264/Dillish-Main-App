@@ -1,1 +1,1 @@
-- [Expo on Replit quirks](expo-replit-quirks.md) — SecureStore is a web no-op (use AsyncStorage on web); API routes need server output + EXPO_PUBLIC_DOMAIN on native; AI integration env/model rules; test via localhost not $REPLIT_DEV_DOMAIN.
+- [Expo on Replit quirks](expo-replit-quirks.md) — SecureStore/AsyncStorage, API routes, AI integration env+model rules, localhost testing, benign log noise.

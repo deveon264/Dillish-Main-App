@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Onboarding</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        * { -webkit-tap-highlight-color: transparent; }
+        .cta-btn:active { transform: scale(0.97); }
+        .water-btn:active { transform: scale(0.94); }
+        .preset-card { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+        .preset-card.selected { border-color: rgba(201,137,122,0.75); background: rgba(201,137,122,0.13); }
+        .preset-card:active { transform: scale(0.97); }
+        .droplet-fill { transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        .wave-anim { animation: waveMove 3s linear infinite; }
+        @keyframes waveMove {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        .tip-card { background: rgba(242,212,204,0.07); border: 1px solid rgba(242,212,204,0.12); }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        serif: ['Cormorant Garamond', 'serif'],
+                        sans: ['DM Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        blush: '#F2D4CC',
+                        rose: '#C9897A',
+                        petal: '#F7EBE8',
+                        mauve: '#9B6E6A',
+                        cream: '#FAF6F3',
+                        charcoal: '#2C2422',
+                        mist: '#E8DDD9',
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-charcoal font-sans flex justify-center items-start min-h-screen">
+
+    <div id="hydration-screen" class="relative w-full max-w-[375px] mx-auto overflow-hidden flex flex-col" style="height: 840px; background: linear-gradient(160deg, #2C2422 0%, #1e1614 60%, #2C2422 100%);">
+
+        <div class="absolute inset-0 pointer-events-none" style="background: radial-gradient(ellipse at 80% 10%, rgba(242,212,204,0.07) 0%, transparent 55%), radial-gradient(ellipse at 10% 90%, rgba(201,137,122,0.05) 0%, transparent 50%);"></div>
+
+        <div id="top-bar" class="relative z-20 flex items-center justify-between px-6 pt-12 pb-3">
+            <div id="logo-mark" class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-full border border-blush/60 flex items-center justify-center">
+                    <i class="fa-solid fa-leaf text-blush text-[10px]"></i>
+                </div>
+                <span class="font-serif text-petal text-lg font-light tracking-[0.12em]">florish</span>
+            </div>
+            <button id="skip-btn" class="text-petal/50 text-sm font-sans font-light tracking-widest uppercase py-2 px-1 min-h-[44px] flex items-center">
+                Skip
+            </button>
+        </div>
+
+        <div id="progress-indicator" class="relative z-20 flex items-center justify-center gap-[6px] px-6 mb-5">
+            <div class="h-[2px] flex-1 rounded-full bg-petal/30"></div>
+            <div class="h-[2px] flex-1 rounded-full bg-petal/30"></div>
+            <div class="h-[2px] flex-1 rounded-full bg-petal/30"></div>
+            <div class="h-[2px] flex-1 rounded-full bg-petal/30"></div>
+            <div class="h-[2px] flex-1 rounded-full bg-petal/90"></div>
+            <div class="h-[2px] flex-1 rounded-full bg-petal/25"></div>
+        </div>
+
+        <div id="main-content" class="relative z-10 flex flex-col flex-1 px-6 overflow-y-auto pb-2">
+
+            <div id="header-block" class="mb-5">
+                <p class="text-blush/70 text-[11px] font-sans font-light tracking-[0.28em] uppercase mb-2">Step 5 of 6</p>
+                <h2 class="font-serif text-petal font-light leading-tight mb-1.5" style="font-size: 30px;">
+                    Set your daily<br/><em class="italic text-blush font-light">hydration goal</em>
+                </h2>
+                <p class="text-petal/45 text-[13px] font-sans font-light leading-relaxed">Staying hydrated powers your performance and glows your skin.</p>
+            </div>
+
+            <div id="droplet-visual" class="flex flex-col items-center mb-6">
+                <div class="relative flex items-center justify-center" style="width: 110px; height: 130px;">
+                    <svg viewBox="0 0 100 120" width="110" height="130" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <clipPath id="dropletClip">
+                                <path d="M50 5 C50 5, 10 55, 10 80 C10 102 28 115 50 115 C72 115 90 102 90 80 C90 55 50 5 50 5 Z"/>
+                            </clipPath>
+                            <linearGradient id="waterGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" style="stop-color:rgba(201,137,122,0.85);stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:rgba(155,110,106,0.9);stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M50 5 C50 5, 10 55, 10 80 C10 102 28 115 50 115 C72 115 90 102 90 80 C90 55 50 5 50 5 Z" fill="rgba(247,235,232,0.06)" stroke="rgba(242,212,204,0.25)" stroke-width="1.5"/>
+                        <g clip-path="url(#dropletClip)">
+                            <rect id="water-fill" x="10" y="50" width="80" height="65" fill="url(#waterGrad)" opacity="0.88"/>
+                            <g class="wave-anim">
+                                <path d="M-10 50 Q5 44 20 50 Q35 56 50 50 Q65 44 80 50 Q95 56 110 50 Q125 44 140 50 L140 120 L-10 120 Z" fill="rgba(201,137,122,0.5)"/>
+                            </g>
+                        </g>
+                        <text x="50" y="76" text-anchor="middle" font-family="Cormorant Garamond, serif" font-size="18" font-weight="300" fill="rgba(247,235,232,0.95)" id="droplet-label">2.0</text>
+                        <text x="50" y="90" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="8" font-weight="300" fill="rgba(247,235,232,0.5)" letter-spacing="1">litres</text>
+                    </svg>
+                </div>
+                <p class="text-petal/40 text-[11px] font-sans font-light tracking-[0.18em] uppercase mt-1">Daily target</p>
+            </div>
+
+            <div id="stepper-control" class="flex items-center justify-center gap-5 mb-6">
+                <button id="decrease-btn" class="water-btn w-[52px] h-[52px] min-w-[52px] rounded-2xl border border-petal/15 flex items-center justify-center transition-all active:scale-95" style="background: rgba(247,235,232,0.06);" onclick="adjustWater(-0.25)">
+                    <i class="fa-solid fa-minus text-petal/60 text-sm"></i>
+                </button>
+                <div class="flex flex-col items-center min-w-[100px]">
+                    <div class="flex items-end gap-1">
+                        <span id="water-value" class="font-serif text-petal font-light" style="font-size: 44px; line-height: 1;">2.0</span>
+                        <span class="text-petal/45 text-[15px] font-sans font-light mb-2">L</span>
+                    </div>
+                    <span class="text-petal/35 text-[11px] font-sans font-light tracking-[0.15em] uppercase">per day</span>
+                </div>
+                <button id="increase-btn" class="water-btn w-[52px] h-[52px] min-w-[52px] rounded-2xl flex items-center justify-center transition-all active:scale-95" style="background: linear-gradient(135deg, rgba(242,212,204,0.25) 0%, rgba(201,137,122,0.2) 100%); border: 1px solid rgba(201,137,122,0.35);" onclick="adjustWater(0.25)">
+                    <i class="fa-solid fa-plus text-blush text-sm"></i>
+                </button>
+            </div>
+
+            <div id="preset-section" class="mb-5">
+                <p class="text-petal/45 text-[11px] font-sans font-light tracking-[0.22em] uppercase mb-2.5">Quick Presets</p>
+                <div class="flex gap-2">
+                    <button class="preset-card flex-1 min-h-[52px] rounded-2xl border border-petal/12 flex flex-col items-center justify-center gap-0.5 transition-all" style="background: rgba(247,235,232,0.05);" onclick="setPreset(1.5, this)">
+                        <span class="text-petal text-[15px] font-serif font-light">1.5L</span>
+                        <span class="text-petal/35 text-[10px] font-sans font-light">Light</span>
+                    </button>
+                    <button class="preset-card flex-1 min-h-[52px] rounded-2xl border border-petal/12 flex flex-col items-center justify-center gap-0.5 transition-all selected" style="background: rgba(247,235,232,0.05);" onclick="setPreset(2.0, this)">
+                        <span class="text-petal text-[15px] font-serif font-light">2.0L</span>
+                        <span class="text-petal/35 text-[10px] font-sans font-light">Moderate</span>
+                    </button>
+                    <button class="preset-card flex-1 min-h-[52px] rounded-2xl border border-petal/12 flex flex-col items-center justify-center gap-0.5 transition-all" style="background: rgba(247,235,232,0.05);" onclick="setPreset(2.5, this)">
+                        <span class="text-petal text-[15px] font-serif font-light">2.5L</span>
+                        <span class="text-petal/35 text-[10px] font-sans font-light">Active</span>
+                    </button>
+                    <button class="preset-card flex-1 min-h-[52px] rounded-2xl border border-petal/12 flex flex-col items-center justify-center gap-0.5 transition-all" style="background: rgba(247,235,232,0.05);" onclick="setPreset(3.0, this)">
+                        <span class="text-petal text-[15px] font-serif font-light">3.0L</span>
+                        <span class="text-petal/35 text-[10px] font-sans font-light">Intense</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="tip-block" class="tip-card rounded-2xl px-4 py-3.5 flex items-start gap-3 mb-2">
+                <div class="w-8 h-8 min-w-[32px] rounded-xl flex items-center justify-center mt-0.5" style="background: rgba(201,137,122,0.18);">
+                    <i class="fa-solid fa-droplet text-rose text-[12px]"></i>
+                </div>
+                <div class="flex flex-col gap-0.5">
+                    <span class="text-blush text-[12px] font-sans font-medium tracking-wide">Hydration tip</span>
+                    <span class="text-petal/45 text-[12px] font-sans font-light leading-relaxed">Drinking enough water supports metabolism, reduces cravings, and keeps energy levels steady throughout your day.</span>
+                </div>
+            </div>
+
+        </div>
+
+        <div id="bottom-actions" class="relative z-20 px-6 pb-10 pt-3" style="background: linear-gradient(to top, #1e1614 70%, transparent 100%);">
+            <div class="flex items-center gap-3">
+                <button id="back-btn" class="min-w-[54px] min-h-[54px] rounded-2xl border border-petal/15 bg-white/5 flex items-center justify-center transition-all active:scale-95">
+                    <i class="fa-solid fa-arrow-left text-petal/60 text-sm"></i>
+                </button>
+                <button id="next-btn" class="cta-btn flex-1 min-h-[54px] rounded-2xl flex items-center justify-center gap-3 font-sans font-medium tracking-wide text-charcoal text-[15px] transition-all" style="background: linear-gradient(135deg, #F2D4CC 0%, #C9897A 100%);">
+                    <span>Continue</span>
+                    <i class="fa-solid fa-arrow-right text-charcoal/80 text-sm"></i>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let waterGoal = 2.0;
+        const minWater = 0.5;
+        const maxWater = 5.0;
+
+        function updateDisplay() {
+            const val = waterGoal.toFixed(1);
+            document.getElementById('water-value').textContent = val;
+            document.getElementById('droplet-label').textContent = val;
+
+            const fillPercent = (waterGoal - minWater) / (maxWater - minWater);
+            const fillY = 115 - (fillPercent * 65);
+            const fillHeight = fillPercent * 65 + 5;
+            const waterFill = document.getElementById('water-fill');
+            if (waterFill) {
+                waterFill.setAttribute('y', fillY);
+                waterFill.setAttribute('height', fillHeight + 10);
+            }
+        }
+
+        function adjustWater(delta) {
+            waterGoal = Math.max(minWater, Math.min(maxWater, waterGoal + delta));
+            waterGoal = Math.round(waterGoal * 4) / 4;
+            updateDisplay();
+            clearPresetSelection();
+
+            const presets = [1.5, 2.0, 2.5, 3.0];
+            const cards = document.querySelectorAll('.preset-card');
+            presets.forEach((p, i) => {
+                if (Math.abs(p - waterGoal) < 0.01) {
+                    cards[i].classList.add('selected');
+                }
+            });
+        }
+
+        function clearPresetSelection() {
+            document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('selected'));
+        }
+
+        function setPreset(value, btn) {
+            waterGoal = value;
+            clearPresetSelection();
+            btn.classList.add('selected');
+            updateDisplay();
+        }
+
+        updateDisplay();
+    </script>
+
+</body>
+</html>
