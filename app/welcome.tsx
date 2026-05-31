@@ -21,7 +21,7 @@ export default function Welcome() {
 
   return (
     <ImageBackground
-      source={require("@/assets/images/photos/welcomehero.jpg")}
+      source={require("@/assets/images/photos/welcomehero.png")}
       style={styles.bg}
       resizeMode="cover"
     >
