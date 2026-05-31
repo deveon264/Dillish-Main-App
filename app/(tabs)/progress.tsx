@@ -23,6 +23,14 @@ const TABS = [
 const M = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const fmtDay = (d: Date) => `${M[d.getMonth()]} ${d.getDate()}`;
+const fmtLogDate = (d: Date) => {
+  const now = new Date();
+  const sameDay =
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate();
+  return sameDay ? "Today" : fmtDay(d);
+};
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const fmtDateInput = (d: Date) => `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
@@ -280,24 +288,36 @@ export default function Progress() {
               </Card>
             ) : (
               <View style={{ gap: 10 }}>
-                {sortedDesc.slice(0, 10).map((l) => (
-                  <Card key={l.id} style={styles.logRow}>
-                    <View style={styles.logLeft}>
-                      <View style={styles.logIcon}>
-                        <Ionicons name="scale-outline" size={18} color={colors.accent} />
+                {sortedDesc.slice(0, 10).map((l, i) => {
+                  const prev = sortedDesc[i + 1];
+                  const delta = prev ? l.weight - prev.weight : null;
+                  return (
+                    <Card key={l.id} style={styles.logRow}>
+                      <View style={styles.logLeft}>
+                        <View style={styles.logIcon}>
+                          <Ionicons name="scale-outline" size={18} color={colors.accent} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.logVal}>
+                            {l.weight.toFixed(1)} {unit}
+                          </Text>
+                          <Text style={styles.logDate}>{fmtLogDate(new Date(l.ts))}</Text>
+                        </View>
                       </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.logVal}>
-                          {l.weight.toFixed(1)} {unit}
-                        </Text>
-                        <Text style={styles.logDate}>{fmtDay(new Date(l.ts))}, {new Date(l.ts).getFullYear()}</Text>
+                      <View style={styles.logRight}>
+                        {delta != null && delta !== 0 ? (
+                          <Text style={styles.logDelta}>
+                            {delta > 0 ? "+" : ""}
+                            {delta.toFixed(1)} {unit}
+                          </Text>
+                        ) : null}
+                        <Pressable onPress={() => removeWeight(l.id)} hitSlop={10}>
+                          <Ionicons name="close-circle-outline" size={22} color={colors.mutedForeground} />
+                        </Pressable>
                       </View>
-                    </View>
-                    <Pressable onPress={() => removeWeight(l.id)} hitSlop={10}>
-                      <Ionicons name="close-circle-outline" size={22} color={colors.mutedForeground} />
-                    </Pressable>
-                  </Card>
-                ))}
+                    </Card>
+                  );
+                })}
               </View>
             )}
           </>
@@ -437,6 +457,8 @@ const styles = StyleSheet.create({
   },
   logVal: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
   logDate: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, marginTop: 2 },
+  logRight: { flexDirection: "row", alignItems: "center", gap: 10 },
+  logDelta: { fontFamily: fonts.sansSemibold, fontSize: 14, color: colors.danger },
 
   comingSoon: { marginTop: 18, alignItems: "center", paddingVertical: 48, gap: 8 },
   comingTitle: { fontFamily: fonts.serifSemibold, fontSize: 20, color: colors.foreground, marginTop: 6 },
