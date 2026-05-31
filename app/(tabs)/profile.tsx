@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, Switch, TextInput } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -205,11 +205,9 @@ export default function Profile() {
                     <Text style={styles.notifTitle}>{row.title}</Text>
                     <Text style={styles.notifSub}>{row.sub}</Text>
                   </View>
-                  <Switch
+                  <Toggle
                     value={notifs[row.key]}
                     onValueChange={(v) => setNotifs((prev) => ({ ...prev, [row.key]: v }))}
-                    trackColor={{ false: colors.track, true: colors.primary }}
-                    thumbColor={colors.foreground}
                   />
                 </View>
               </View>
@@ -453,6 +451,18 @@ export default function Profile() {
   );
 }
 
+function Toggle({ value, onValueChange }: { value: boolean; onValueChange: (v: boolean) => void }) {
+  return (
+    <Pressable
+      onPress={() => onValueChange(!value)}
+      hitSlop={6}
+      style={[styles.toggleTrack, value ? styles.toggleTrackOn : styles.toggleTrackOff]}
+    >
+      <View style={[styles.toggleThumb, value ? styles.toggleThumbOn : styles.toggleThumbOff]} />
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 20 },
   brand: { fontFamily: fonts.sansSemibold, fontSize: 11, letterSpacing: 3, color: colors.mutedForeground, marginBottom: 4 },
@@ -489,6 +499,12 @@ const styles = StyleSheet.create({
   acctRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 16, paddingHorizontal: 14 },
   acctLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
   acctLabel: { fontFamily: fonts.sansMedium, fontSize: 15, color: colors.foreground },
+  toggleTrack: { width: 52, height: 30, borderRadius: 15, padding: 3, justifyContent: "center" },
+  toggleTrackOn: { backgroundColor: colors.primary },
+  toggleTrackOff: { backgroundColor: "rgba(255,255,255,0.14)" },
+  toggleThumb: { width: 24, height: 24, borderRadius: 12, backgroundColor: "#FFFFFF" },
+  toggleThumbOn: { alignSelf: "flex-end" },
+  toggleThumbOff: { alignSelf: "flex-start" },
   lightPanel: {
     borderRadius: colors.radiusLg,
     padding: 14,
