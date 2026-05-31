@@ -1,4 +1,4 @@
-- [Exercise video streaming & admin uploads](exercise-video-streaming.md) — Range/206 + 416 matrix, 1-indexed PG substring, mock-auth header gating limit, Expo Router API TS casts.
+- [Exercise video streaming & admin uploads](exercise-video-streaming.md) — bytes in object storage (sidecar signed URLs, NOT @google-cloud SDK — won't bundle in Metro), Postgres key only, 302-to-GCS for Range, mock-auth header gating limit.
 - [Expo + Replit quirks](expo-replit-quirks.md) — SDK54 pinning, fonts, --tunnel, legacy-peer-deps.
 - [Profile header panel theming](profile-light-panel.md) — Profile header is dark "glass" matching the rest of the app.
 - [Streak/week math duplication](streak-week-math.md) — weekly-streak/week-day computation has copies that must stay in sync.

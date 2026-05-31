@@ -1,17 +1,21 @@
 ---
 name: Exercise video streaming & admin uploads
-description: Decisions/constraints for the Postgres-backed exercise video feature (Expo Router API routes).
+description: Decisions/constraints for the exercise video feature (object-storage bytes + Postgres metadata, Expo Router API routes).
 ---
 
 # Exercise video uploads & streaming
 
-Videos are stored as Postgres `bytea` (no object-storage skill exists in this env) and served via Expo Router API routes.
+Video **bytes live in Replit Object Storage**; Postgres `exercises` stores only the object path + metadata (title, description, cues, category, level, duration, video_mime, video_size). This is a hard architectural requirement — never put video bytes in Postgres.
+
+## Object storage via sidecar (NOT the @google-cloud/storage SDK)
+- **The `@google-cloud/storage` SDK does NOT bundle in Metro's Expo Router server runtime** — it fails at bundle time with `Cannot read properties of undefined (reading 'v1')`. Do not import it in `+api.ts` (or anything they import).
+- Instead talk to the Replit object-storage sidecar at `http://127.0.0.1:1106/object-storage/signed-object-url` with plain `fetch`: POST `{bucket_name, object_name, method, expires_at}` → `{signed_url}`. Upload = signed `PUT`, stream = signed `GET`, delete = signed `DELETE`. See `lib/objectStorageServer.ts`.
+- Object path format: `${PRIVATE_OBJECT_DIR}/exercise-videos/<uuid>`; parse `/bucket/object...` by splitting on `/`.
+- **Why:** keeps the heavy SDK out of the Metro bundle entirely; signed URLs do all the work.
 
 ## HTTP Range streaming (iOS/Safari requirement)
-- iOS/Safari will NOT play a `<video>` source unless the server honors `Range` and replies `206` with `Content-Range`/`Accept-Ranges`. Always implement Range.
-- Postgres `substring(video_data FROM $1 FOR $2)` is **1-indexed** — pass `start + 1` for the byte offset.
-- Range handler must: support suffix ranges (`bytes=-N` → last N bytes), return `416` + `Content-Range: bytes */<total>` for unsatisfiable/malformed/out-of-bounds ranges, and reject multi-range (`,`) with 416.
-- **How to apply:** any byte-serving endpoint backed by bytea needs the full Range matrix; verify with curl `Range:` headers (normal, suffix, unsatisfiable, malformed, multi-range) before declaring done.
+- iOS/Safari will NOT play a `<video>` source unless the server honors `Range` and replies `206`. With object storage this is **free**: the video endpoint just 302-redirects to the signed GCS GET URL, and GCS handles `Range`/`206` natively. Verified curl `Range: bytes=0-99` → `206` + `Content-Range`.
+- **How to apply:** don't re-implement Range when redirecting to GCS — let storage serve the bytes.
 
 ## Admin auth constraint (known limitation, not a bug to "fix" in scope)
 - This app uses **mock auth with no real server sessions**. The server can only gate admin-only routes by comparing a client-supplied `x-user-email` header against the admin email constant.

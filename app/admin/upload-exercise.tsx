@@ -37,6 +37,8 @@ export default function UploadExercise() {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [cues, setCues] = useState("");
+  const [duration, setDuration] = useState("");
   const [category, setCategory] = useState("Strength");
   const [level, setLevel] = useState("Beginner");
   const [asset, setAsset] = useState<(VideoAsset & { size?: number }) | null>(null);
@@ -93,8 +95,10 @@ export default function UploadExercise() {
       await uploadExercise({
         title: title.trim(),
         description: description.trim(),
+        cues: cues.trim(),
         category,
         level,
+        duration: duration.trim(),
         asset,
         email: user?.email ?? "",
       });
@@ -145,6 +149,25 @@ export default function UploadExercise() {
           value={description}
           onChangeText={setDescription}
           multiline
+        />
+
+        <Text style={styles.label}>Coaching cues</Text>
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          placeholder="Step-by-step cues members should follow…"
+          placeholderTextColor={colors.mutedForeground}
+          value={cues}
+          onChangeText={setCues}
+          multiline
+        />
+
+        <Text style={styles.label}>Duration</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g. 3 min · 12 reps each side"
+          placeholderTextColor={colors.mutedForeground}
+          value={duration}
+          onChangeText={setDuration}
         />
 
         <Text style={styles.label}>Category</Text>

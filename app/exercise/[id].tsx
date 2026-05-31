@@ -10,12 +10,14 @@ import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
 export default function ExercisePlayer() {
-  const { id, title, description, category, level } = useLocalSearchParams<{
+  const { id, title, description, cues, category, level, duration } = useLocalSearchParams<{
     id: string;
     title?: string;
     description?: string;
+    cues?: string;
     category?: string;
     level?: string;
+    duration?: string;
   }>();
   const router = useRouter();
   const insets = useInsets();
@@ -53,12 +55,26 @@ export default function ExercisePlayer() {
         <View style={styles.info}>
           {!!category && <Text style={styles.cat}>{String(category).toUpperCase()}</Text>}
           <Text style={styles.title}>{title || "Exercise"}</Text>
-          {!!level && (
-            <View style={styles.pill}>
-              <Text style={styles.pillText}>{level}</Text>
+          <View style={styles.metaRow}>
+            {!!level && (
+              <View style={styles.pill}>
+                <Text style={styles.pillText}>{level}</Text>
+              </View>
+            )}
+            {!!duration && (
+              <View style={styles.metaItem}>
+                <Ionicons name="time-outline" size={14} color={colors.muted} />
+                <Text style={styles.metaText}>{duration}</Text>
+              </View>
+            )}
+          </View>
+          {!!description && <Text style={styles.desc}>{description}</Text>}
+          {!!cues && (
+            <View style={styles.cuesBox}>
+              <Text style={styles.cuesLabel}>COACHING CUES</Text>
+              <Text style={styles.cuesText}>{cues}</Text>
             </View>
           )}
-          {!!description && <Text style={styles.desc}>{description}</Text>}
         </View>
       </ScrollView>
     </GradientBackground>
@@ -105,5 +121,19 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   pillText: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.muted },
+  metaRow: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 2 },
+  metaItem: { flexDirection: "row", alignItems: "center", gap: 5 },
+  metaText: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.muted },
   desc: { fontFamily: fonts.sans, fontSize: 15, color: colors.mutedForeground, lineHeight: 23, marginTop: 8 },
+  cuesBox: {
+    marginTop: 14,
+    backgroundColor: "rgba(201,137,122,0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(201,137,122,0.28)",
+    borderRadius: colors.radius,
+    padding: 16,
+    gap: 8,
+  },
+  cuesLabel: { fontFamily: fonts.sansSemibold, fontSize: 11, color: colors.accent, letterSpacing: 1.2 },
+  cuesText: { fontFamily: fonts.sans, fontSize: 15, color: colors.foreground, lineHeight: 23 },
 });

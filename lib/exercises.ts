@@ -5,8 +5,10 @@ export type UploadedExercise = {
   id: string;
   title: string;
   description: string;
+  cues: string;
   category: string;
   level: string;
+  duration: string;
   videoMime: string;
   videoSize: number;
   createdAt: number;
@@ -32,20 +34,24 @@ export async function listExercises(): Promise<UploadedExercise[]> {
 export async function uploadExercise(params: {
   title: string;
   description: string;
+  cues: string;
   category: string;
   level: string;
+  duration: string;
   asset: VideoAsset;
   email: string;
 }): Promise<UploadedExercise> {
-  const { title, description, category, level, asset, email } = params;
+  const { title, description, cues, category, level, duration, asset, email } = params;
   const name = asset.fileName || `exercise-${Date.now()}.mp4`;
   const type = asset.mimeType || "video/mp4";
 
   const form = new FormData();
   form.append("title", title);
   form.append("description", description);
+  form.append("cues", cues);
   form.append("category", category);
   form.append("level", level);
+  form.append("duration", duration);
 
   if (Platform.OS === "web") {
     const blob = await (await fetch(asset.uri)).blob();

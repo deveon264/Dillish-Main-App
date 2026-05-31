@@ -136,8 +136,10 @@ export default function ExerciseLibrary() {
                         id: item.id,
                         title: item.title,
                         description: item.description,
+                        cues: item.cues,
                         category: item.category,
                         level: item.level,
+                        duration: item.duration,
                       },
                     })
                   }
