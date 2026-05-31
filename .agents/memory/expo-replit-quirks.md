@@ -40,3 +40,14 @@ A `react-native-svg` bar chart (`<Svg>` with `<Defs>/<LinearGradient>/<Rect>/<Li
 
 ## Benign workflow noise
 "React Native DevTools ... libglib-2.0.so.0: cannot open shared object file" is an environment lib gap, not an app error — ignore it.
+
+## Expo Go (App Store) lags npm `latest` SDK — match the binary, not the tag
+The public Expo Go app only supports the SDK its store binary shipped with, which trails npm's `expo@latest`. A project on a too-new SDK fails on a physical phone with "Project is incompatible with this version of Expo Go" even when the user is on the newest Expo Go (other older-SDK projects still open fine). The web preview is unaffected.
+**Why:** npm can publish a new SDK (e.g. `latest`=56) days/weeks before the Expo Go store binary adds support, so the highest SDK Expo Go can actually run is usually `latest - 1`.
+**How to apply:** To make Expo Go work, downgrade to the newest Expo-Go-supported SDK. Pin `expo` to that SDK, then align EVERY other dep (react, react-dom, react-native, all `expo-*` and `react-native-*`) to the exact versions in that SDK's `node_modules/expo/bundledNativeModules.json` (extract from the npm tarball before installing). Drop SDK-only packages you don't actually use rather than chasing versions for them. Verify with `npx expo install --check`.
+
+## This Expo project requires legacy-peer-deps
+`npm install` fails with ERESOLVE (expo-router's nested `react-server-dom-webpack` wants a higher `react-dom` than the SDK pins). Keep a repo-root `.npmrc` with `legacy-peer-deps=true` so installs (and Replit's reconcile) succeed.
+
+## Don't try to delete `.cache/dotslash`
+The React Native DevTools binary is extracted there and the files are read-only (Replit-managed) — `rm -rf` fails with permission-denied. A Metro `ENOENT watch ...DevTools...resources` crash on startup is a stale half-extracted temp dir; just restart the workflow once the real extraction has completed (don't try to delete the cache).
