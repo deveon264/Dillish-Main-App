@@ -1,1 +1,1 @@
-- [Expo on Replit quirks](expo-replit-quirks.md) — SecureStore/AsyncStorage, API routes, AI integration env+model rules, localhost testing, benign log noise.
+- [Streak/week math duplication](streak-week-math.md) — weekly streak + Mon-start week-marks logic is copy-pasted in home and workout player; keep both in sync.

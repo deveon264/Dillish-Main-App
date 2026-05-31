@@ -9,17 +9,20 @@ import { GradientBackground } from "@/components/GradientBackground";
 import { Button } from "@/components/Button";
 import { getWorkout } from "@/constants/workouts";
 import { useData } from "@/contexts/DataContext";
+import { todayKey } from "@/lib/storage";
 import { useInsets } from "@/hooks/useInsets";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
 type Phase = "active" | "done";
 
+const WEEK_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
 export default function WorkoutPlayer() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useInsets();
-  const { completeWorkout } = useData();
+  const { completeWorkout, completions } = useData();
   const workout = getWorkout(id);
 
   const [phase, setPhase] = useState<Phase>("active");
@@ -108,6 +111,27 @@ export default function WorkoutPlayer() {
     const overall = totalSeconds > 0 ? elapsed / totalSeconds : 0;
     const overallPct = `${Math.round(overall * 100)}%` as const;
     const kcalBurned = Math.round(workout.kcal * overall);
+    const kcalPct = `${Math.round(overall * 100)}%` as const;
+    const bpm = 96 + Math.round(overall * 44);
+    const zone = bpm < 110 ? "Light" : bpm < 135 ? "Moderate" : "Intense";
+    const bpmPct = `${Math.min(100, Math.round(((bpm - 60) / 120) * 100))}%` as const;
+    const completionDays = new Set(completions.map((c) => todayKey(new Date(c.ts))));
+    const monday = new Date();
+    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+    const tkNow = todayKey();
+    const weekMarks = WEEK_LABELS.map((label, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const k = todayKey(d);
+      return { label, active: completionDays.has(k), isToday: k === tkNow };
+    });
+    let streak = 0;
+    const sd = new Date();
+    if (!completionDays.has(todayKey(sd))) sd.setDate(sd.getDate() - 1);
+    while (completionDays.has(todayKey(sd))) {
+      streak += 1;
+      sd.setDate(sd.getDate() - 1);
+    }
     const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
     const parts = workout.title.split(" ");
     const titleTail = parts.length > 1 ? parts.pop()! : "";
@@ -309,25 +333,106 @@ export default function WorkoutPlayer() {
             )}
 
             {tab === "progress" && (
-              <View style={{ marginTop: 18, gap: 12 }}>
-                <View style={styles.progressBarBg}>
-                  <LinearGradient
-                    colors={colors.gradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={[styles.progressBarFill, { width: overallPct }]}
-                  />
+              <View style={{ marginTop: 18, gap: 16 }}>
+                <View style={styles.guideCard}>
+                  <View style={styles.sessRow}>
+                    <Text style={styles.guideHeadText}>SESSION PROGRESS</Text>
+                    <Text style={styles.sessPct}>{Math.round(overall * 100)}%</Text>
+                  </View>
+                  <View style={[styles.progressBarBg, { marginTop: 14 }]}>
+                    <LinearGradient
+                      colors={colors.gradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={[styles.progressBarFill, { width: overallPct }]}
+                    />
+                  </View>
+                  <View style={[styles.sessRow, { marginTop: 12 }]}>
+                    <Text style={styles.sessMeta}>{fmt(elapsed)} elapsed</Text>
+                    <Text style={styles.sessMeta}>{fmt(Math.max(0, totalSeconds - elapsed))} remaining</Text>
+                  </View>
                 </View>
-                <Text style={styles.progressLabel}>
-                  {Math.round(overall * 100)}% complete · {index + 1} of {total} exercises
-                </Text>
+
+                <View style={{ flexDirection: "row", gap: 14 }}>
+                  <View style={[styles.guideCard, { flex: 1 }]}>
+                    <View style={styles.statHead}>
+                      <Ionicons name="flame-outline" size={15} color={colors.accent} />
+                      <Text style={styles.statHeadText}>Calories</Text>
+                    </View>
+                    <Text style={styles.statBig}>{kcalBurned}</Text>
+                    <Text style={styles.statSub}>of {workout.kcal} kcal</Text>
+                    <View style={[styles.miniBar, { marginTop: 12 }]}>
+                      <LinearGradient
+                        colors={colors.gradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={[styles.miniBarFill, { width: kcalPct }]}
+                      />
+                    </View>
+                  </View>
+                  <View style={[styles.guideCard, { flex: 1 }]}>
+                    <View style={styles.statHead}>
+                      <Ionicons name="heart-outline" size={15} color={colors.accent} />
+                      <Text style={styles.statHeadText}>Heart Rate</Text>
+                    </View>
+                    <Text style={styles.statBig}>{bpm}</Text>
+                    <Text style={styles.statSub}>bpm · {zone}</Text>
+                    <View style={[styles.miniBar, { marginTop: 12 }]}>
+                      <LinearGradient
+                        colors={colors.gradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={[styles.miniBarFill, { width: bpmPct }]}
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.guideCard}>
+                  <View style={styles.sessRow}>
+                    <Text style={styles.guideHeadText}>WEEKLY STREAK</Text>
+                    <Text style={styles.streakDaysText}>🔥 {streak} days</Text>
+                  </View>
+                  <View style={styles.weekRow}>
+                    {weekMarks.map((d, i) => (
+                      <View key={i} style={styles.weekCol}>
+                        <View
+                          style={[
+                            styles.weekDot,
+                            d.active && styles.weekDotDone,
+                            d.isToday && !d.active && styles.weekDotToday,
+                          ]}
+                        >
+                          {d.active ? (
+                            <Ionicons name="checkmark" size={16} color={colors.onPrimary} />
+                          ) : d.isToday ? (
+                            <Ionicons name="barbell" size={15} color={colors.onPrimary} />
+                          ) : (
+                            <Text style={styles.weekDash}>–</Text>
+                          )}
+                        </View>
+                        <Text style={[styles.weekLabel, d.isToday && styles.weekLabelToday]}>{d.label}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+
+                <View style={styles.guideCard}>
+                  <Text style={styles.completeHint}>Complete the session to log your progress</Text>
+                  <Pressable style={styles.completeBtn} onPress={finish}>
+                    <Ionicons name="flag" size={16} color={colors.onPrimary} />
+                    <Text style={styles.completeBtnText}>Mark as Complete</Text>
+                  </Pressable>
+                </View>
               </View>
             )}
 
-            <Pressable style={styles.endBtn} onPress={finish}>
-              <Ionicons name="stop" size={16} color={colors.accent} />
-              <Text style={styles.endBtnText}>End Session</Text>
-            </Pressable>
+            {tab !== "progress" && (
+              <Pressable style={styles.endBtn} onPress={finish}>
+                <Ionicons name="stop" size={16} color={colors.accent} />
+                <Text style={styles.endBtnText}>End Session</Text>
+              </Pressable>
+            )}
           </View>
         </ScrollView>
       </GradientBackground>
@@ -488,7 +593,44 @@ const styles = StyleSheet.create({
   cueRowText: { flex: 1, fontFamily: fonts.sans, fontSize: 14, color: colors.foreground, lineHeight: 21 },
   progressBarBg: { height: 10, borderRadius: 5, backgroundColor: colors.track, overflow: "hidden" },
   progressBarFill: { height: 10, borderRadius: 5 },
-  progressLabel: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.muted },
+  sessRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  sessPct: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.primary },
+  sessMeta: { fontFamily: fonts.sans, fontSize: 13, color: colors.muted },
+  statHead: { flexDirection: "row", alignItems: "center", gap: 7, marginBottom: 12 },
+  statHeadText: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.foreground },
+  statBig: { fontFamily: fonts.serifSemibold, fontSize: 32, color: colors.foreground },
+  statSub: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.muted, marginTop: 2 },
+  miniBar: { height: 6, borderRadius: 3, backgroundColor: colors.track, overflow: "hidden" },
+  miniBarFill: { height: 6, borderRadius: 3 },
+  streakDaysText: { fontFamily: fonts.sansSemibold, fontSize: 14, color: colors.accent },
+  weekRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 16 },
+  weekCol: { alignItems: "center", gap: 8 },
+  weekDot: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(247,235,232,0.08)",
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  weekDotDone: { backgroundColor: "rgba(201,137,122,0.30)", borderColor: "transparent" },
+  weekDotToday: { backgroundColor: colors.accent, borderColor: "transparent" },
+  weekDash: { fontFamily: fonts.sansMedium, fontSize: 16, color: colors.muted },
+  weekLabel: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.muted },
+  weekLabelToday: { color: colors.primary },
+  completeHint: { fontFamily: fonts.sans, fontSize: 14, color: colors.muted, textAlign: "center", marginBottom: 14 },
+  completeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    height: 54,
+    borderRadius: colors.radius,
+    backgroundColor: colors.primary,
+  },
+  completeBtnText: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.onPrimary },
   endBtn: {
     flexDirection: "row",
     alignItems: "center",
