@@ -119,7 +119,7 @@ export default function Dashboard() {
             <Text style={styles.greet}>{greeting().toUpperCase()}</Text>
             <View style={styles.nameRow}>
               <Text style={styles.name}>{firstName}</Text>
-              <Ionicons name="sparkles" size={18} color={colors.accent} style={{ marginLeft: 8 }} />
+              <Text style={{ fontSize: 18, marginLeft: 8 }}>🌸</Text>
             </View>
           </View>
           <Pressable style={styles.iconBtn} hitSlop={6}>
