@@ -41,7 +41,7 @@ export default function Welcome() {
             Bloom into{"\n"}your <Text style={styles.titleItalic}>best self</Text>
           </Text>
           <Text style={styles.subtitle}>
-            Mindful movement, nourishing habits, and gentle guidance — all in one beautiful space.
+            Mindful movement, nourishing habits, and gentle guidance all in one beautiful space.
           </Text>
 
           <View style={styles.trustRow}>
@@ -57,7 +57,7 @@ export default function Welcome() {
         </View>
 
         <View style={styles.actions}>
-          <Button label="Get Started" iconRight="arrow-forward" onPress={() => router.push("/(auth)/signup")} />
+          <Button label="Begin Your Journey" iconRight="arrow-forward" onPress={() => router.push("/(auth)/signup")} />
           <Pressable style={styles.signin} onPress={() => router.push("/(auth)/login")}>
             <Text style={styles.signinText}>
               Already have an account? <Text style={styles.signinLink}>Sign in</Text>
