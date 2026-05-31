@@ -267,12 +267,43 @@ export default function WorkoutPlayer() {
             )}
 
             {tab === "guidance" && (
-              <View style={{ marginTop: 16, gap: 8 }}>
-                <Text style={styles.guidanceName}>{current.name}</Text>
-                <Text style={styles.guidanceDetail}>{current.detail}</Text>
-                <View style={styles.cueBox}>
-                  <Ionicons name="bulb-outline" size={16} color={colors.accent} />
-                  <Text style={styles.cueText}>{current.cue}</Text>
+              <View style={{ marginTop: 18, gap: 16 }}>
+                <View style={styles.guideCard}>
+                  <View style={styles.guideHead}>
+                    <Ionicons name="information-circle-outline" size={15} color={colors.accent} />
+                    <Text style={styles.guideHeadText}>CURRENT EXERCISE</Text>
+                  </View>
+                  <Text style={styles.guideTitle}>
+                    {current.name.split(" ").slice(0, -1).join(" ")}
+                    {current.name.split(" ").length > 1 ? " " : ""}
+                    <Text style={styles.guideTitleItalic}>{current.name.split(" ").slice(-1)[0]}</Text>
+                  </Text>
+                  <Text style={styles.guideDesc}>{current.description}</Text>
+                </View>
+
+                <View style={styles.guideCard}>
+                  <View style={styles.guideHead}>
+                    <Ionicons name="list-outline" size={15} color={colors.accent} />
+                    <Text style={styles.guideHeadText}>KEY CUES</Text>
+                  </View>
+                  <View style={{ gap: 14, marginTop: 6 }}>
+                    {current.cues.map((c, i) => (
+                      <View key={i} style={styles.cueRow}>
+                        <View style={styles.cueNum}>
+                          <Text style={styles.cueNumText}>{i + 1}</Text>
+                        </View>
+                        <Text style={styles.cueRowText}>{c}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+
+                <View style={styles.guideCard}>
+                  <View style={styles.guideHead}>
+                    <Ionicons name="warning-outline" size={15} color={colors.accent} />
+                    <Text style={styles.guideHeadText}>MODIFICATIONS</Text>
+                  </View>
+                  <Text style={styles.guideDesc}>{current.modifications}</Text>
                 </View>
               </View>
             )}
@@ -439,10 +470,22 @@ const styles = StyleSheet.create({
   tabOn: { backgroundColor: colors.accent },
   tabText: { fontFamily: fonts.sansMedium, fontSize: 13.5, color: colors.muted },
   tabTextOn: { color: colors.onPrimary },
-  guidanceName: { fontFamily: fonts.serifSemibold, fontSize: 24, color: colors.foreground },
-  guidanceDetail: { fontFamily: fonts.sans, fontSize: 14, color: colors.muted },
-  cueBox: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.card, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 16, marginTop: 6 },
-  cueText: { flex: 1, fontFamily: fonts.sansMedium, fontSize: 14, color: colors.foreground },
+  guideCard: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: colors.radiusLg,
+    padding: 18,
+  },
+  guideHead: { flexDirection: "row", alignItems: "center", gap: 7, marginBottom: 12 },
+  guideHeadText: { fontFamily: fonts.sansSemibold, fontSize: 11.5, color: colors.accent, letterSpacing: 1.2 },
+  guideTitle: { fontFamily: fonts.serif, fontSize: 26, color: colors.foreground },
+  guideTitleItalic: { fontFamily: fonts.serifItalic, fontSize: 26, color: colors.foreground },
+  guideDesc: { fontFamily: fonts.sans, fontSize: 14.5, color: colors.muted, lineHeight: 22, marginTop: 8 },
+  cueRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  cueNum: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", marginTop: 1 },
+  cueNumText: { fontFamily: fonts.sansSemibold, fontSize: 12, color: colors.onPrimary },
+  cueRowText: { flex: 1, fontFamily: fonts.sans, fontSize: 14, color: colors.foreground, lineHeight: 21 },
   progressBarBg: { height: 10, borderRadius: 5, backgroundColor: colors.track, overflow: "hidden" },
   progressBarFill: { height: 10, borderRadius: 5 },
   progressLabel: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.muted },
