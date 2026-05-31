@@ -144,6 +144,21 @@ export default function Profile() {
     { key: "weekly", title: "Weekly Progress Report", sub: "Every Sunday evening" },
   ];
 
+  const isMetric = profile.weightUnit === "kg";
+  const PREF_ROWS = [
+    { key: "units", title: "Units", sub: isMetric ? "Metric (kg, cm)" : "Imperial (lbs, ft)", value: isMetric ? "Metric" : "Imperial" },
+    { key: "water", title: "Daily Water Goal", sub: `${profile.waterGoalMl.toLocaleString()} ml`, value: `${(profile.waterGoalMl / 1000).toFixed(1)} L` },
+    { key: "calorie", title: "Daily Calorie Goal", sub: `${profile.calorieGoal.toLocaleString()} kcal`, value: String(profile.calorieGoal) },
+    { key: "language", title: "Language", sub: "English", value: "EN" },
+  ];
+
+  const ACCOUNT_ROWS: { key: string; icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
+    { key: "password", icon: "lock-closed-outline", label: "Change Password" },
+    { key: "privacy", icon: "document-text-outline", label: "Privacy Policy" },
+    { key: "about", icon: "information-circle-outline", label: "About Florish" },
+    { key: "support", icon: "headset-outline", label: "Support" },
+  ];
+
   return (
     <GradientBackground>
       <ScrollView
@@ -199,6 +214,41 @@ export default function Profile() {
                 </View>
               </View>
             ))}
+
+            <Text style={styles.label}>PREFERENCES</Text>
+            <Card style={styles.settingsCard}>
+              {PREF_ROWS.map((row, i) => (
+                <View key={row.key}>
+                  {i > 0 ? <View style={styles.settingsDivider} /> : null}
+                  <Pressable style={styles.prefRow}>
+                    <View style={styles.prefLeft}>
+                      <Text style={styles.prefTitle}>{row.title}</Text>
+                      <Text style={styles.prefSub}>{row.sub}</Text>
+                    </View>
+                    <View style={styles.prefRight}>
+                      <Text style={styles.prefValue}>{row.value}</Text>
+                      <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
+                    </View>
+                  </Pressable>
+                </View>
+              ))}
+            </Card>
+
+            <Text style={styles.label}>ACCOUNT &amp; PRIVACY</Text>
+            <Card style={styles.settingsCard}>
+              {ACCOUNT_ROWS.map((row, i) => (
+                <View key={row.key}>
+                  {i > 0 ? <View style={styles.settingsDivider} /> : null}
+                  <Pressable style={styles.acctRow}>
+                    <View style={styles.acctLeft}>
+                      <Ionicons name={row.icon} size={20} color={colors.accent} />
+                      <Text style={styles.acctLabel}>{row.label}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
+                  </Pressable>
+                </View>
+              ))}
+            </Card>
           </>
         ) : (
         <>
@@ -428,6 +478,17 @@ const styles = StyleSheet.create({
   notifDivider: { height: 1, backgroundColor: colors.cardBorder },
   notifTitle: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
   notifSub: { fontFamily: fonts.sans, fontSize: 13, color: colors.mutedForeground, marginTop: 3 },
+  settingsCard: { paddingVertical: 4 },
+  settingsDivider: { height: 1, backgroundColor: colors.cardBorder, marginHorizontal: 14 },
+  prefRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 14, paddingHorizontal: 14 },
+  prefLeft: { flex: 1, paddingRight: 12 },
+  prefTitle: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
+  prefSub: { fontFamily: fonts.sans, fontSize: 12, color: colors.mutedForeground, marginTop: 2 },
+  prefRight: { flexDirection: "row", alignItems: "center", gap: 6 },
+  prefValue: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.mutedForeground },
+  acctRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 16, paddingHorizontal: 14 },
+  acctLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
+  acctLabel: { fontFamily: fonts.sansMedium, fontSize: 15, color: colors.foreground },
   lightPanel: {
     borderRadius: colors.radiusLg,
     padding: 14,
