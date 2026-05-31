@@ -43,8 +43,9 @@ A `react-native-svg` bar chart (`<Svg>` with `<Defs>/<LinearGradient>/<Rect>/<Li
 
 ## Expo Go (App Store) lags npm `latest` SDK — match the binary, not the tag
 The public Expo Go app only supports the SDK its store binary shipped with, which trails npm's `expo@latest`. A project on a too-new SDK fails on a physical phone with "Project is incompatible with this version of Expo Go" even when the user is on the newest Expo Go (other older-SDK projects still open fine). The web preview is unaffected.
-**Why:** npm can publish a new SDK (e.g. `latest`=56) days/weeks before the Expo Go store binary adds support, so the highest SDK Expo Go can actually run is usually `latest - 1`.
+**Why:** npm can publish new SDKs days/weeks before the Expo Go store binary adds support. The store binary can lag by TWO SDKs — observed: npm `latest`=56, but the App Store Expo Go only ran SDK 54 (both 55 and 56 were too new). Don't assume `latest - 1` is enough.
 **How to apply:** To make Expo Go work, downgrade to the newest Expo-Go-supported SDK. Pin `expo` to that SDK, then align EVERY other dep (react, react-dom, react-native, all `expo-*` and `react-native-*`) to the exact versions in that SDK's `node_modules/expo/bundledNativeModules.json` (extract from the npm tarball before installing). Drop SDK-only packages you don't actually use rather than chasing versions for them. Verify with `npx expo install --check`.
+**Verify which SDK the dev server advertises (don't guess from a phone screenshot):** `curl -s -H "Expo-Platform: ios" -H "Accept: application/expo+json,application/json" http://localhost:5000/` and read `runtimeVersion` — it's `exposdk:<X>.0.0`. If Expo Go still says "requires a newer version" after a downgrade, the store binary is older than that `<X>` → drop one more SDK.
 
 ## This Expo project requires legacy-peer-deps
 `npm install` fails with ERESOLVE (expo-router's nested `react-server-dom-webpack` wants a higher `react-dom` than the SDK pins). Keep a repo-root `.npmrc` with `legacy-peer-deps=true` so installs (and Replit's reconcile) succeed.
