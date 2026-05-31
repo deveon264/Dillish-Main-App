@@ -1,5 +1,5 @@
 import { getPool, ensureSchema } from "@/lib/db";
-import { isAdminEmail } from "@/constants/admin";
+import { requireAdmin } from "@/lib/adminAuth";
 import { uploadExerciseVideo, deleteObject } from "@/lib/objectStorageServer";
 
 function genId(): string {
@@ -42,8 +42,8 @@ export async function GET(): Promise<Response> {
 
 export async function POST(request: Request): Promise<Response> {
   try {
-    const email = request.headers.get("x-user-email");
-    if (!isAdminEmail(email)) {
+    const email = await requireAdmin(request);
+    if (!email) {
       return Response.json({ error: "Not authorized" }, { status: 403 });
     }
 
@@ -120,8 +120,8 @@ export async function POST(request: Request): Promise<Response> {
 
 export async function DELETE(request: Request): Promise<Response> {
   try {
-    const email = request.headers.get("x-user-email");
-    if (!isAdminEmail(email)) {
+    const email = await requireAdmin(request);
+    if (!email) {
       return Response.json({ error: "Not authorized" }, { status: 403 });
     }
     const id = new URL(request.url).searchParams.get("id");

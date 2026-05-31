@@ -39,9 +39,9 @@ export async function uploadExercise(params: {
   level: string;
   duration: string;
   asset: VideoAsset;
-  email: string;
+  token: string;
 }): Promise<UploadedExercise> {
-  const { title, description, cues, category, level, duration, asset, email } = params;
+  const { title, description, cues, category, level, duration, asset, token } = params;
   const name = asset.fileName || `exercise-${Date.now()}.mp4`;
   const type = asset.mimeType || "video/mp4";
 
@@ -63,7 +63,7 @@ export async function uploadExercise(params: {
 
   const resp = await fetch(`${getApiUrl()}/api/exercises`, {
     method: "POST",
-    headers: { "x-user-email": email },
+    headers: { Authorization: `Bearer ${token}` },
     body: form,
   });
   if (!resp.ok) {
@@ -80,10 +80,10 @@ export async function uploadExercise(params: {
   return data.item;
 }
 
-export async function deleteExercise(id: string, email: string): Promise<void> {
+export async function deleteExercise(id: string, token: string): Promise<void> {
   const resp = await fetch(`${getApiUrl()}/api/exercises?id=${encodeURIComponent(id)}`, {
     method: "DELETE",
-    headers: { "x-user-email": email },
+    headers: { Authorization: `Bearer ${token}` },
   });
   if (!resp.ok) throw new Error("Could not delete exercise");
 }

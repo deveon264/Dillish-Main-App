@@ -14,6 +14,7 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
 import { useInsets } from "@/hooks/useInsets";
 import { useAuth } from "@/contexts/AuthContext";
+import { AdminUnlock } from "@/components/AdminUnlock";
 import { listExercises, deleteExercise, UploadedExercise } from "@/lib/exercises";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
@@ -27,7 +28,7 @@ function formatSize(bytes: number): string {
 export default function ExerciseLibrary() {
   const router = useRouter();
   const insets = useInsets();
-  const { user, isAdmin } = useAuth();
+  const { isAdmin, adminUnlocked, adminToken } = useAuth();
   const [items, setItems] = useState<UploadedExercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +55,7 @@ export default function ExerciseLibrary() {
   const confirmDelete = (item: UploadedExercise) => {
     const run = async () => {
       try {
-        await deleteExercise(item.id, user?.email ?? "");
+        await deleteExercise(item.id, adminToken ?? "");
         setItems((prev) => prev.filter((i) => i.id !== item.id));
       } catch {
         if (Platform.OS === "web") window.alert("Could not delete this exercise.");
@@ -94,11 +95,17 @@ export default function ExerciseLibrary() {
           )}
         </View>
 
-        {isAdmin && (
+        {isAdmin && !adminUnlocked && (
+          <View style={{ marginTop: 18 }}>
+            <AdminUnlock />
+          </View>
+        )}
+
+        {adminUnlocked && (
           <View style={styles.adminNote}>
             <Ionicons name="shield-checkmark" size={15} color={colors.accent} />
             <Text style={styles.adminNoteText}>
-              You're signed in as the coach. Anything you upload here is visible to every member.
+              You're verified as the coach. Anything you upload here is visible to every member.
             </Text>
           </View>
         )}
@@ -160,7 +167,7 @@ export default function ExerciseLibrary() {
                     </View>
                   </View>
                 </Pressable>
-                {isAdmin && (
+                {adminUnlocked && (
                   <Pressable style={styles.delBtn} hitSlop={8} onPress={() => confirmDelete(item)}>
                     <Ionicons name="trash-outline" size={18} color={colors.muted} />
                   </Pressable>

@@ -17,6 +17,7 @@ import { GradientBackground } from "@/components/GradientBackground";
 import { Button } from "@/components/Button";
 import { useInsets } from "@/hooks/useInsets";
 import { useAuth } from "@/contexts/AuthContext";
+import { AdminUnlock } from "@/components/AdminUnlock";
 import { uploadExercise, VideoAsset } from "@/lib/exercises";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
@@ -33,7 +34,7 @@ function notify(title: string, message: string) {
 export default function UploadExercise() {
   const router = useRouter();
   const insets = useInsets();
-  const { user, isAdmin } = useAuth();
+  const { isAdmin, adminUnlocked, adminToken } = useAuth();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -53,6 +54,32 @@ export default function UploadExercise() {
           <Text style={styles.guardText}>This area is reserved for the Florish coach account.</Text>
           <Button label="Go Back" variant="outline" onPress={() => router.back()} style={{ marginTop: 20, width: 200 }} />
         </View>
+      </GradientBackground>
+    );
+  }
+
+  if (!adminUnlocked) {
+    return (
+      <GradientBackground>
+        <ScrollView
+          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 }]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.header}>
+            <Pressable style={styles.roundBtn} onPress={() => router.back()} hitSlop={8}>
+              <Ionicons name="chevron-back" size={22} color={colors.foreground} />
+            </Pressable>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.eyebrow}>COACH</Text>
+              <Text style={styles.title}>
+                Upload <Text style={styles.titleItalic}>Exercise</Text>
+              </Text>
+            </View>
+          </View>
+          <View style={{ marginTop: 24 }}>
+            <AdminUnlock />
+          </View>
+        </ScrollView>
       </GradientBackground>
     );
   }
@@ -100,7 +127,7 @@ export default function UploadExercise() {
         level,
         duration: duration.trim(),
         asset,
-        email: user?.email ?? "",
+        token: adminToken ?? "",
       });
       if (Platform.OS !== "web") Alert.alert("Uploaded", "Your exercise video is now live for all members.");
       router.back();

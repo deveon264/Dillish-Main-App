@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 import { getJSON, setJSON, genId } from "@/lib/storage";
 import { isAdminEmail } from "@/constants/admin";
+import { getAdminToken, unlockAdmin as unlockAdminRequest, clearAdminToken } from "@/lib/adminSession";
 
 export type User = {
   id: string;
@@ -20,10 +21,14 @@ type StoredUser = User & { password: string };
 type AuthContextType = {
   user: User | null;
   isAdmin: boolean;
+  adminUnlocked: boolean;
+  adminToken: string | null;
   loading: boolean;
   signup: (name: string, email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => Promise<void>;
+  unlockAdmin: (passcode: string) => Promise<{ ok: boolean; error?: string }>;
+  lockAdmin: () => Promise<void>;
   completeOnboarding: () => Promise<void>;
   updateUser: (patch: UserUpdate) => Promise<{ ok: boolean; error?: string }>;
 };
@@ -66,6 +71,7 @@ function publicUser(u: StoredUser): User {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [adminToken, setAdminToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const userIdRef = useRef<string | null>(null);
 
@@ -79,7 +85,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (id) {
         const users = await getJSON<StoredUser[]>(USERS_KEY, []);
         const found = users.find((u) => u.id === id);
-        if (found) setUser(publicUser(found));
+        if (found) {
+          setUser(publicUser(found));
+          if (isAdminEmail(found.email)) {
+            setAdminToken(await getAdminToken());
+          }
+        }
       }
       setLoading(false);
     })();
@@ -122,7 +133,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     await clearSession();
+    await clearAdminToken();
+    setAdminToken(null);
     setUser(null);
+  }, []);
+
+  const unlockAdmin = useCallback(async (passcode: string) => {
+    const res = await unlockAdminRequest(passcode.trim());
+    if (res.ok && res.token) {
+      setAdminToken(res.token);
+      return { ok: true };
+    }
+    return { ok: false, error: res.error };
+  }, []);
+
+  const lockAdmin = useCallback(async () => {
+    await clearAdminToken();
+    setAdminToken(null);
   }, []);
 
   const persistPatch = useCallback(async (patch: Partial<StoredUser>) => {
@@ -163,7 +190,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isAdmin: isAdminEmail(user?.email), loading, signup, login, logout, completeOnboarding, updateUser }}
+      value={{
+        user,
+        isAdmin: isAdminEmail(user?.email),
+        adminUnlocked: isAdminEmail(user?.email) && !!adminToken,
+        adminToken,
+        loading,
+        signup,
+        login,
+        logout,
+        unlockAdmin,
+        lockAdmin,
+        completeOnboarding,
+        updateUser,
+      }}
     >
       {children}
     </AuthContext.Provider>
