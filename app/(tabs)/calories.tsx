@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, Image, Platform, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, Image, Platform, ActivityIndicator, TextInput } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
@@ -23,6 +23,8 @@ type AnalysisResult = {
   fats: number;
 };
 
+type LogTab = "photo" | "text" | "scan";
+
 export default function Calories() {
   const insets = useInsets();
   const { profile, calorieLogs, addCalorie, deleteCalorie } = useData();
@@ -31,6 +33,12 @@ export default function Calories() {
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<LogTab>("photo");
+  const [mName, setMName] = useState("");
+  const [mKcal, setMKcal] = useState("");
+  const [mProtein, setMProtein] = useState("");
+  const [mCarbs, setMCarbs] = useState("");
+  const [mFats, setMFats] = useState("");
 
   const tk = todayKey();
   const todayLogs = useMemo(() => calorieLogs.filter((l) => todayKey(new Date(l.ts)) === tk), [calorieLogs, tk]);
@@ -49,6 +57,9 @@ export default function Calories() {
   const goalProtein = Math.round((profile.calorieGoal * 0.3) / 4);
   const goalCarbs = Math.round((profile.calorieGoal * 0.4) / 4);
   const goalFats = Math.round((profile.calorieGoal * 0.3) / 9);
+
+  const now = new Date();
+  const dateStr = `${now.toLocaleDateString("en-US", { weekday: "short" })}, ${now.getDate()} ${now.toLocaleDateString("en-US", { month: "short" })}`;
 
   const pickImage = async (fromCamera: boolean) => {
     setError(null);
@@ -128,7 +139,36 @@ export default function Calories() {
     reset();
   };
 
+  const saveManual = async () => {
+    const kcal = parseInt(mKcal, 10);
+    if (!mName.trim() || !kcal || kcal <= 0) {
+      setError("Add a name and calories to log a meal.");
+      return;
+    }
+    setError(null);
+    await addCalorie({
+      name: mName.trim(),
+      kcal,
+      protein: parseInt(mProtein, 10) || 0,
+      carbs: parseInt(mCarbs, 10) || 0,
+      fats: parseInt(mFats, 10) || 0,
+    });
+    setMName("");
+    setMKcal("");
+    setMProtein("");
+    setMCarbs("");
+    setMFats("");
+    if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
   const kcalPct = Math.min(1, totals.kcal / profile.calorieGoal);
+  const remaining = Math.max(0, profile.calorieGoal - totals.kcal);
+
+  const TABS: { key: LogTab; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+    { key: "photo", label: "Photo", icon: "camera-outline" },
+    { key: "text", label: "Text", icon: "create-outline" },
+    { key: "scan", label: "Scan", icon: "scan-outline" },
+  ];
 
   return (
     <GradientBackground>
@@ -136,14 +176,43 @@ export default function Calories() {
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 110 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>AI Nutrition</Text>
-        <Text style={styles.subtitle}>Snap your meal, we'll do the math.</Text>
+        <View style={styles.header}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.eyebrow}>AI POWERED</Text>
+            <Text style={styles.title}>
+              Calorie <Text style={styles.titleItalic}>Tracker</Text>
+            </Text>
+          </View>
+          <Pressable style={styles.headerBtn} hitSlop={6}>
+            <Ionicons name="help" size={18} color={colors.muted} />
+          </Pressable>
+          <View style={styles.avatar}>
+            <Ionicons name="person" size={20} color={colors.accent} />
+          </View>
+        </View>
 
-        <Card style={styles.summary}>
-          <ProgressRing size={104} strokeWidth={9} progress={kcalPct}>
-            <Text style={styles.ringValue}>{totals.kcal}</Text>
-            <Text style={styles.ringLabel}>/ {profile.calorieGoal}</Text>
-          </ProgressRing>
+        <Card style={styles.goalCard}>
+          <View style={styles.goalHead}>
+            <Text style={styles.cardEyebrow}>TODAY'S GOAL</Text>
+            <View style={styles.dateChip}>
+              <Ionicons name="calendar-outline" size={13} color={colors.muted} />
+              <Text style={styles.dateText}>{dateStr}</Text>
+            </View>
+          </View>
+
+          <View style={styles.goalMain}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.bigNum}>
+                {totals.kcal.toLocaleString()}
+                <Text style={styles.bigNumGoal}> / {profile.calorieGoal.toLocaleString()} kcal</Text>
+              </Text>
+              <Text style={styles.remaining}>{remaining.toLocaleString()} kcal remaining</Text>
+            </View>
+            <ProgressRing size={72} strokeWidth={7} progress={kcalPct}>
+              <Text style={styles.ringPct}>{Math.round(kcalPct * 100)}%</Text>
+            </ProgressRing>
+          </View>
+
           <View style={styles.macros}>
             <Macro label="Protein" value={totals.protein} goal={goalProtein} color={colors.protein} />
             <Macro label="Carbs" value={totals.carbs} goal={goalCarbs} color={colors.carbs} />
@@ -151,20 +220,28 @@ export default function Calories() {
           </View>
         </Card>
 
-        {!image ? (
-          <Card style={styles.scanCard}>
-            <View style={styles.scanIcon}>
-              <Ionicons name="sparkles" size={28} color={colors.accent} />
-            </View>
-            <Text style={styles.scanTitle}>Track with a photo</Text>
-            <Text style={styles.scanDesc}>
-              Take or upload a picture of your meal and our AI estimates calories and macros instantly.
-            </Text>
-            <Button label="Take Photo" icon="camera-outline" onPress={() => pickImage(true)} style={{ marginTop: 18 }} />
-            <Button label="Upload Photo" icon="image-outline" variant="outline" onPress={() => pickImage(false)} style={{ marginTop: 10 }} />
-          </Card>
-        ) : (
-          <Card style={{ marginTop: 22 }}>
+        <Text style={styles.section}>LOG A MEAL</Text>
+        <View style={styles.tabRow}>
+          {TABS.map((t) => {
+            const active = tab === t.key;
+            return (
+              <Pressable
+                key={t.key}
+                style={[styles.tab, active && styles.tabActive]}
+                onPress={() => {
+                  setTab(t.key);
+                  reset();
+                }}
+              >
+                <Ionicons name={t.icon} size={16} color={active ? colors.onPrimary : colors.muted} />
+                <Text style={[styles.tabLabel, { color: active ? colors.onPrimary : colors.muted }]}>{t.label}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {image ? (
+          <Card style={{ marginTop: 14 }}>
             <Image source={{ uri: image }} style={styles.preview} />
             {analyzing ? (
               <View style={styles.analyzing}>
@@ -194,16 +271,66 @@ export default function Calories() {
               </View>
             ) : null}
           </Card>
+        ) : tab === "text" ? (
+          <Card style={styles.textCard}>
+            <Text style={styles.fieldLabel}>Meal name</Text>
+            <TextInput
+              value={mName}
+              onChangeText={setMName}
+              placeholder="e.g. Greek yogurt bowl"
+              placeholderTextColor={colors.mutedForeground}
+              style={styles.input}
+            />
+            <Text style={styles.fieldLabel}>Calories</Text>
+            <TextInput
+              value={mKcal}
+              onChangeText={setMKcal}
+              placeholder="kcal"
+              placeholderTextColor={colors.mutedForeground}
+              keyboardType="number-pad"
+              style={styles.input}
+            />
+            <View style={styles.macroInputs}>
+              <View style={styles.macroInputCol}>
+                <Text style={styles.fieldLabel}>Protein</Text>
+                <TextInput value={mProtein} onChangeText={setMProtein} placeholder="g" placeholderTextColor={colors.mutedForeground} keyboardType="number-pad" style={styles.input} />
+              </View>
+              <View style={styles.macroInputCol}>
+                <Text style={styles.fieldLabel}>Carbs</Text>
+                <TextInput value={mCarbs} onChangeText={setMCarbs} placeholder="g" placeholderTextColor={colors.mutedForeground} keyboardType="number-pad" style={styles.input} />
+              </View>
+              <View style={styles.macroInputCol}>
+                <Text style={styles.fieldLabel}>Fats</Text>
+                <TextInput value={mFats} onChangeText={setMFats} placeholder="g" placeholderTextColor={colors.mutedForeground} keyboardType="number-pad" style={styles.input} />
+              </View>
+            </View>
+            {error ? <Text style={styles.formError}>{error}</Text> : null}
+            <Button label="Add to Diary" icon="add" onPress={saveManual} style={{ marginTop: 16 }} />
+          </Card>
+        ) : (
+          <Pressable onPress={() => pickImage(tab === "photo" ? Platform.OS !== "web" : false)}>
+            <Card style={styles.dropCard}>
+              <View style={styles.dropInner}>
+                <View style={styles.dropIcon}>
+                  <Ionicons name={tab === "photo" ? "camera" : "scan"} size={26} color={colors.accent} />
+                </View>
+                <Text style={styles.dropTitle}>
+                  {tab === "photo" ? "Tap to take a photo or upload" : "Tap to scan a meal photo"}
+                </Text>
+                <Text style={styles.dropDesc}>AI will recognize your food instantly</Text>
+              </View>
+            </Card>
+          </Pressable>
         )}
 
-        {!image && error ? (
+        {!image && error && tab !== "text" ? (
           <View style={styles.inlineError}>
             <Ionicons name="alert-circle" size={16} color={colors.primary} />
             <Text style={styles.inlineErrorText}>{error}</Text>
           </View>
         ) : null}
 
-        <Text style={styles.section}>Today's diary</Text>
+        <Text style={styles.diarySection}>Today's diary</Text>
         {todayLogs.length === 0 ? (
           <Card style={{ alignItems: "center", paddingVertical: 28 }}>
             <Ionicons name="restaurant-outline" size={32} color={colors.mutedForeground} />
@@ -243,10 +370,13 @@ function Macro({ label, value, goal, color }: { label: string; value: number; go
   return (
     <View style={styles.macroRow}>
       <View style={styles.macroHead}>
-        <Text style={styles.macroLabel}>{label}</Text>
-        <Text style={styles.macroValue}>{value}/{goal}g</Text>
+        <View style={styles.macroLabelWrap}>
+          <View style={[styles.macroDot, { backgroundColor: color }]} />
+          <Text style={styles.macroLabel}>{label}</Text>
+        </View>
+        <Text style={styles.macroValue}>{value}g / {goal}g</Text>
       </View>
-      <ProgressBar progress={goal ? value / goal : 0} color={color} height={6} style={{ marginTop: 5 }} />
+      <ProgressBar progress={goal ? value / goal : 0} color={color} height={6} style={{ marginTop: 6 }} />
     </View>
   );
 }
@@ -262,28 +392,97 @@ function ResultMacro({ label, value }: { label: string; value: number }) {
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 20 },
-  title: { fontFamily: fonts.serif, fontSize: 36, color: colors.foreground },
-  subtitle: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted, marginTop: 4 },
-  summary: { flexDirection: "row", alignItems: "center", gap: 18, marginTop: 20 },
-  ringValue: { fontFamily: fonts.serifSemibold, fontSize: 26, color: colors.foreground },
-  ringLabel: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, marginTop: -2 },
-  macros: { flex: 1, gap: 12 },
-  macroRow: {},
-  macroHead: { flexDirection: "row", justifyContent: "space-between" },
-  macroLabel: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.foreground },
-  macroValue: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted },
-  scanCard: { alignItems: "center", marginTop: 22, paddingVertical: 26 },
-  scanIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 20,
-    backgroundColor: "rgba(242,212,204,0.10)",
+  header: { flexDirection: "row", alignItems: "center", gap: 10 },
+  eyebrow: { fontFamily: fonts.sansMedium, fontSize: 11, letterSpacing: 2, color: colors.muted },
+  title: { fontFamily: fonts.serif, fontSize: 32, color: colors.foreground, marginTop: 2 },
+  titleItalic: { fontFamily: fonts.serifItalic, color: colors.accent },
+  headerBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 14,
   },
-  scanTitle: { fontFamily: fonts.serifSemibold, fontSize: 22, color: colors.foreground },
-  scanDesc: { fontFamily: fonts.sans, fontSize: 14, color: colors.muted, textAlign: "center", marginTop: 8, lineHeight: 21, paddingHorizontal: 10 },
+  avatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "rgba(242,212,204,0.12)",
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  goalCard: { marginTop: 20, padding: 20 },
+  goalHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  cardEyebrow: { fontFamily: fonts.sansMedium, fontSize: 11, letterSpacing: 1.5, color: colors.muted },
+  dateChip: { flexDirection: "row", alignItems: "center", gap: 6 },
+  dateText: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.muted },
+  goalMain: { flexDirection: "row", alignItems: "center", marginTop: 16 },
+  bigNum: { fontFamily: fonts.serifSemibold, fontSize: 40, color: colors.foreground },
+  bigNumGoal: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted },
+  remaining: { fontFamily: fonts.sans, fontSize: 13, color: colors.muted, marginTop: 4 },
+  ringPct: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.foreground },
+  macros: { gap: 14, marginTop: 22 },
+  macroRow: {},
+  macroHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  macroLabelWrap: { flexDirection: "row", alignItems: "center", gap: 8 },
+  macroDot: { width: 8, height: 8, borderRadius: 4 },
+  macroLabel: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.foreground },
+  macroValue: { fontFamily: fonts.sans, fontSize: 13, color: colors.muted },
+  section: { fontFamily: fonts.sansMedium, fontSize: 11, letterSpacing: 1.5, color: colors.muted, marginTop: 28, marginBottom: 12 },
+  tabRow: {
+    flexDirection: "row",
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: colors.radius,
+    padding: 4,
+    gap: 4,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 11,
+    borderRadius: 12,
+  },
+  tabActive: { backgroundColor: colors.accent },
+  tabLabel: { fontFamily: fonts.sansSemibold, fontSize: 13.5 },
+  dropCard: { marginTop: 14, paddingVertical: 36, borderStyle: "dashed", borderWidth: 1.5, borderColor: "rgba(242,212,204,0.30)" },
+  dropInner: { alignItems: "center" },
+  dropIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "rgba(242,212,204,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  dropTitle: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
+  dropDesc: { fontFamily: fonts.sans, fontSize: 13, color: colors.muted, marginTop: 6 },
+  textCard: { marginTop: 14, padding: 18 },
+  fieldLabel: { fontFamily: fonts.sansMedium, fontSize: 12.5, color: colors.muted, marginBottom: 6, marginTop: 12 },
+  input: {
+    backgroundColor: colors.cardElevated,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: Platform.OS === "ios" ? 13 : 10,
+    fontFamily: fonts.sans,
+    fontSize: 15,
+    color: colors.foreground,
+  },
+  macroInputs: { flexDirection: "row", gap: 10 },
+  macroInputCol: { flex: 1 },
+  formError: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.primary, marginTop: 12 },
   preview: { width: "100%", height: 200, borderRadius: colors.radius, marginBottom: 8 },
   analyzing: { alignItems: "center", paddingVertical: 20, gap: 12 },
   analyzingText: { fontFamily: fonts.sansMedium, fontSize: 15, color: colors.muted },
@@ -305,7 +504,7 @@ const styles = StyleSheet.create({
   errorText: { fontFamily: fonts.sans, fontSize: 14, color: colors.muted, textAlign: "center", marginTop: 8 },
   inlineError: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12 },
   inlineErrorText: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.foreground, flex: 1 },
-  section: { fontFamily: fonts.serif, fontSize: 22, color: colors.foreground, marginTop: 28, marginBottom: 14 },
+  diarySection: { fontFamily: fonts.serif, fontSize: 22, color: colors.foreground, marginTop: 28, marginBottom: 14 },
   emptyText: { fontFamily: fonts.sans, fontSize: 14, color: colors.muted, marginTop: 10 },
   logRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 },
   logThumb: { width: 48, height: 48, borderRadius: 12 },
