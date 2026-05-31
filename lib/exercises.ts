@@ -1,6 +1,11 @@
 import { Platform } from "react-native";
-import { uploadAsync, FileSystemUploadType } from "expo-file-system/legacy";
+import { createUploadTask, FileSystemUploadType } from "expo-file-system/legacy";
 import { getApiUrl } from "@/lib/api";
+
+// Reports upload progress as (bytesSent, bytesTotal). `total` may be 0 when the
+// platform can't report an expected size, in which case callers show an
+// indeterminate state.
+export type UploadProgress = (sent: number, total: number) => void;
 
 export type UploadedExercise = {
   id: string;
@@ -49,10 +54,27 @@ async function postBinary(
   endpoint: string,
   uri: string,
   contentType: string,
-  token: string
+  token: string,
+  onProgress?: UploadProgress
 ): Promise<{ status: number; body: string }> {
   if (Platform.OS === "web") {
     const blob = await (await fetch(uri)).blob();
+    // XMLHttpRequest is the only browser API that exposes upload progress; fall
+    // back to a plain fetch when no progress consumer is interested.
+    if (onProgress) {
+      return await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", endpoint);
+        xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+        xhr.setRequestHeader("Content-Type", contentType);
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) onProgress(e.loaded, e.total);
+        };
+        xhr.onload = () => resolve({ status: xhr.status, body: xhr.responseText });
+        xhr.onerror = () => reject(new Error("Network error during upload"));
+        xhr.send(blob);
+      });
+    }
     const resp = await fetch(endpoint, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": contentType },
@@ -60,11 +82,22 @@ async function postBinary(
     });
     return { status: resp.status, body: await resp.text() };
   }
-  const result = await uploadAsync(endpoint, uri, {
-    httpMethod: "POST",
-    uploadType: FileSystemUploadType.BINARY_CONTENT,
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": contentType },
-  });
+  // Native streams the file from disk; createUploadTask surfaces byte-level
+  // progress that uploadAsync alone does not.
+  const task = createUploadTask(
+    endpoint,
+    uri,
+    {
+      httpMethod: "POST",
+      uploadType: FileSystemUploadType.BINARY_CONTENT,
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": contentType },
+    },
+    onProgress
+      ? (data) => onProgress(data.totalBytesSent, data.totalBytesExpectedToSend)
+      : undefined
+  );
+  const result = await task.uploadAsync();
+  if (!result) throw new Error("Upload was cancelled");
   return { status: result.status, body: result.body };
 }
 
@@ -88,8 +121,10 @@ export async function uploadExercise(params: {
   asset: VideoAsset;
   poster?: PosterAsset | null;
   token: string;
+  onProgress?: UploadProgress;
 }): Promise<UploadedExercise> {
-  const { title, description, cues, category, level, duration, asset, poster, token } = params;
+  const { title, description, cues, category, level, duration, asset, poster, token, onProgress } =
+    params;
   const type = asset.mimeType || "video/mp4";
 
   // Metadata travels in query params so the video can be sent as the raw request
@@ -108,7 +143,8 @@ export async function uploadExercise(params: {
     `${getApiUrl()}/api/exercises?${qs}`,
     asset.uri,
     type,
-    token
+    token,
+    onProgress
   );
   if (status < 200 || status >= 300) {
     throw new Error(errorFrom(body, "Upload failed"));

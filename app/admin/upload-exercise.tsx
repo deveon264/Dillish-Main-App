@@ -49,6 +49,7 @@ export default function UploadExercise() {
   const [posterCustom, setPosterCustom] = useState(false);
   const [posterBusy, setPosterBusy] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<{ sent: number; total: number } | null>(null);
 
   if (!isAdmin) {
     return (
@@ -170,6 +171,7 @@ export default function UploadExercise() {
       return;
     }
     setBusy(true);
+    setProgress({ sent: 0, total: asset.size ?? 0 });
     try {
       await uploadExercise({
         title: title.trim(),
@@ -181,6 +183,7 @@ export default function UploadExercise() {
         asset,
         poster,
         token: adminToken ?? "",
+        onProgress: (sent, total) => setProgress({ sent, total }),
       });
       if (Platform.OS !== "web") Alert.alert("Uploaded", "Your exercise video is now live for all members.");
       router.back();
@@ -188,10 +191,16 @@ export default function UploadExercise() {
       notify("Upload failed", e?.message ?? "Please try again.");
     } finally {
       setBusy(false);
+      setProgress(null);
     }
   };
 
   const sizeLabel = asset?.size ? ` · ${(asset.size / (1024 * 1024)).toFixed(1)} MB` : "";
+  const mb = (bytes: number) => (bytes / (1024 * 1024)).toFixed(1);
+  const pct =
+    progress && progress.total > 0
+      ? Math.min(100, Math.round((progress.sent / progress.total) * 100))
+      : 0;
 
   return (
     <GradientBackground>
@@ -312,6 +321,28 @@ export default function UploadExercise() {
             : "Pick a video to auto-generate a poster, or choose your own."}
         </Text>
 
+        {busy && progress ? (
+          <View style={styles.progressCard}>
+            <View style={styles.progressHeader}>
+              <Text style={styles.progressLabel}>
+                {progress.total > 0 ? `Uploading… ${pct}%` : "Uploading…"}
+              </Text>
+              {progress.total > 0 ? (
+                <Text style={styles.progressBytes}>
+                  {mb(progress.sent)} / {mb(progress.total)} MB
+                </Text>
+              ) : null}
+            </View>
+            <View style={styles.progressTrack}>
+              {progress.total > 0 ? (
+                <View style={[styles.progressFill, { width: `${pct}%` }]} />
+              ) : (
+                <View style={[styles.progressFill, styles.progressFillIndeterminate]} />
+              )}
+            </View>
+          </View>
+        ) : null}
+
         <Pressable
           style={[styles.submit, busy && { opacity: 0.7 }]}
           onPress={submit}
@@ -411,6 +442,27 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   posterBtnText: { fontFamily: fonts.sansMedium, fontSize: 14, color: colors.foreground },
+  progressCard: {
+    marginTop: 30,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: colors.radius,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 10,
+  },
+  progressHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  progressLabel: { fontFamily: fonts.sansSemibold, fontSize: 14, color: colors.foreground },
+  progressBytes: { fontFamily: fonts.sans, fontSize: 13, color: colors.muted },
+  progressTrack: {
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: colors.cardBorder,
+    overflow: "hidden",
+  },
+  progressFill: { height: "100%", borderRadius: 999, backgroundColor: colors.accent },
+  progressFillIndeterminate: { width: "40%" },
   submit: {
     flexDirection: "row",
     alignItems: "center",
@@ -419,7 +471,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     borderRadius: colors.radius,
     paddingVertical: 16,
-    marginTop: 30,
+    marginTop: 16,
   },
   submitText: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.onPrimary },
   guard: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32, gap: 8 },
