@@ -7,7 +7,6 @@ import { Platform } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Button } from "@/components/Button";
-import { ProgressRing } from "@/components/ProgressRing";
 import { getWorkout } from "@/constants/workouts";
 import { useData } from "@/contexts/DataContext";
 import { useInsets } from "@/hooks/useInsets";
@@ -27,6 +26,7 @@ export default function WorkoutPlayer() {
   const [index, setIndex] = useState(0);
   const [remaining, setRemaining] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [tab, setTab] = useState<"exercises" | "guidance" | "progress">("exercises");
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const savedRef = useRef(false);
 
@@ -165,60 +165,181 @@ export default function WorkoutPlayer() {
   }
 
   if (phase === "active" && current) {
-    const progress = (current.seconds - remaining) / current.seconds;
+    const totalSeconds = workout.exercises.reduce((s, e) => s + e.seconds, 0);
+    const priorSeconds = workout.exercises.slice(0, index).reduce((s, e) => s + e.seconds, 0);
+    const elapsed = priorSeconds + (current.seconds - remaining);
+    const overall = totalSeconds > 0 ? elapsed / totalSeconds : 0;
+    const overallPct = `${Math.round(overall * 100)}%` as const;
+    const kcalBurned = Math.round(workout.kcal * overall);
+    const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+    const parts = workout.title.split(" ");
+    const titleTail = parts.length > 1 ? parts.pop()! : "";
+    const titleHead = parts.join(" ");
+
     return (
       <GradientBackground>
-        <View style={[styles.activeWrap, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24 }]}>
-          <View style={styles.activeHead}>
-            <Pressable onPress={() => router.back()} hitSlop={10}>
-              <Ionicons name="close" size={26} color={colors.foreground} />
-            </Pressable>
-            <Text style={styles.activeCount}>{index + 1} / {total}</Text>
-            <Pressable onPress={finish} hitSlop={10}>
-              <Text style={styles.skipAll}>End</Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.progressTrack}>
-            {workout.exercises.map((e, i) => (
-              <View
-                key={e.id}
-                style={[
-                  styles.progressSeg,
-                  { backgroundColor: i < index ? colors.accent : i === index ? colors.primary : colors.track },
-                ]}
-              />
-            ))}
-          </View>
-
-          <View style={styles.timerArea}>
-            <ProgressRing size={240} strokeWidth={12} progress={progress}>
-              <Text style={styles.timerValue}>{remaining}</Text>
-              <Text style={styles.timerUnit}>seconds</Text>
-            </ProgressRing>
-          </View>
-
-          <View style={styles.exInfo}>
-            <Text style={styles.activeName}>{current.name}</Text>
-            <Text style={styles.activeDetail}>{current.detail}</Text>
-            <View style={styles.cueBox}>
-              <Ionicons name="bulb-outline" size={16} color={colors.accent} />
-              <Text style={styles.cueText}>{current.cue}</Text>
+        <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 24 }} showsVerticalScrollIndicator={false}>
+          <ImageBackground source={workout.image} style={styles.player}>
+            <LinearGradient
+              colors={["rgba(44,36,34,0.5)", "rgba(44,36,34,0.2)", "rgba(44,36,34,0.85)"]}
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={[styles.playerTop, { marginTop: insets.top + 8 }]}>
+              <Pressable style={styles.roundBtn} onPress={() => router.back()} hitSlop={8}>
+                <Ionicons name="chevron-back" size={22} color={colors.foreground} />
+              </Pressable>
+              <View style={styles.nowPlaying}>
+                <Text style={styles.nowPlayingText}>NOW PLAYING</Text>
+              </View>
+              <Pressable style={styles.roundBtn} hitSlop={8}>
+                <Ionicons name="heart-outline" size={20} color={colors.foreground} />
+              </Pressable>
             </View>
-          </View>
 
-          <View style={styles.controls}>
-            <Pressable style={styles.ctrlSecondary} onPress={goPrev} disabled={index === 0}>
-              <Ionicons name="play-skip-back" size={22} color={index === 0 ? colors.mutedForeground : colors.foreground} />
-            </Pressable>
-            <Pressable style={styles.ctrlMain} onPress={() => setPaused((p) => !p)}>
-              <Ionicons name={paused ? "play" : "pause"} size={30} color={colors.onPrimary} />
-            </Pressable>
-            <Pressable style={styles.ctrlSecondary} onPress={goNext}>
-              <Ionicons name="play-skip-forward" size={22} color={colors.foreground} />
+            <View style={styles.playerControls}>
+              <Pressable style={styles.playerCtrl} onPress={goPrev} disabled={index === 0}>
+                <Ionicons name="play-skip-back" size={26} color={index === 0 ? colors.mutedForeground : colors.foreground} />
+              </Pressable>
+              <Pressable style={styles.playerPlay} onPress={() => setPaused((p) => !p)}>
+                <Ionicons name={paused ? "play" : "pause"} size={34} color={colors.foreground} />
+              </Pressable>
+              <Pressable style={styles.playerCtrl} onPress={goNext}>
+                <Ionicons name="play-skip-forward" size={26} color={colors.foreground} />
+              </Pressable>
+            </View>
+
+            <View style={styles.playerBar}>
+              <Text style={styles.playerTime}>{fmt(elapsed)}</Text>
+              <View style={styles.playerTrack}>
+                <View style={[styles.playerFill, { width: overallPct }]} />
+                <View style={[styles.playerThumb, { left: overallPct }]} />
+              </View>
+              <Text style={styles.playerTime}>{fmt(totalSeconds)}</Text>
+            </View>
+          </ImageBackground>
+
+          <View style={styles.info}>
+            <View style={styles.infoTop}>
+              <View style={styles.rowCenter}>
+                <View style={styles.catPill}>
+                  <Text style={styles.catPillText}>{workout.category.toUpperCase()}</Text>
+                </View>
+                <Text style={styles.levelText}>{workout.level.toUpperCase()}</Text>
+              </View>
+              <Pressable style={styles.shareBtn} hitSlop={8}>
+                <Ionicons name="share-social-outline" size={18} color={colors.foreground} />
+              </Pressable>
+            </View>
+
+            <View style={styles.titleRow}>
+              <Text style={styles.playerTitle}>
+                {titleHead}
+                {titleHead ? " " : ""}
+                <Text style={styles.playerTitleItalic}>{titleTail}</Text>
+              </Text>
+              <View style={styles.rating}>
+                <Ionicons name="star" size={14} color={colors.accent} />
+                <Text style={styles.ratingText}>4.9</Text>
+              </View>
+            </View>
+
+            <View style={styles.metaRow}>
+              <View style={styles.metaItem}>
+                <Ionicons name="time-outline" size={15} color={colors.muted} />
+                <Text style={styles.metaText2}>{workout.durationMin} min</Text>
+              </View>
+              <View style={styles.metaItem}>
+                <Ionicons name="flame-outline" size={15} color={colors.muted} />
+                <Text style={styles.metaText2}>{workout.kcal} kcal</Text>
+              </View>
+              <View style={styles.metaItem}>
+                <Ionicons name="person-outline" size={15} color={colors.muted} />
+                <Text style={styles.metaText2}>Florish</Text>
+              </View>
+            </View>
+
+            <View style={styles.statCards}>
+              <View style={styles.statCard}>
+                <Ionicons name="flame" size={18} color={colors.accent} />
+                <Text style={styles.statNum}>{kcalBurned}</Text>
+                <Text style={styles.statLbl}>kcal burned</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Ionicons name="time" size={18} color={colors.accent} />
+                <Text style={styles.statNum}>{fmt(elapsed)}</Text>
+                <Text style={styles.statLbl}>elapsed</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Ionicons name="list" size={18} color={colors.accent} />
+                <Text style={styles.statNum}>{index + 1}/{total}</Text>
+                <Text style={styles.statLbl}>exercises</Text>
+              </View>
+            </View>
+
+            <View style={styles.tabs}>
+              {(["exercises", "guidance", "progress"] as const).map((t) => (
+                <Pressable key={t} style={[styles.tab, tab === t && styles.tabOn]} onPress={() => setTab(t)}>
+                  <Text style={[styles.tabText, tab === t && styles.tabTextOn]}>
+                    {t.charAt(0).toUpperCase() + t.slice(1)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            {tab === "exercises" && (
+              <View style={{ gap: 10, marginTop: 16 }}>
+                {workout.exercises.map((e, i) => (
+                  <View key={e.id} style={[styles.exRow, i === index && styles.exRowActive]}>
+                    <View style={[styles.exNum, i < index && styles.exNumDone, i === index && styles.exNumActive]}>
+                      {i < index ? (
+                        <Ionicons name="checkmark" size={16} color={colors.onPrimary} />
+                      ) : (
+                        <Text style={[styles.exNumText, i === index && { color: colors.onPrimary }]}>{i + 1}</Text>
+                      )}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.exName}>{e.name}</Text>
+                      <Text style={styles.exDetail}>{e.detail}</Text>
+                    </View>
+                    <Text style={styles.exTime}>{e.seconds}s</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {tab === "guidance" && (
+              <View style={{ marginTop: 16, gap: 8 }}>
+                <Text style={styles.guidanceName}>{current.name}</Text>
+                <Text style={styles.guidanceDetail}>{current.detail}</Text>
+                <View style={styles.cueBox}>
+                  <Ionicons name="bulb-outline" size={16} color={colors.accent} />
+                  <Text style={styles.cueText}>{current.cue}</Text>
+                </View>
+              </View>
+            )}
+
+            {tab === "progress" && (
+              <View style={{ marginTop: 18, gap: 12 }}>
+                <View style={styles.progressBarBg}>
+                  <LinearGradient
+                    colors={colors.gradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[styles.progressBarFill, { width: overallPct }]}
+                  />
+                </View>
+                <Text style={styles.progressLabel}>
+                  {Math.round(overall * 100)}% complete · {index + 1} of {total} exercises
+                </Text>
+              </View>
+            )}
+
+            <Pressable style={styles.endBtn} onPress={finish}>
+              <Ionicons name="stop" size={16} color={colors.accent} />
+              <Text style={styles.endBtnText}>End Session</Text>
             </Pressable>
           </View>
-        </View>
+        </ScrollView>
       </GradientBackground>
     );
   }
@@ -302,23 +423,130 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     backgroundColor: "rgba(30,22,20,0.9)",
   },
-  activeWrap: { flex: 1, paddingHorizontal: 24 },
-  activeHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  activeCount: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
-  skipAll: { fontFamily: fonts.sansMedium, fontSize: 15, color: colors.accent },
-  progressTrack: { flexDirection: "row", gap: 4, marginTop: 20 },
-  progressSeg: { flex: 1, height: 4, borderRadius: 2 },
-  timerArea: { alignItems: "center", justifyContent: "center", flex: 1 },
-  timerValue: { fontFamily: fonts.serifLight, fontSize: 84, color: colors.foreground },
-  timerUnit: { fontFamily: fonts.sansMedium, fontSize: 14, color: colors.muted, marginTop: -8 },
-  exInfo: { alignItems: "center" },
-  activeName: { fontFamily: fonts.serifSemibold, fontSize: 30, color: colors.foreground, textAlign: "center" },
-  activeDetail: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted, marginTop: 4 },
-  cueBox: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.card, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 16, marginTop: 18 },
-  cueText: { fontFamily: fonts.sansMedium, fontSize: 14, color: colors.foreground },
-  controls: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 28, marginTop: 32 },
-  ctrlSecondary: { width: 56, height: 56, borderRadius: 28, borderWidth: 1, borderColor: colors.cardBorder, backgroundColor: colors.card, alignItems: "center", justifyContent: "center" },
-  ctrlMain: { width: 80, height: 80, borderRadius: 40, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
+  rowCenter: { flexDirection: "row", alignItems: "center", gap: 10 },
+  player: { height: 360, justifyContent: "space-between" },
+  playerTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20 },
+  roundBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "rgba(44,36,34,0.45)",
+    borderWidth: 1,
+    borderColor: "rgba(247,235,232,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  nowPlaying: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: "rgba(44,36,34,0.5)",
+    borderWidth: 1,
+    borderColor: "rgba(247,235,232,0.15)",
+  },
+  nowPlayingText: { fontFamily: fonts.sansSemibold, fontSize: 11, color: colors.foreground, letterSpacing: 1.5 },
+  playerControls: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 28 },
+  playerCtrl: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "rgba(44,36,34,0.4)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  playerPlay: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: "rgba(247,235,232,0.22)",
+    borderWidth: 1,
+    borderColor: "rgba(247,235,232,0.3)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  playerBar: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingBottom: 18 },
+  playerTime: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.foreground },
+  playerTrack: { flex: 1, height: 4, borderRadius: 2, backgroundColor: "rgba(247,235,232,0.25)", justifyContent: "center" },
+  playerFill: { height: 4, borderRadius: 2, backgroundColor: colors.accent },
+  playerThumb: {
+    position: "absolute",
+    width: 13,
+    height: 13,
+    borderRadius: 7,
+    backgroundColor: colors.foreground,
+    marginLeft: -6,
+  },
+  info: { paddingHorizontal: 24, paddingTop: 22 },
+  infoTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  catPill: { backgroundColor: colors.accent, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999 },
+  catPillText: { fontFamily: fonts.sansSemibold, fontSize: 10.5, color: colors.onPrimary, letterSpacing: 0.8 },
+  levelText: { fontFamily: fonts.sansMedium, fontSize: 11.5, color: colors.muted, letterSpacing: 1 },
+  shareBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 12 },
+  playerTitle: { flex: 1, fontFamily: fonts.serifSemibold, fontSize: 30, color: colors.foreground },
+  playerTitleItalic: { fontFamily: fonts.serifItalic, fontStyle: "italic", color: colors.foreground },
+  rating: { flexDirection: "row", alignItems: "center", gap: 4, marginLeft: 10 },
+  ratingText: { fontFamily: fonts.sansSemibold, fontSize: 14, color: colors.foreground },
+  metaRow: { flexDirection: "row", gap: 18, marginTop: 12, flexWrap: "wrap" },
+  metaText2: { fontFamily: fonts.sansMedium, fontSize: 13.5, color: colors.muted },
+  statCards: { flexDirection: "row", gap: 10, marginTop: 22 },
+  statCard: {
+    flex: 1,
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: colors.radius,
+    paddingVertical: 16,
+  },
+  statNum: { fontFamily: fonts.serifSemibold, fontSize: 22, color: colors.foreground },
+  statLbl: { fontFamily: fonts.sans, fontSize: 11, color: colors.muted },
+  tabs: {
+    flexDirection: "row",
+    gap: 4,
+    marginTop: 24,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: 999,
+    padding: 4,
+  },
+  tab: { flex: 1, alignItems: "center", paddingVertical: 11, borderRadius: 999 },
+  tabOn: { backgroundColor: colors.accent },
+  tabText: { fontFamily: fonts.sansMedium, fontSize: 13.5, color: colors.muted },
+  tabTextOn: { color: colors.onPrimary },
+  exRowActive: { borderColor: colors.accent },
+  exNumActive: { backgroundColor: colors.accent },
+  exNumDone: { backgroundColor: colors.accent },
+  guidanceName: { fontFamily: fonts.serifSemibold, fontSize: 24, color: colors.foreground },
+  guidanceDetail: { fontFamily: fonts.sans, fontSize: 14, color: colors.muted },
+  cueBox: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.card, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 16, marginTop: 6 },
+  cueText: { flex: 1, fontFamily: fonts.sansMedium, fontSize: 14, color: colors.foreground },
+  progressBarBg: { height: 10, borderRadius: 5, backgroundColor: colors.track, overflow: "hidden" },
+  progressBarFill: { height: 10, borderRadius: 5 },
+  progressLabel: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.muted },
+  endBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 26,
+    paddingVertical: 15,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.accent,
+  },
+  endBtnText: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.accent },
   doneIcon: { width: 96, height: 96, borderRadius: 48, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
   doneTitle: { fontFamily: fonts.serifSemibold, fontSize: 34, color: colors.foreground, marginTop: 24 },
   doneSub: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted, textAlign: "center", marginTop: 10, lineHeight: 23 },
