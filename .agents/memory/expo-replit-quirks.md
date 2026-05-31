@@ -22,5 +22,10 @@ gpt-5 family: NO `temperature`, and use `max_completion_tokens` (not `max_tokens
 `curl $REPLIT_DEV_DOMAIN/...` fails with exit 7 / HTTP 000 — outbound to the public domain is blocked from the sandbox shell.
 **How to apply:** Hit the dev server directly at `http://localhost:5000/...` instead.
 
+## Animations: prefer pure-View Animated transforms over SVG wrapped in Animated.View
+Wrapping `react-native-svg` (`<Svg>`/`<Path>`) inside an `Animated.View` crashed the screen at render on web (caught by ErrorBoundary; minified to `{}` so no usable message). Static SVG (e.g. `WaterDroplet`) is fine — the breakage is the Animated.View + SVG combo.
+**Why:** continuous water/wave animations are easy to reach for with animated SVG paths, but that combo is fragile in this RN 0.85 / react-native-web stack.
+**How to apply:** Build animated effects from plain `View`s with `Animated` transforms (e.g. the flowing-water look in `components/WaterCircle.tsx` uses two rotating rounded-squircle Views clipped to a circle, `useNativeDriver:false`). Reserve SVG for static shapes.
+
 ## Benign workflow noise
 "React Native DevTools ... libglib-2.0.so.0: cannot open shared object file" is an environment lib gap, not an app error — ignore it.

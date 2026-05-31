@@ -5,7 +5,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Card } from "@/components/Card";
-import { WaterDroplet } from "@/components/WaterDroplet";
+import { WaterCircle } from "@/components/WaterCircle";
 import { ProgressBar } from "@/components/ProgressBar";
 import { BarChart, BarDatum } from "@/components/BarChart";
 import { useAuth } from "@/contexts/AuthContext";
@@ -143,8 +143,8 @@ export default function Water() {
               </View>
               <View style={styles.hydrationBody}>
                 <View style={styles.dropWrap}>
-                  <WaterDroplet size={110} progress={pct} />
-                  <View style={styles.dropOverlay} pointerEvents="none">
+                  <WaterCircle size={110} progress={pct} />
+                  <View style={[styles.dropOverlay, { pointerEvents: "none" }]}>
                     <Text style={styles.dropL}>{(todayTotal / 1000).toFixed(1)}L</Text>
                     <Text style={styles.dropOf}>of {(goal / 1000).toFixed(1)}L</Text>
                   </View>
@@ -313,9 +313,9 @@ const styles = StyleSheet.create({
   dateText: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.muted },
   hydrationBody: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 14 },
   dropWrap: { width: 110, height: 110, alignItems: "center", justifyContent: "center" },
-  dropOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center" },
+  dropOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center", paddingTop: 22 },
   dropL: { fontFamily: fonts.serifSemibold, fontSize: 22, color: colors.foreground },
-  dropOf: { fontFamily: fonts.sans, fontSize: 11, color: colors.muted, marginTop: -2 },
+  dropOf: { fontFamily: fonts.sans, fontSize: 11, color: "rgba(247,235,232,0.85)", marginTop: -2 },
   hydrationInfo: { flex: 1, paddingLeft: 6 },
   bigRow: { flexDirection: "row", alignItems: "baseline" },
   bigNum: { fontFamily: fonts.sansBold, fontSize: 34, color: colors.foreground },
