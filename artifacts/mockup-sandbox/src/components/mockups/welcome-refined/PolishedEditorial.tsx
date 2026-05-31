@@ -32,9 +32,11 @@ export function PolishedEditorial() {
           <h1 className="font-serif text-[#F7EBE8] text-[40px] tracking-wide leading-none">
             Florish
           </h1>
-          <p className="font-serif italic text-[#C9897A] text-[18px] leading-tight -mt-1 ml-1">
-            by dillish
-          </p>
+          <span className="inline-flex items-center mt-2 ml-1 px-3 py-1 rounded-full bg-[#F7EBE8]/[0.08] border border-[#F2D4CC]/20 backdrop-blur-sm">
+            <span className="font-serif italic text-[#C9897A] text-[15px] leading-none">
+              by dillish
+            </span>
+          </span>
         </div>
 
         {/* Bottom: Copy & Actions */}

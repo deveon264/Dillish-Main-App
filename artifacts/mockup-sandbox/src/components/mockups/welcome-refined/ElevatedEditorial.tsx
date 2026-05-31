@@ -26,9 +26,11 @@ export function ElevatedEditorial() {
           <h1 className="font-serif text-[#F7EBE8] text-[2.75rem] tracking-wide leading-none">
             Florish
           </h1>
-          <p className="font-sans font-semibold tracking-[0.15em] text-[#C9897A] text-[9px] mt-1 ml-1 uppercase">
-            By Dillish
-          </p>
+          <span className="inline-flex items-center mt-2 ml-1 px-3 py-1 rounded-full bg-[#F7EBE8]/[0.08] border border-[#F2D4CC]/20 backdrop-blur-sm">
+            <span className="font-sans font-semibold tracking-[0.15em] text-[#C9897A] text-[9px] uppercase leading-none">
+              By Dillish
+            </span>
+          </span>
         </div>
 
         {/* Bottom Panel */}
