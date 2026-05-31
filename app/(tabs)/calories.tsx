@@ -38,11 +38,7 @@ export default function Calories() {
   const [qty, setQty] = useState(1);
   const [mealType, setMealType] = useState("Lunch");
   const [mealMenu, setMealMenu] = useState(false);
-  const [mName, setMName] = useState("");
-  const [mKcal, setMKcal] = useState("");
-  const [mProtein, setMProtein] = useState("");
-  const [mCarbs, setMCarbs] = useState("");
-  const [mFats, setMFats] = useState("");
+  const [mealText, setMealText] = useState("");
 
   const tk = todayKey();
   const todayLogs = useMemo(() => calorieLogs.filter((l) => todayKey(new Date(l.ts)) === tk), [calorieLogs, tk]);
@@ -147,26 +143,37 @@ export default function Calories() {
     reset();
   };
 
-  const saveManual = async () => {
-    const kcal = parseInt(mKcal, 10);
-    if (!mName.trim() || !kcal || kcal <= 0) {
-      setError("Add a name and calories to log a meal.");
+  const analyzeText = async (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) {
+      setError("Describe your meal to analyze.");
       return;
     }
+    setMealText(trimmed);
+    setImage(null);
+    setBase64(null);
+    setResult(null);
+    setAnalyzing(true);
     setError(null);
-    await addCalorie({
-      name: mName.trim(),
-      kcal,
-      protein: parseInt(mProtein, 10) || 0,
-      carbs: parseInt(mCarbs, 10) || 0,
-      fats: parseInt(mFats, 10) || 0,
-    });
-    setMName("");
-    setMKcal("");
-    setMProtein("");
-    setMCarbs("");
-    setMFats("");
-    if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    try {
+      const url = `${getApiUrl()}/api/analyze`;
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: trimmed }),
+      });
+      if (!resp.ok) {
+        const txt = await resp.text();
+        throw new Error(txt || "Analysis failed");
+      }
+      const data = (await resp.json()) as AnalysisResult;
+      setResult(data);
+      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e: any) {
+      setError(e?.message?.includes("API") ? "AI service is not configured yet." : "Could not analyze that meal. Please try again.");
+    } finally {
+      setAnalyzing(false);
+    }
   };
 
   const kcalPct = Math.min(1, totals.kcal / profile.calorieGoal);
@@ -248,120 +255,129 @@ export default function Calories() {
           })}
         </View>
 
-        {image ? (
+        {result ? (
           <Card style={{ marginTop: 14 }}>
-            {!result ? <Image source={{ uri: image }} style={styles.preview} /> : null}
-            {analyzing ? (
-              <View style={styles.analyzing}>
-                <ActivityIndicator color={colors.accent} />
-                <Text style={styles.analyzingText}>Analyzing your meal...</Text>
-              </View>
-            ) : result ? (
-              <View style={styles.resultBox}>
-                <View style={styles.heroWrap}>
-                  <Image source={{ uri: image }} style={styles.heroImg} />
-                  <LinearGradient
-                    colors={["transparent", "rgba(20,15,14,0.82)"]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={StyleSheet.absoluteFill}
-                  />
-                  <View style={styles.aiBadge}>
-                    <Ionicons name="sparkles" size={12} color={colors.onPrimary} />
-                    <Text style={styles.aiBadgeText}>AI Detected</Text>
-                  </View>
-                  <View style={styles.heroText}>
-                    <Text style={styles.heroTitle} numberOfLines={2}>{result.name}</Text>
-                    <View style={styles.heroKcalRow}>
-                      <Ionicons name="flame" size={15} color={colors.accent} />
-                      <Text style={styles.heroKcal}>{result.kcal * qty} kcal</Text>
-                    </View>
-                  </View>
-                </View>
-
-                <View style={styles.resultMacros}>
-                  <ResultMacro label="Protein" value={result.protein * qty} />
-                  <ResultMacro label="Carbs" value={result.carbs * qty} />
-                  <ResultMacro label="Fats" value={result.fats * qty} />
-                </View>
-
-                <View style={styles.ctrlRow}>
-                  <Pressable style={styles.mealSelect} onPress={() => setMealMenu(true)}>
-                    <Text style={styles.mealSelectText}>{mealType}</Text>
-                    <Ionicons name="chevron-down" size={16} color={colors.muted} />
-                  </Pressable>
-                  <View style={styles.qtyBox}>
-                    <Pressable hitSlop={8} onPress={() => setQty((q) => Math.max(1, q - 1))}>
-                      <Ionicons name="remove" size={18} color={colors.muted} />
-                    </Pressable>
-                    <Text style={styles.qtyText}>{qty}</Text>
-                    <Pressable hitSlop={8} onPress={() => setQty((q) => Math.min(20, q + 1))}>
-                      <Ionicons name="add" size={18} color={colors.accent} />
-                    </Pressable>
-                  </View>
-                </View>
-
-                <View style={styles.btnRow}>
-                  <Pressable style={styles.retakeBtn} onPress={reset}>
-                    <Ionicons name="refresh" size={16} color={colors.foreground} />
-                    <Text style={styles.retakeText}>Retake</Text>
-                  </Pressable>
-                  <Pressable style={styles.logBtn} onPress={save}>
+            <View style={styles.resultBox}>
+              <View style={styles.heroWrap}>
+                {image ? (
+                  <>
+                    <Image source={{ uri: image }} style={styles.heroImg} />
                     <LinearGradient
-                      colors={colors.gradient}
+                      colors={["transparent", "rgba(20,15,14,0.82)"]}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
-                      style={styles.logBtnGrad}
-                    >
-                      <Ionicons name="add" size={18} color={colors.onPrimary} />
-                      <Text style={styles.logBtnText}>Log This Meal</Text>
-                    </LinearGradient>
+                      style={StyleSheet.absoluteFill}
+                    />
+                  </>
+                ) : (
+                  <View style={styles.heroFallback}>
+                    <Ionicons name="restaurant" size={42} color="rgba(242,212,204,0.28)" />
+                  </View>
+                )}
+                <View style={styles.aiBadge}>
+                  <Ionicons name="sparkles" size={12} color={colors.onPrimary} />
+                  <Text style={styles.aiBadgeText}>AI Detected</Text>
+                </View>
+                <View style={styles.heroText}>
+                  <Text style={styles.heroTitle} numberOfLines={2}>{result.name}</Text>
+                  <View style={styles.heroKcalRow}>
+                    <Ionicons name="flame" size={15} color={colors.accent} />
+                    <Text style={styles.heroKcal}>{result.kcal * qty} kcal</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.resultMacros}>
+                <ResultMacro label="Protein" value={result.protein * qty} />
+                <ResultMacro label="Carbs" value={result.carbs * qty} />
+                <ResultMacro label="Fats" value={result.fats * qty} />
+              </View>
+
+              <View style={styles.ctrlRow}>
+                <Pressable style={styles.mealSelect} onPress={() => setMealMenu(true)}>
+                  <Text style={styles.mealSelectText}>{mealType}</Text>
+                  <Ionicons name="chevron-down" size={16} color={colors.muted} />
+                </Pressable>
+                <View style={styles.qtyBox}>
+                  <Pressable hitSlop={8} onPress={() => setQty((q) => Math.max(1, q - 1))}>
+                    <Ionicons name="remove" size={18} color={colors.muted} />
+                  </Pressable>
+                  <Text style={styles.qtyText}>{qty}</Text>
+                  <Pressable hitSlop={8} onPress={() => setQty((q) => Math.min(20, q + 1))}>
+                    <Ionicons name="add" size={18} color={colors.accent} />
                   </Pressable>
                 </View>
               </View>
-            ) : error ? (
-              <View style={styles.errorBox}>
-                <Ionicons name="alert-circle-outline" size={22} color={colors.primary} />
-                <Text style={styles.errorText}>{error}</Text>
-                <Button label="Try Again" variant="outline" onPress={reset} style={{ marginTop: 12 }} />
+
+              <View style={styles.btnRow}>
+                <Pressable style={styles.retakeBtn} onPress={reset}>
+                  <Ionicons name="refresh" size={16} color={colors.foreground} />
+                  <Text style={styles.retakeText}>Retake</Text>
+                </Pressable>
+                <Pressable style={styles.logBtn} onPress={save}>
+                  <LinearGradient
+                    colors={colors.gradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.logBtnGrad}
+                  >
+                    <Ionicons name="add" size={18} color={colors.onPrimary} />
+                    <Text style={styles.logBtnText}>Log This Meal</Text>
+                  </LinearGradient>
+                </Pressable>
               </View>
-            ) : null}
+            </View>
+          </Card>
+        ) : analyzing ? (
+          <Card style={{ marginTop: 14 }}>
+            {image ? <Image source={{ uri: image }} style={styles.preview} /> : null}
+            <View style={styles.analyzing}>
+              <ActivityIndicator color={colors.accent} />
+              <Text style={styles.analyzingText}>Analyzing your meal...</Text>
+            </View>
           </Card>
         ) : tab === "text" ? (
           <Card style={styles.textCard}>
-            <Text style={styles.fieldLabel}>Meal name</Text>
-            <TextInput
-              value={mName}
-              onChangeText={setMName}
-              placeholder="e.g. Greek yogurt bowl"
-              placeholderTextColor={colors.mutedForeground}
-              style={styles.input}
-            />
-            <Text style={styles.fieldLabel}>Calories</Text>
-            <TextInput
-              value={mKcal}
-              onChangeText={setMKcal}
-              placeholder="kcal"
-              placeholderTextColor={colors.mutedForeground}
-              keyboardType="number-pad"
-              style={styles.input}
-            />
-            <View style={styles.macroInputs}>
-              <View style={styles.macroInputCol}>
-                <Text style={styles.fieldLabel}>Protein</Text>
-                <TextInput value={mProtein} onChangeText={setMProtein} placeholder="g" placeholderTextColor={colors.mutedForeground} keyboardType="number-pad" style={styles.input} />
-              </View>
-              <View style={styles.macroInputCol}>
-                <Text style={styles.fieldLabel}>Carbs</Text>
-                <TextInput value={mCarbs} onChangeText={setMCarbs} placeholder="g" placeholderTextColor={colors.mutedForeground} keyboardType="number-pad" style={styles.input} />
-              </View>
-              <View style={styles.macroInputCol}>
-                <Text style={styles.fieldLabel}>Fats</Text>
-                <TextInput value={mFats} onChangeText={setMFats} placeholder="g" placeholderTextColor={colors.mutedForeground} keyboardType="number-pad" style={styles.input} />
-              </View>
+            <View style={styles.searchRow}>
+              <Ionicons name="search" size={18} color={colors.muted} />
+              <TextInput
+                value={mealText}
+                onChangeText={setMealText}
+                placeholder="e.g. 2 eggs, oatmeal with berries..."
+                placeholderTextColor={colors.mutedForeground}
+                style={styles.searchInput}
+                returnKeyType="search"
+                onSubmitEditing={() => analyzeText(mealText)}
+              />
+              <Pressable style={styles.analyzeBtn} onPress={() => analyzeText(mealText)}>
+                <LinearGradient
+                  colors={colors.gradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.analyzeBtnGrad}
+                >
+                  <Ionicons name="sparkles" size={14} color={colors.onPrimary} />
+                  <Text style={styles.analyzeBtnText}>Analyze</Text>
+                </LinearGradient>
+              </Pressable>
+            </View>
+            <View style={styles.chipsWrap}>
+              {SUGGESTIONS.map((s) => (
+                <Pressable key={s} style={styles.suggestChip} onPress={() => setMealText(s)}>
+                  <Text style={styles.suggestChipText}>{s}</Text>
+                </Pressable>
+              ))}
             </View>
             {error ? <Text style={styles.formError}>{error}</Text> : null}
-            <Button label="Add to Diary" icon="add" onPress={saveManual} style={{ marginTop: 16 }} />
+          </Card>
+        ) : image ? (
+          <Card style={{ marginTop: 14 }}>
+            <Image source={{ uri: image }} style={styles.preview} />
+            <View style={styles.errorBox}>
+              <Ionicons name="alert-circle-outline" size={22} color={colors.primary} />
+              <Text style={styles.errorText}>{error ?? "Could not analyze the image."}</Text>
+              <Button label="Try Again" variant="outline" onPress={reset} style={{ marginTop: 12 }} />
+            </View>
           </Card>
         ) : (
           <Pressable onPress={() => pickImage(tab === "photo" ? Platform.OS !== "web" : false)}>
@@ -379,7 +395,7 @@ export default function Calories() {
           </Pressable>
         )}
 
-        {!image && error && tab !== "text" ? (
+        {!image && !result && !analyzing && error && tab !== "text" ? (
           <View style={styles.inlineError}>
             <Ionicons name="alert-circle" size={16} color={colors.primary} />
             <Text style={styles.inlineErrorText}>{error}</Text>
@@ -447,6 +463,8 @@ export default function Calories() {
 }
 
 const MEALS = ["Breakfast", "Lunch", "Dinner", "Snack"];
+
+const SUGGESTIONS = ["Greek yogurt", "Avocado toast", "Protein shake", "Brown rice", "Salmon fillet"];
 
 function Macro({ label, value, goal, color }: { label: string; value: number; goal: number; color: string }) {
   return (
@@ -550,27 +568,61 @@ const styles = StyleSheet.create({
   dropTitle: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
   dropDesc: { fontFamily: fonts.sans, fontSize: 13, color: colors.muted, marginTop: 6 },
   textCard: { marginTop: 14, padding: 18 },
-  fieldLabel: { fontFamily: fonts.sansMedium, fontSize: 12.5, color: colors.muted, marginBottom: 6, marginTop: 12 },
-  input: {
+  formError: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.primary, marginTop: 12 },
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     backgroundColor: colors.cardElevated,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: Platform.OS === "ios" ? 13 : 10,
-    fontFamily: fonts.sans,
-    fontSize: 15,
-    color: colors.foreground,
+    borderRadius: 28,
+    paddingLeft: 16,
+    paddingRight: 6,
+    paddingVertical: 6,
   },
-  macroInputs: { flexDirection: "row", gap: 10 },
-  macroInputCol: { flex: 1 },
-  formError: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.primary, marginTop: 12 },
+  searchInput: {
+    flex: 1,
+    fontFamily: fonts.sans,
+    fontSize: 14.5,
+    color: colors.foreground,
+    paddingVertical: Platform.OS === "ios" ? 8 : 4,
+  },
+  analyzeBtn: { borderRadius: 22, overflow: "hidden" },
+  analyzeBtnGrad: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  analyzeBtnText: { fontFamily: fonts.sansSemibold, fontSize: 14, color: colors.onPrimary },
+  chipsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 14 },
+  suggestChip: {
+    backgroundColor: colors.cardElevated,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  suggestChipText: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.muted },
   preview: { width: "100%", height: 200, borderRadius: colors.radius, marginBottom: 8 },
   analyzing: { alignItems: "center", paddingVertical: 20, gap: 12 },
   analyzingText: { fontFamily: fonts.sansMedium, fontSize: 15, color: colors.muted },
   resultBox: { paddingTop: 2 },
   heroWrap: { height: 188, borderRadius: colors.radius, overflow: "hidden", justifyContent: "center" },
   heroImg: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, width: "100%", height: "100%" },
+  heroFallback: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "#241A18",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   aiBadge: {
     position: "absolute",
     top: 12,

@@ -8,28 +8,28 @@ export async function POST(request: Request): Promise<Response> {
       return Response.json({ error: "AI service not configured" }, { status: 503 });
     }
 
-    const body = (await request.json()) as { image?: string };
-    if (!body.image) {
-      return Response.json({ error: "No image provided" }, { status: 400 });
+    const body = (await request.json()) as { image?: string; text?: string };
+    if (!body.image && !body.text?.trim()) {
+      return Response.json({ error: "No image or text provided" }, { status: 400 });
     }
 
     const openai = new OpenAI({ apiKey, baseURL });
 
+    const systemPrompt =
+      "You are a precise nutrition estimator. Identify the food and estimate its nutritional content for the portion described or shown. Respond ONLY with JSON in this exact shape: {\"name\": string, \"kcal\": number, \"protein\": number, \"carbs\": number, \"fats\": number}. Macros are in grams, rounded to whole numbers. If the input is not food, return name 'Not a meal' with zeros.";
+
+    const userContent = body.image
+      ? [
+          { type: "text" as const, text: "Analyze this meal and estimate its nutrition." },
+          { type: "image_url" as const, image_url: { url: `data:image/jpeg;base64,${body.image}` } },
+        ]
+      : `Analyze this meal description and estimate its nutrition: ${body.text}`;
+
     const completion = await openai.chat.completions.create({
       model: "gpt-5-mini",
       messages: [
-        {
-          role: "system",
-          content:
-            "You are a precise nutrition estimator. Given a photo of a meal, identify the food and estimate its nutritional content for the portion shown. Respond ONLY with JSON in this exact shape: {\"name\": string, \"kcal\": number, \"protein\": number, \"carbs\": number, \"fats\": number}. Macros are in grams, rounded to whole numbers. If the image is not food, return name 'Not a meal' with zeros.",
-        },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: "Analyze this meal and estimate its nutrition." },
-            { type: "image_url", image_url: { url: `data:image/jpeg;base64,${body.image}` } },
-          ],
-        },
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userContent },
       ],
       response_format: { type: "json_object" },
       max_completion_tokens: 8192,
@@ -49,6 +49,6 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json(result);
   } catch (e: any) {
     console.error("analyze error:", e?.message ?? e);
-    return Response.json({ error: "Failed to analyze image" }, { status: 500 });
+    return Response.json({ error: "Failed to analyze meal" }, { status: 500 });
   }
 }
