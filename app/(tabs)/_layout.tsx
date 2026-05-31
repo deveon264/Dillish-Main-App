@@ -31,6 +31,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="workouts" />
       <Tabs.Screen name="calories" />
       <Tabs.Screen name="water" />
+      <Tabs.Screen name="progress" />
       <Tabs.Screen name="profile" />
     </Tabs>
   );

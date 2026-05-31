@@ -22,13 +22,6 @@ const QUICK = [
   { ml: 500, label: "Large", icon: "water" as const },
 ];
 
-const TABS = [
-  { key: "water", label: "Water", icon: "water" as const },
-  { key: "progress", label: "Progress", icon: "trending-up" as const },
-  { key: "bmi", label: "BMI", icon: "body-outline" as const },
-  { key: "photos", label: "Photos", icon: "images-outline" as const },
-];
-
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const fmtTime = (ts: number) => {
@@ -55,7 +48,6 @@ export default function Water() {
   const { user } = useAuth();
   const { profile, waterLogs, completions, addWater, removeWater } = useData();
 
-  const [tab, setTab] = useState("water");
   const [custom, setCustom] = useState("");
 
   const firstName = (user?.name ?? "there").split(" ")[0];
@@ -138,7 +130,7 @@ export default function Water() {
           <View style={{ flex: 1 }}>
             <Text style={styles.eyebrow}>WELLNESS</Text>
             <Text style={styles.title}>
-              Water & <Text style={styles.titleItalic}>Progress</Text>
+              Stay <Text style={styles.titleItalic}>Hydrated</Text>
             </Text>
           </View>
           <View style={styles.streakPill}>
@@ -151,21 +143,7 @@ export default function Water() {
           </Pressable>
         </View>
 
-        <View style={styles.tabBar}>
-          {TABS.map((t) => {
-            const active = t.key === tab;
-            return (
-              <Pressable key={t.key} style={[styles.tab, active && styles.tabActive]} onPress={() => setTab(t.key)}>
-                <Ionicons name={t.icon} size={15} color={active ? colors.onPrimary : colors.muted} />
-                <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{t.label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {tab === "water" ? (
-          <>
-            <Card style={styles.hydrationCard}>
+        <Card style={styles.hydrationCard}>
               <View style={styles.hydrationHead}>
                 <Text style={styles.hydrationEyebrow}>TODAY'S HYDRATION</Text>
                 <View style={styles.dateChip}>
@@ -279,18 +257,6 @@ export default function Water() {
                 ))}
               </View>
             )}
-          </>
-        ) : (
-          <Card style={styles.comingSoon}>
-            <Ionicons
-              name={TABS.find((t) => t.key === tab)?.icon ?? "sparkles"}
-              size={34}
-              color={colors.accent}
-            />
-            <Text style={styles.comingTitle}>{TABS.find((t) => t.key === tab)?.label}</Text>
-            <Text style={styles.comingDesc}>Coming soon</Text>
-          </Card>
-        )}
       </ScrollView>
     </GradientBackground>
   );
@@ -327,28 +293,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   avatarText: { fontFamily: fonts.serifSemibold, fontSize: 18, color: colors.accent },
-  tabBar: {
-    flexDirection: "row",
-    gap: 4,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    borderRadius: 18,
-    padding: 5,
-    marginTop: 20,
-  },
-  tab: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 5,
-    paddingVertical: 11,
-    borderRadius: 13,
-  },
-  tabActive: { backgroundColor: colors.primary },
-  tabLabel: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.muted },
-  tabLabelActive: { fontFamily: fonts.sansSemibold, color: colors.onPrimary },
   hydrationCard: { marginTop: 18, padding: 18 },
   hydrationHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   hydrationEyebrow: { fontFamily: fonts.sansSemibold, fontSize: 12, letterSpacing: 1.2, color: colors.muted },
@@ -430,7 +374,4 @@ const styles = StyleSheet.create({
   },
   logHeadTitle: { fontFamily: fonts.sansSemibold, fontSize: 12, letterSpacing: 1.4, color: colors.muted },
   entryCount: { fontFamily: fonts.sansSemibold, fontSize: 12, color: colors.primary },
-  comingSoon: { marginTop: 18, alignItems: "center", paddingVertical: 48, gap: 8 },
-  comingTitle: { fontFamily: fonts.serifSemibold, fontSize: 20, color: colors.foreground, marginTop: 6 },
-  comingDesc: { fontFamily: fonts.sans, fontSize: 14, color: colors.muted },
 });

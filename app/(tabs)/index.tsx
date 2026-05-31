@@ -27,8 +27,8 @@ const WEEK_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 const QUICK_ACCESS = [
   { icon: "barbell-outline" as const, title: "Workout Library", sub: "200+ videos", route: "/(tabs)/workouts" as const },
   { icon: "scan-outline" as const, title: "AI Food Log", sub: "Snap & track", route: "/(tabs)/calories" as const },
-  { icon: "water-outline" as const, title: "Water & Progress", sub: "Track & analyse", route: "/(tabs)/water" as const },
-  { icon: "stats-chart-outline" as const, title: "My Progress", sub: "Photos & stats", route: "/(tabs)/profile" as const },
+  { icon: "water-outline" as const, title: "Hydration", sub: "Track your intake", route: "/(tabs)/water" as const },
+  { icon: "stats-chart-outline" as const, title: "My Progress", sub: "Photos & stats", route: "/(tabs)/progress" as const },
 ];
 
 const WATER_QUICK = [250, 500, 750];

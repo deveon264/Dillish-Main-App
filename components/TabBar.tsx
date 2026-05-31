@@ -16,10 +16,11 @@ const CONF: Record<string, { label: string; icon: IconConf }> = {
   workouts: { label: "Workouts", icon: { lib: "mci", name: "dumbbell", nameFocused: "dumbbell" } },
   calories: { label: "Calories", icon: { lib: "mci", name: "brain", nameFocused: "brain" } },
   water: { label: "Water", icon: { lib: "ion", name: "water-outline", nameFocused: "water" } },
+  progress: { label: "Progress", icon: { lib: "ion", name: "stats-chart-outline", nameFocused: "stats-chart" } },
   profile: { label: "Profile", icon: { lib: "ion", name: "person-outline", nameFocused: "person" } },
 };
 
-const ORDER = ["index", "workouts", "calories", "water", "profile"];
+const ORDER = ["index", "workouts", "calories", "water", "progress", "profile"];
 
 type TabBarProps = Pick<BottomTabBarProps, "state" | "navigation">;
 
