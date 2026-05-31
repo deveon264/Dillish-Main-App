@@ -49,10 +49,16 @@ export default function Profile() {
     profile.goalWeight != null ? String(profile.goalWeight) : ""
   );
   const [goalWeightError, setGoalWeightError] = useState<string | null>(null);
+  const [waterGoalInput, setWaterGoalInput] = useState((profile.waterGoalMl / 1000).toFixed(2));
+  const [waterGoalError, setWaterGoalError] = useState<string | null>(null);
 
   useEffect(() => {
     setGoalWeightInput(profile.goalWeight != null ? String(profile.goalWeight) : "");
   }, [profile.goalWeight]);
+
+  useEffect(() => {
+    setWaterGoalInput((profile.waterGoalMl / 1000).toFixed(2));
+  }, [profile.waterGoalMl]);
 
   const totalWorkouts = completions.length;
   const totalMeals = calorieLogs.length;
@@ -125,6 +131,22 @@ export default function Profile() {
     }
     setGoalWeightError(null);
     await updateProfile({ goalWeight: val });
+  };
+
+  const saveWaterGoal = async () => {
+    const trimmed = waterGoalInput.trim().replace(",", ".");
+    const val = Number(trimmed);
+    if (!trimmed || !Number.isFinite(val) || val <= 0) {
+      setWaterGoalError("Enter a valid water goal.");
+      return;
+    }
+    const ml = Math.round(val * 1000);
+    if (ml < 1000 || ml > 5000) {
+      setWaterGoalError("Water goal must be between 1 and 5 L.");
+      return;
+    }
+    setWaterGoalError(null);
+    await updateProfile({ waterGoalMl: ml });
   };
 
   const saveName = async () => {
@@ -401,7 +423,7 @@ export default function Profile() {
         ) : null}
 
         <View style={styles.goalWeightHead}>
-          <Text style={styles.label}>GOAL WEIGHT</Text>
+          <Text style={styles.label}>WEIGHT GOAL</Text>
           {kgToGo != null ? (
             <Text style={styles.toGo}>
               {fmtStat(kgToGo, 1)} {profile.weightUnit} to go
@@ -456,23 +478,33 @@ export default function Profile() {
           <Text style={styles.label}>HYDRATION GOAL</Text>
           <Text style={styles.toGo}>{(profile.waterGoalMl / 1000).toFixed(2)} L / day</Text>
         </View>
-        <View style={styles.waterField}>
-          <Pressable
-            style={styles.waterBtn}
-            onPress={() => updateProfile({ waterGoalMl: Math.max(1000, profile.waterGoalMl - 250) })}
-            hitSlop={6}
-          >
-            <Ionicons name="remove" size={20} color={colors.foreground} />
-          </Pressable>
-          <Text style={styles.waterVal}>{(profile.waterGoalMl / 1000).toFixed(2)} L</Text>
-          <Pressable
-            style={styles.waterBtn}
-            onPress={() => updateProfile({ waterGoalMl: Math.min(5000, profile.waterGoalMl + 250) })}
-            hitSlop={6}
-          >
-            <Ionicons name="add" size={20} color={colors.foreground} />
+        <View style={styles.goalWeightRow}>
+          <View style={styles.goalWeightField}>
+            <TextInput
+              value={waterGoalInput}
+              onChangeText={(t) => {
+                setWaterGoalInput(t);
+                if (waterGoalError) setWaterGoalError(null);
+              }}
+              keyboardType="decimal-pad"
+              placeholder="—"
+              placeholderTextColor={colors.mutedForeground}
+              style={styles.goalWeightInput}
+            />
+            <Text style={styles.goalWeightUnit}>L</Text>
+          </View>
+          <Pressable onPress={saveWaterGoal} style={({ pressed }) => [styles.updateBtn, { opacity: pressed ? 0.9 : 1 }]}>
+            <LinearGradient
+              colors={colors.gradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.updateBtnInner}
+            >
+              <Text style={styles.updateBtnText}>Update</Text>
+            </LinearGradient>
           </Pressable>
         </View>
+        {waterGoalError ? <Text style={styles.goalWeightError}>{waterGoalError}</Text> : null}
 
         <View style={styles.sectionDivider} />
 
@@ -750,27 +782,5 @@ const styles = StyleSheet.create({
   goalWeightError: { fontFamily: fonts.sans, fontSize: 13, color: colors.danger, marginTop: 8 },
   goalScaleRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 10 },
   goalScaleText: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted },
-  waterField: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    borderRadius: colors.radius,
-    paddingHorizontal: 14,
-    minHeight: 54,
-  },
-  waterBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    backgroundColor: colors.cardElevated,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  waterVal: { fontFamily: fonts.sansSemibold, fontSize: 18, color: colors.foreground },
   version: { fontFamily: fonts.sans, fontSize: 12, color: colors.mutedForeground, textAlign: "center", marginTop: 18 },
 });
