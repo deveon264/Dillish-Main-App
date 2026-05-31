@@ -130,6 +130,18 @@ export async function POST(request: Request): Promise<Response> {
       dryRun
     );
 
+    // Log a one-line summary so a coach can confirm a run happened (and what it
+    // did) from the deployment logs — important for the scheduled/cron trigger,
+    // where there is no UI response to look at.
+    console.log(
+      `exercise-cleanup ${dryRun ? "(dry run) " : ""}by ${email}: ` +
+        `scanned=${videos.scanned + posters.scanned} ` +
+        `referenced=${referencedVideos.size + referencedPosters.size} ` +
+        `orphans=${videos.orphans + posters.orphans} ` +
+        `deleted=${videos.deleted + posters.deleted} ` +
+        `failed=${videos.failed + posters.failed}`
+    );
+
     return Response.json({
       dryRun,
       scanned: videos.scanned + posters.scanned,
