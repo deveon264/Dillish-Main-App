@@ -384,12 +384,14 @@ export default function Calories() {
             <Card style={styles.dropCard}>
               <View style={styles.dropInner}>
                 <View style={styles.dropIcon}>
-                  <Ionicons name={tab === "photo" ? "camera" : "scan"} size={26} color={colors.accent} />
+                  <Ionicons name={tab === "photo" ? "camera" : "barcode"} size={26} color={colors.accent} />
                 </View>
                 <Text style={styles.dropTitle}>
-                  {tab === "photo" ? "Tap to take a photo or upload" : "Tap to scan a meal photo"}
+                  {tab === "photo" ? "Tap to take a photo or upload" : "Point camera at barcode"}
                 </Text>
-                <Text style={styles.dropDesc}>AI will recognize your food instantly</Text>
+                <Text style={styles.dropDesc}>
+                  {tab === "photo" ? "AI will recognize your food instantly" : "Supports all food product barcodes"}
+                </Text>
               </View>
             </Card>
           </Pressable>
