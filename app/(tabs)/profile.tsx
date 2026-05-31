@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, TextInput } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Modal } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
@@ -45,6 +47,12 @@ export default function Profile() {
     weekly: true,
   });
   const [name, setName] = useState(user?.name ?? "");
+  const [avatarModal, setAvatarModal] = useState(false);
+  const [avatarError, setAvatarError] = useState("");
+  const [emailModal, setEmailModal] = useState(false);
+  const [emailInput, setEmailInput] = useState(user?.email ?? "");
+  const [emailError, setEmailError] = useState("");
+  const [emailSuccess, setEmailSuccess] = useState(false);
   const [goalWeightInput, setGoalWeightInput] = useState(
     profile.goalWeight != null ? String(profile.goalWeight) : ""
   );
@@ -166,6 +174,62 @@ export default function Profile() {
     setEditing(false);
   };
 
+  const pickAvatar = async (mode: "camera" | "library") => {
+    setAvatarModal(false);
+    setAvatarError("");
+    try {
+      const perm =
+        mode === "camera"
+          ? await ImagePicker.requestCameraPermissionsAsync()
+          : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        setAvatarError("Permission is required to add a photo.");
+        return;
+      }
+      const opts: ImagePicker.ImagePickerOptions = {
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.6,
+        base64: true,
+      };
+      const res =
+        mode === "camera"
+          ? await ImagePicker.launchCameraAsync(opts)
+          : await ImagePicker.launchImageLibraryAsync(opts);
+      if (res.canceled || !res.assets?.length) return;
+      const asset = res.assets[0];
+      const uri = asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
+      await updateUser({ avatar: uri });
+    } catch {
+      setAvatarError("Couldn't add the photo. Please try again.");
+    }
+  };
+
+  const removeAvatar = async () => {
+    setAvatarModal(false);
+    setAvatarError("");
+    await updateUser({ avatar: null });
+  };
+
+  const openEmailModal = () => {
+    setEmailInput(user?.email ?? "");
+    setEmailError("");
+    setEmailSuccess(false);
+    setEmailModal(true);
+  };
+
+  const saveEmail = async () => {
+    const res = await updateUser({ email: emailInput });
+    if (!res.ok) {
+      setEmailError(res.error ?? "Couldn't update your email.");
+      return;
+    }
+    setEmailError("");
+    setEmailSuccess(true);
+    setTimeout(() => setEmailModal(false), 900);
+  };
+
   const firstName = (user?.name ?? "F").charAt(0).toUpperCase();
 
   const PROFILE_TABS = ["Profile", "Plan", "History", "Settings"];
@@ -186,7 +250,8 @@ export default function Profile() {
     { key: "language", title: "Language", sub: "English", value: "EN" },
   ];
 
-  const ACCOUNT_ROWS: { key: string; icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
+  const ACCOUNT_ROWS: { key: string; icon: keyof typeof Ionicons.glyphMap; label: string; onPress?: () => void }[] = [
+    { key: "email", icon: "mail-outline", label: "Change Email", onPress: openEmailModal },
     { key: "password", icon: "lock-closed-outline", label: "Change Password" },
     { key: "privacy", icon: "document-text-outline", label: "Privacy Policy" },
     { key: "about", icon: "information-circle-outline", label: "About Florish" },
@@ -273,7 +338,7 @@ export default function Profile() {
               {ACCOUNT_ROWS.map((row, i) => (
                 <View key={row.key}>
                   {i > 0 ? <View style={styles.settingsDivider} /> : null}
-                  <Pressable style={styles.acctRow}>
+                  <Pressable style={styles.acctRow} onPress={row.onPress}>
                     <View style={styles.acctLeft}>
                       <Ionicons name={row.icon} size={20} color={colors.accent} />
                       <Text style={styles.acctLabel}>{row.label}</Text>
@@ -320,20 +385,33 @@ export default function Profile() {
             ) : (
               <View style={styles.profileRow}>
                 <View style={styles.avatarWrap}>
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>{firstName}</Text>
-                  </View>
+                  {user?.avatar ? (
+                    <Image source={{ uri: user.avatar }} style={styles.avatar} contentFit="cover" />
+                  ) : (
+                    <View style={styles.avatar}>
+                      <Text style={styles.avatarText}>{firstName}</Text>
+                    </View>
+                  )}
                   <Pressable
                     style={styles.cameraBadge}
-                    onPress={() => { setName(user?.name ?? ""); setEditing(true); }}
+                    onPress={() => { setAvatarError(""); setAvatarModal(true); }}
                     hitSlop={8}
                   >
                     <Ionicons name="camera" size={13} color={colors.foreground} />
                   </Pressable>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.profileName}>{user?.name}</Text>
-                  <Text style={styles.profileEmail}>{user?.email}</Text>
+                  <View style={styles.nameRow}>
+                    <Text style={styles.profileName} numberOfLines={1}>{user?.name}</Text>
+                    <Pressable
+                      style={styles.nameEditBtn}
+                      onPress={() => { setName(user?.name ?? ""); setEditing(true); }}
+                      hitSlop={8}
+                    >
+                      <Ionicons name="pencil" size={15} color={colors.accent} />
+                    </Pressable>
+                  </View>
+                  {avatarError ? <Text style={styles.avatarErrorText}>{avatarError}</Text> : null}
                   <View style={styles.badgeRow}>
                     <View style={[styles.badge, styles.badgePremium]}>
                       <Ionicons name="sparkles" size={12} color={palette.petal} />
@@ -540,6 +618,73 @@ export default function Profile() {
         </>
         )}
       </ScrollView>
+
+      <Modal visible={avatarModal} transparent animationType="fade" onRequestClose={() => setAvatarModal(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setAvatarModal(false)}>
+          <Pressable style={styles.sheet} onPress={() => {}}>
+            <Text style={styles.sheetTitle}>Profile Photo</Text>
+            <Pressable style={styles.sheetOption} onPress={() => pickAvatar("camera")}>
+              <Ionicons name="camera-outline" size={20} color={colors.accent} />
+              <Text style={styles.sheetOptionText}>Take Photo</Text>
+            </Pressable>
+            <Pressable style={styles.sheetOption} onPress={() => pickAvatar("library")}>
+              <Ionicons name="images-outline" size={20} color={colors.accent} />
+              <Text style={styles.sheetOptionText}>Choose from Library</Text>
+            </Pressable>
+            {user?.avatar ? (
+              <Pressable style={styles.sheetOption} onPress={removeAvatar}>
+                <Ionicons name="trash-outline" size={20} color={colors.danger} />
+                <Text style={[styles.sheetOptionText, { color: colors.danger }]}>Remove Photo</Text>
+              </Pressable>
+            ) : null}
+            <Pressable style={styles.sheetCancel} onPress={() => setAvatarModal(false)}>
+              <Text style={styles.sheetCancelText}>Cancel</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal visible={emailModal} transparent animationType="fade" onRequestClose={() => setEmailModal(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setEmailModal(false)}>
+          <Pressable style={styles.sheet} onPress={() => {}}>
+            <Text style={styles.sheetTitle}>Change Email</Text>
+            <Text style={styles.sheetSub}>This is the address you use to sign in.</Text>
+            <TextInput
+              value={emailInput}
+              onChangeText={(t) => {
+                setEmailInput(t);
+                if (emailError) setEmailError("");
+              }}
+              placeholder="you@example.com"
+              placeholderTextColor={colors.mutedForeground}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoCorrect={false}
+              style={styles.emailInput}
+            />
+            {emailError ? <Text style={styles.avatarErrorText}>{emailError}</Text> : null}
+            {emailSuccess ? <Text style={styles.emailSuccessText}>Email updated</Text> : null}
+            <View style={styles.editBtnRow}>
+              <Pressable onPress={saveEmail} style={({ pressed }) => [styles.editSave, { opacity: pressed ? 0.9 : 1 }]}>
+                <LinearGradient
+                  colors={colors.gradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.editSaveInner}
+                >
+                  <Text style={styles.editSaveText}>Save</Text>
+                </LinearGradient>
+              </Pressable>
+              <Pressable
+                onPress={() => setEmailModal(false)}
+                style={({ pressed }) => [styles.editCancel, { opacity: pressed ? 0.85 : 1 }]}
+              >
+                <Text style={styles.editCancelText}>Cancel</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </GradientBackground>
   );
 }
@@ -714,8 +859,60 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  profileName: { fontFamily: fonts.serifSemibold, fontSize: 22, color: colors.foreground },
-  profileEmail: { fontFamily: fonts.sans, fontSize: 14, color: colors.mutedForeground, marginTop: 2 },
+  profileName: { fontFamily: fonts.serifSemibold, fontSize: 22, color: colors.foreground, flexShrink: 1 },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  nameEditBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.track,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarErrorText: { fontFamily: fonts.sans, fontSize: 12, color: colors.danger, marginTop: 6 },
+  emailSuccessText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.accent, marginTop: 6 },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  sheet: {
+    width: "100%",
+    maxWidth: 380,
+    backgroundColor: colors.card,
+    borderRadius: colors.radiusLg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    padding: 20,
+  },
+  sheetTitle: { fontFamily: fonts.serifSemibold, fontSize: 20, color: colors.foreground, marginBottom: 4 },
+  sheetSub: { fontFamily: fonts.sans, fontSize: 13, color: colors.mutedForeground, marginBottom: 12 },
+  sheetOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.cardBorder,
+  },
+  sheetOptionText: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
+  sheetCancel: { alignItems: "center", paddingVertical: 14, marginTop: 4 },
+  sheetCancelText: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.mutedForeground },
+  emailInput: {
+    fontFamily: fonts.sans,
+    fontSize: 15,
+    color: colors.foreground,
+    backgroundColor: colors.track,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: colors.radius,
+    paddingHorizontal: 14,
+    minHeight: 48,
+  },
   badgeRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 },
   badge: {
     flexDirection: "row",

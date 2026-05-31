@@ -9,8 +9,11 @@ export type User = {
   id: string;
   name: string;
   email: string;
+  avatar?: string;
   onboardingComplete: boolean;
 };
+
+export type UserUpdate = { name?: string; email?: string; avatar?: string | null };
 
 type StoredUser = User & { password: string };
 
@@ -22,7 +25,7 @@ type AuthContextType = {
   login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => Promise<void>;
   completeOnboarding: () => Promise<void>;
-  updateUser: (patch: Partial<Pick<User, "name" | "email">>) => Promise<void>;
+  updateUser: (patch: UserUpdate) => Promise<{ ok: boolean; error?: string }>;
 };
 
 const USERS_KEY = "florish:users";
@@ -58,7 +61,7 @@ async function clearSession(): Promise<void> {
 }
 
 function publicUser(u: StoredUser): User {
-  return { id: u.id, name: u.name, email: u.email, onboardingComplete: u.onboardingComplete };
+  return { id: u.id, name: u.name, email: u.email, avatar: u.avatar, onboardingComplete: u.onboardingComplete };
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -136,11 +139,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [persistPatch]);
 
   const updateUser = useCallback(
-    async (patch: Partial<Pick<User, "name" | "email">>) => {
+    async (patch: UserUpdate) => {
       const clean: Partial<StoredUser> = {};
-      if (patch.name != null) clean.name = patch.name;
-      if (patch.email != null) clean.email = patch.email.trim().toLowerCase();
+      if (patch.name != null) clean.name = patch.name.trim();
+      if (patch.email != null) {
+        const trimmed = patch.email.trim().toLowerCase();
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(trimmed)) {
+          return { ok: false, error: "Enter a valid email" };
+        }
+        const id = userIdRef.current ?? (await getSession());
+        const users = await getJSON<StoredUser[]>(USERS_KEY, []);
+        if (users.some((u) => u.email === trimmed && u.id !== id)) {
+          return { ok: false, error: "An account with this email already exists" };
+        }
+        clean.email = trimmed;
+      }
+      if ("avatar" in patch) clean.avatar = patch.avatar ?? undefined;
       await persistPatch(clean);
+      return { ok: true };
     },
     [persistPatch]
   );
