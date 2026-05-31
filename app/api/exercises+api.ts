@@ -1,13 +1,12 @@
 import { getPool, ensureSchema } from "@/lib/db";
 import { requireAdmin } from "@/lib/adminAuth";
-import { uploadExerciseVideo, uploadExercisePoster, deleteObject } from "@/lib/objectStorageServer";
+import { uploadExerciseVideoStream, deleteObject } from "@/lib/objectStorageServer";
 
 function genId(): string {
   return Date.now().toString() + Math.random().toString(36).slice(2, 11);
 }
 
 const MAX_BYTES = 80 * 1024 * 1024; // 80MB
-const MAX_POSTER_BYTES = 8 * 1024 * 1024; // 8MB
 const CATEGORIES = ["Pilates", "Yoga", "Strength", "HIIT", "Mobility", "Cardio"];
 const LEVELS = ["Beginner", "Intermediate", "Advanced"];
 
@@ -42,6 +41,12 @@ export async function GET(): Promise<Response> {
   }
 }
 
+// The video is sent as the raw request body (not multipart), with the text
+// metadata carried in query params. This lets the server enforce the size limit
+// from the Content-Length header BEFORE touching the body, and stream the bytes
+// straight to object storage without ever buffering the whole file in memory.
+// The optional poster image is uploaded separately to /api/exercise-poster
+// (keyed by the id returned here), since the body is reserved for the video.
 export async function POST(request: Request): Promise<Response> {
   try {
     const email = await requireAdmin(request);
@@ -49,64 +54,61 @@ export async function POST(request: Request): Promise<Response> {
       return Response.json({ error: "Not authorized" }, { status: 403 });
     }
 
-    // Reject oversized uploads up front when the client declares the size.
-    const declared = Number(request.headers.get("content-length") ?? "0");
-    if (declared && declared > MAX_BYTES + 1024 * 1024) {
-      return Response.json({ error: "Video is too large (max 80MB)" }, { status: 413 });
-    }
-
-    const form: any = await request.formData();
-    const title = String(form.get("title") ?? "").trim();
-    const description = String(form.get("description") ?? "").trim();
-    const cues = String(form.get("cues") ?? "").trim();
-    const duration = String(form.get("duration") ?? "").trim();
-    let category = String(form.get("category") ?? "Strength").trim();
-    let level = String(form.get("level") ?? "Beginner").trim();
-    const file = form.get("video");
-    const posterFile = form.get("poster");
+    const params = new URL(request.url).searchParams;
+    const title = (params.get("title") ?? "").trim();
+    const description = (params.get("description") ?? "").trim();
+    const cues = (params.get("cues") ?? "").trim();
+    const duration = (params.get("duration") ?? "").trim();
+    let category = (params.get("category") ?? "Strength").trim();
+    let level = (params.get("level") ?? "Beginner").trim();
 
     if (!title) return Response.json({ error: "Title is required" }, { status: 400 });
-    if (!(file instanceof Blob)) return Response.json({ error: "A video file is required" }, { status: 400 });
     if (!CATEGORIES.includes(category)) category = "Strength";
     if (!LEVELS.includes(level)) level = "Beginner";
 
-    const mime = (file as any).type || "video/mp4";
+    const mime = (request.headers.get("content-type") ?? "").split(";")[0].trim() || "video/mp4";
     if (!mime.startsWith("video/")) {
       return Response.json({ error: "Uploaded file must be a video" }, { status: 400 });
     }
 
-    const buf = Buffer.from(await file.arrayBuffer());
-    if (buf.length === 0) return Response.json({ error: "The video file is empty" }, { status: 400 });
-    if (buf.length > MAX_BYTES) {
+    // Enforce the size limit from the declared length up front, before reading
+    // any of the body into memory.
+    const contentLength = Number(request.headers.get("content-length") ?? "0");
+    if (!contentLength || !Number.isFinite(contentLength)) {
+      return Response.json({ error: "A video file is required" }, { status: 411 });
+    }
+    if (contentLength > MAX_BYTES) {
       return Response.json({ error: "Video is too large (max 80MB)" }, { status: 413 });
     }
-
-    // The poster is optional — a generated frame or a coach-chosen image.
-    let posterMime: string | null = null;
-    let posterBuf: Buffer | null = null;
-    if (posterFile instanceof Blob) {
-      const pMime = (posterFile as any).type || "image/jpeg";
-      if (pMime.startsWith("image/")) {
-        const pBuf = Buffer.from(await posterFile.arrayBuffer());
-        if (pBuf.length > 0 && pBuf.length <= MAX_POSTER_BYTES) {
-          posterMime = pMime;
-          posterBuf = pBuf;
-        }
-      }
+    if (!request.body) {
+      return Response.json({ error: "A video file is required" }, { status: 400 });
     }
 
-    // Store the bytes in object storage; keep only a reference in Postgres.
-    const objectPath = await uploadExerciseVideo(buf, mime);
-    let posterPath: string | null = null;
-    if (posterBuf && posterMime) {
-      try {
-        posterPath = await uploadExercisePoster(posterBuf, posterMime);
-      } catch (posterErr: any) {
-        // A failed poster shouldn't block publishing the video.
-        console.error("poster upload failed:", posterErr?.message ?? posterErr);
-        posterPath = null;
-        posterMime = null;
+    // Guard against a body that exceeds the declared length: abort the stream
+    // (and the upload) the instant it crosses the limit instead of buffering it.
+    let seen = 0;
+    const limited = request.body.pipeThrough(
+      new TransformStream<Uint8Array, Uint8Array>({
+        transform(chunk, controller) {
+          seen += chunk.byteLength;
+          if (seen > MAX_BYTES) {
+            controller.error(new Error("VIDEO_TOO_LARGE"));
+            return;
+          }
+          controller.enqueue(chunk);
+        },
+      })
+    );
+
+    // Stream the bytes straight to object storage; keep only a reference in Postgres.
+    let objectPath: string;
+    try {
+      objectPath = await uploadExerciseVideoStream(limited, mime, contentLength);
+    } catch (e: any) {
+      if (String(e?.message).includes("VIDEO_TOO_LARGE")) {
+        return Response.json({ error: "Video is too large (max 80MB)" }, { status: 413 });
       }
+      throw e;
     }
 
     const id = genId();
@@ -116,14 +118,13 @@ export async function POST(request: Request): Promise<Response> {
     try {
       await pool.query(
         `INSERT INTO exercises
-           (id, title, description, cues, category, level, duration, video_object_path, video_mime, video_size, poster_object_path, poster_mime, created_by, created_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
-        [id, title, description, cues, category, level, duration, objectPath, mime, buf.length, posterPath, posterMime, String(email).toLowerCase(), createdAt]
+           (id, title, description, cues, category, level, duration, video_object_path, video_mime, video_size, created_by, created_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+        [id, title, description, cues, category, level, duration, objectPath, mime, contentLength, String(email).toLowerCase(), createdAt]
       );
     } catch (dbErr) {
       // Don't leave orphaned objects if the DB write fails.
       await deleteObject(objectPath).catch(() => {});
-      if (posterPath) await deleteObject(posterPath).catch(() => {});
       throw dbErr;
     }
 
@@ -137,8 +138,8 @@ export async function POST(request: Request): Promise<Response> {
         level,
         duration,
         videoMime: mime,
-        videoSize: buf.length,
-        hasPoster: !!posterPath,
+        videoSize: contentLength,
+        hasPoster: false,
         createdAt,
       },
     });

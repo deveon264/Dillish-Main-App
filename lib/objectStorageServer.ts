@@ -47,38 +47,70 @@ async function signObjectURL(
   return signed_url;
 }
 
-// Uploads bytes to a fresh object under the private exercise-videos folder via a
-// signed PUT URL. Returns the full object path stored in the database.
-export async function uploadExerciseVideo(buffer: Buffer, contentType: string): Promise<string> {
-  const fullPath = `${getPrivateDir()}/exercise-videos/${uuid()}`;
+// Streams a request body straight to a fresh object via a signed PUT URL — the
+// bytes are never buffered in the server's memory. `contentLength` (the exact
+// byte count) is forwarded so the storage backend receives a regular,
+// non-chunked upload. Returns the full object path stored in the database. If
+// the upload fails (including when a size-limiting stream aborts early), any
+// partial object is cleaned up.
+async function putObjectStream(
+  fullPath: string,
+  body: ReadableStream<Uint8Array>,
+  contentType: string,
+  contentLength: number,
+  fallbackType: string
+): Promise<string> {
   const putUrl = await signObjectURL(fullPath, "PUT", 900);
-  const res = await fetch(putUrl, {
-    method: "PUT",
-    headers: { "Content-Type": contentType || "video/mp4" },
-    body: new Uint8Array(buffer),
-  });
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw new Error(`Object upload failed (${res.status}) ${detail.slice(0, 200)}`);
+  try {
+    const res = await fetch(putUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Type": contentType || fallbackType,
+        "Content-Length": String(contentLength),
+      },
+      body: body as any,
+      // Required by undici when streaming a request body.
+      duplex: "half",
+    } as any);
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      throw new Error(`Object upload failed (${res.status}) ${detail.slice(0, 200)}`);
+    }
+    return fullPath;
+  } catch (err) {
+    await deleteObject(fullPath).catch(() => {});
+    throw err;
   }
-  return fullPath;
 }
 
-// Uploads a poster image under the private exercise-posters folder via a signed
-// PUT URL. Returns the full object path stored in the database.
-export async function uploadExercisePoster(buffer: Buffer, contentType: string): Promise<string> {
-  const fullPath = `${getPrivateDir()}/exercise-posters/${uuid()}`;
-  const putUrl = await signObjectURL(fullPath, "PUT", 900);
-  const res = await fetch(putUrl, {
-    method: "PUT",
-    headers: { "Content-Type": contentType || "image/jpeg" },
-    body: new Uint8Array(buffer),
-  });
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw new Error(`Poster upload failed (${res.status}) ${detail.slice(0, 200)}`);
-  }
-  return fullPath;
+// Streams an exercise video to the private exercise-videos folder.
+export async function uploadExerciseVideoStream(
+  body: ReadableStream<Uint8Array>,
+  contentType: string,
+  contentLength: number
+): Promise<string> {
+  return putObjectStream(
+    `${getPrivateDir()}/exercise-videos/${uuid()}`,
+    body,
+    contentType,
+    contentLength,
+    "video/mp4"
+  );
+}
+
+// Streams a poster image to the private exercise-posters folder.
+export async function uploadExercisePosterStream(
+  body: ReadableStream<Uint8Array>,
+  contentType: string,
+  contentLength: number
+): Promise<string> {
+  return putObjectStream(
+    `${getPrivateDir()}/exercise-posters/${uuid()}`,
+    body,
+    contentType,
+    contentLength,
+    "image/jpeg"
+  );
 }
 
 // Returns a short-lived signed GET URL clients can stream from (GCS supports Range).

@@ -19,6 +19,12 @@ Video **bytes live in Replit Object Storage**; Postgres `exercises` stores only 
 - Object path format: `${PRIVATE_OBJECT_DIR}/exercise-videos/<uuid>`; parse `/bucket/object...` by splitting on `/`.
 - **Why:** keeps the heavy SDK out of the Metro bundle entirely; signed URLs do all the work.
 
+## Streamed uploads (don't buffer whole videos in server memory)
+- The signed `PUT` URL accepts a **streamed body** (undici `fetch` with `body: ReadableStream`, `duplex: "half"`) as long as you forward an explicit `Content-Length` header. Verified end-to-end (PUT 200, GET back byte-for-byte). With Content-Length the upload is a normal, non-chunked request.
+- The upload wire format is **raw video bytes as the request body + text metadata in query params** (NOT multipart). This is what lets the server enforce the 80MB cap from the request's `Content-Length` *before* touching the body, and pipe `request.body` straight to storage. A `TransformStream` byte-counter aborts mid-stream as defense-in-depth. `video_size` is taken from Content-Length.
+- **Why multipart was dropped:** `request.formData()` buffers the entire payload into memory before any size check could run. Multipart also has no per-part length, so you can't give the GCS PUT a Content-Length.
+- Client native path uses `expo-file-system` **legacy** `uploadAsync(url, uri, { uploadType: FileSystemUploadType.BINARY_CONTENT })` — streams the file from disk, never through JS memory. Import from `expo-file-system/legacy` (the new File API in v19 doesn't expose uploadAsync at the top level). **Pin expo-file-system to the SDK-54 version (`19.0.x`)** — `installLanguagePackages` grabbed a wrong `56.x` that Expo flagged as incompatible.
+
 ## HTTP Range streaming (iOS/Safari requirement)
 - iOS/Safari will NOT play a `<video>` source unless the server honors `Range` and replies `206`. With object storage this is **free**: the video endpoint just 302-redirects to the signed GCS GET URL, and GCS handles `Range`/`206` natively. Verified curl `Range: bytes=0-99` → `206` + `Content-Range`.
 - **How to apply:** don't re-implement Range when redirecting to GCS — let storage serve the bytes.

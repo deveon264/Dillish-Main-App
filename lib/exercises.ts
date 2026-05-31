@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import { uploadAsync, FileSystemUploadType } from "expo-file-system/legacy";
 import { getApiUrl } from "@/lib/api";
 
 export type UploadedExercise = {
@@ -41,6 +42,42 @@ export async function listExercises(): Promise<UploadedExercise[]> {
   return data.items ?? [];
 }
 
+// Sends the bytes at `uri` as a raw request body so the server can stream them
+// straight to storage. On native the file streams from disk (never through JS
+// memory); on web the blob/object URL is fetched and sent directly.
+async function postBinary(
+  endpoint: string,
+  uri: string,
+  contentType: string,
+  token: string
+): Promise<{ status: number; body: string }> {
+  if (Platform.OS === "web") {
+    const blob = await (await fetch(uri)).blob();
+    const resp = await fetch(endpoint, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": contentType },
+      body: blob,
+    });
+    return { status: resp.status, body: await resp.text() };
+  }
+  const result = await uploadAsync(endpoint, uri, {
+    httpMethod: "POST",
+    uploadType: FileSystemUploadType.BINARY_CONTENT,
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": contentType },
+  });
+  return { status: result.status, body: result.body };
+}
+
+function errorFrom(body: string, fallback: string): string {
+  try {
+    const j = JSON.parse(body);
+    if (j?.error) return j.error as string;
+  } catch {
+    // ignore
+  }
+  return fallback;
+}
+
 export async function uploadExercise(params: {
   title: string;
   description: string;
@@ -53,58 +90,51 @@ export async function uploadExercise(params: {
   token: string;
 }): Promise<UploadedExercise> {
   const { title, description, cues, category, level, duration, asset, poster, token } = params;
-  const name = asset.fileName || `exercise-${Date.now()}.mp4`;
   const type = asset.mimeType || "video/mp4";
 
-  const form = new FormData();
-  form.append("title", title);
-  form.append("description", description);
-  form.append("cues", cues);
-  form.append("category", category);
-  form.append("level", level);
-  form.append("duration", duration);
+  // Metadata travels in query params so the video can be sent as the raw request
+  // body. This lets the server stream the bytes straight to storage and reject
+  // oversized uploads from the Content-Length header before reading the body.
+  const qs = new URLSearchParams({
+    title,
+    description,
+    cues,
+    category,
+    level,
+    duration,
+  }).toString();
 
-  if (Platform.OS === "web") {
-    const blob = await (await fetch(asset.uri)).blob();
-    form.append("video", blob, name);
-  } else {
-    // React Native FormData accepts a file descriptor object.
-    form.append("video", { uri: asset.uri, name, type } as any);
+  const { status, body } = await postBinary(
+    `${getApiUrl()}/api/exercises?${qs}`,
+    asset.uri,
+    type,
+    token
+  );
+  if (status < 200 || status >= 300) {
+    throw new Error(errorFrom(body, "Upload failed"));
   }
+  let item = (JSON.parse(body) as { item: UploadedExercise }).item;
 
+  // The poster is optional and uploaded as a second request keyed by the new
+  // exercise id. A poster failure must never fail the (already saved) video.
   if (poster?.uri) {
-    const posterType = poster.mimeType || "image/jpeg";
-    const ext = posterType.includes("png") ? "png" : "jpg";
-    const posterName = `poster-${Date.now()}.${ext}`;
     try {
-      if (Platform.OS === "web") {
-        const blob = await (await fetch(poster.uri)).blob();
-        form.append("poster", blob, posterName);
-      } else {
-        form.append("poster", { uri: poster.uri, name: posterName, type: posterType } as any);
+      const posterType = poster.mimeType || "image/jpeg";
+      const pr = await postBinary(
+        `${getApiUrl()}/api/exercise-poster?id=${encodeURIComponent(item.id)}`,
+        poster.uri,
+        posterType,
+        token
+      );
+      if (pr.status >= 200 && pr.status < 300) {
+        item = { ...item, hasPoster: true };
       }
     } catch {
-      // A poster is optional; never block the video upload on it.
+      // poster optional; ignore
     }
   }
 
-  const resp = await fetch(`${getApiUrl()}/api/exercises`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-    body: form,
-  });
-  if (!resp.ok) {
-    let msg = "Upload failed";
-    try {
-      const j = await resp.json();
-      if (j?.error) msg = j.error;
-    } catch {
-      // ignore
-    }
-    throw new Error(msg);
-  }
-  const data = (await resp.json()) as { item: UploadedExercise };
-  return data.item;
+  return item;
 }
 
 export async function deleteExercise(id: string, token: string): Promise<void> {
