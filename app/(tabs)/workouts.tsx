@@ -123,12 +123,16 @@ export default function Workouts() {
                 <ImageBackground source={w.image} style={styles.cardImg} imageStyle={styles.cardImgRadius}>
                   <LinearGradient colors={["rgba(44,36,34,0.05)", "rgba(44,36,34,0.85)"]} style={StyleSheet.absoluteFill} />
                   <View style={styles.cardBody}>
-                    <View style={styles.cardBadge}>
-                      <Text style={styles.cardBadgeText}>{w.level}</Text>
+                    <View style={styles.cardTags}>
+                      <Text style={styles.cardCat}>{w.category}</Text>
+                      <View style={styles.cardTagDot} />
+                      <Text style={styles.cardLevel}>{w.level}</Text>
                     </View>
                     <View>
-                      <Text style={styles.cardCat}>{w.category}</Text>
                       <Text style={styles.cardTitle}>{w.title}</Text>
+                      <Text style={styles.cardDesc} numberOfLines={2}>
+                        {w.description}
+                      </Text>
                       <View style={styles.cardMeta}>
                         <View style={styles.metaItem}>
                           <Ionicons name="time-outline" size={14} color={colors.foreground} />
@@ -140,9 +144,6 @@ export default function Workouts() {
                         </View>
                       </View>
                     </View>
-                  </View>
-                  <View style={styles.play}>
-                    <Ionicons name="play" size={18} color={colors.onPrimary} />
                   </View>
                 </ImageBackground>
               </Pressable>
@@ -244,33 +245,18 @@ const styles = StyleSheet.create({
   filterTextActive: { color: colors.accent },
   list: { gap: 16 },
   card: { borderRadius: colors.radiusLg, overflow: "hidden" },
-  cardImg: { height: 180, justifyContent: "space-between" },
+  cardImg: { height: 200, justifyContent: "space-between" },
   cardImgRadius: { borderRadius: colors.radiusLg },
   cardBody: { flex: 1, justifyContent: "space-between", padding: 16 },
-  cardBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: "rgba(247,235,232,0.18)",
-    paddingHorizontal: 11,
-    paddingVertical: 4,
-    borderRadius: 16,
-  },
-  cardBadgeText: { fontFamily: fonts.sansSemibold, fontSize: 10.5, color: colors.foreground, letterSpacing: 0.4 },
-  cardCat: { fontFamily: fonts.sansSemibold, fontSize: 11, color: colors.accent, letterSpacing: 0.5 },
-  cardTitle: { fontFamily: fonts.serifSemibold, fontSize: 22, color: colors.foreground, marginTop: 2 },
-  cardMeta: { flexDirection: "row", gap: 16, marginTop: 6 },
+  cardTags: { flexDirection: "row", alignItems: "center", gap: 8, alignSelf: "flex-start" },
+  cardCat: { fontFamily: fonts.sansSemibold, fontSize: 11, color: colors.accent, letterSpacing: 0.6, textTransform: "uppercase" },
+  cardTagDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: "rgba(247,235,232,0.5)" },
+  cardLevel: { fontFamily: fonts.sansSemibold, fontSize: 11, color: colors.foreground, letterSpacing: 0.6, textTransform: "uppercase" },
+  cardTitle: { fontFamily: fonts.serifSemibold, fontSize: 22, color: colors.foreground },
+  cardDesc: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 18, color: "rgba(247,235,232,0.78)", marginTop: 4 },
+  cardMeta: { flexDirection: "row", gap: 16, marginTop: 10 },
   metaItem: { flexDirection: "row", alignItems: "center", gap: 5 },
   metaText: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.foreground },
-  play: {
-    position: "absolute",
-    top: 16,
-    right: 16,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   empty: { alignItems: "center", paddingVertical: 60, gap: 12 },
   emptyText: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted },
 });
