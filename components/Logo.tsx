@@ -31,16 +31,14 @@ export function Logo({
       </LinearGradient>
       {showText ? (
         <View style={styles.textCol}>
-          {tagline ? (
-            <View style={styles.taglinePill}>
-              <Text style={[styles.tagline, { fontSize: taglineSize }]}>
-                {tagline.toUpperCase()}
-              </Text>
-            </View>
-          ) : null}
           <Text style={[styles.text, { fontSize }]}>
             Florish
           </Text>
+          {tagline ? (
+            <Text style={[styles.tagline, { fontSize: taglineSize }]}>
+              {tagline.toUpperCase()}
+            </Text>
+          ) : null}
         </View>
       ) : null}
     </View>
@@ -56,16 +54,10 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     letterSpacing: 0.5,
   },
-  taglinePill: {
-    backgroundColor: colors.primary,
-    borderRadius: 999,
-    paddingHorizontal: 9,
-    paddingVertical: 2,
-    marginBottom: 4,
-  },
   tagline: {
     fontFamily: fonts.sansSemibold,
-    color: colors.foreground,
-    letterSpacing: 1.2,
+    color: colors.primary,
+    letterSpacing: 2,
+    marginTop: 2,
   },
 });
