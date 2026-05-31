@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, TextInput } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Card } from "@/components/Card";
@@ -54,12 +56,14 @@ export default function Progress() {
   const insets = useInsets();
   const router = useRouter();
   const { user } = useAuth();
-  const { profile, weightLogs, completions, addWeight, removeWeight } = useData();
+  const { profile, weightLogs, progressPhotos, completions, addWeight, removeWeight, addPhoto, removePhoto } =
+    useData();
 
   const [tab, setTab] = useState("progress");
   const [weightInput, setWeightInput] = useState("");
   const [dateInput, setDateInput] = useState(fmtDateInput(new Date()));
   const [logError, setLogError] = useState("");
+  const [photoError, setPhotoError] = useState("");
 
   const firstName = (user?.name ?? "there").split(" ")[0];
   const unit = profile.weightUnit ?? "kg";
@@ -125,6 +129,46 @@ export default function Progress() {
     setWeightInput("");
     setDateInput(fmtDateInput(new Date()));
     setLogError("");
+  };
+
+  const sortedPhotos = useMemo(
+    () => [...progressPhotos].sort((a, b) => b.ts - a.ts),
+    [progressPhotos]
+  );
+  const beforePhoto = sortedPhotos.length ? sortedPhotos[sortedPhotos.length - 1] : null;
+  const afterPhoto = sortedPhotos.length ? sortedPhotos[0] : null;
+  const hasPair = sortedPhotos.length >= 2;
+
+  const addProgressPhoto = async (fromCamera: boolean) => {
+    setPhotoError("");
+    try {
+      const perm = fromCamera
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        setPhotoError("Permission is required to add a photo.");
+        return;
+      }
+      const opts: ImagePicker.ImagePickerOptions = {
+        mediaTypes: ["images"],
+        quality: 0.6,
+        base64: true,
+        allowsEditing: true,
+      };
+      const res = fromCamera
+        ? await ImagePicker.launchCameraAsync(opts)
+        : await ImagePicker.launchImageLibraryAsync(opts);
+      if (res.canceled || !res.assets?.[0]) return;
+      const asset = res.assets[0];
+      const uri = asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
+      try {
+        await addPhoto(uri, current);
+      } catch {
+        setPhotoError("Couldn't save the photo — storage may be full. Try removing older photos.");
+      }
+    } catch {
+      setPhotoError("Unable to open the camera or library on this device.");
+    }
   };
 
   const active = TABS.find((t) => t.key === tab) ?? TABS[0];
@@ -321,6 +365,108 @@ export default function Progress() {
               </View>
             )}
           </>
+        ) : tab === "photos" ? (
+          <>
+            <Card style={styles.galleryCard}>
+              <View style={styles.galleryIcon}>
+                <Ionicons name="lock-closed" size={22} color={colors.accent} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.galleryTitle}>Private Gallery</Text>
+                <Text style={styles.gallerySub}>Only visible to you · End-to-end encrypted</Text>
+              </View>
+            </Card>
+
+            <Pressable
+              onPress={() => addProgressPhoto(Platform.OS !== "web")}
+              style={({ pressed }) => [styles.addPhotoCard, pressed && { opacity: 0.85 }]}
+            >
+              <View style={styles.addPhotoIcon}>
+                <Ionicons name="camera" size={22} color={colors.accent} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.addPhotoTitle}>Add Progress Photo</Text>
+                <Text style={styles.addPhotoSub}>Tap to take or upload a photo</Text>
+              </View>
+            </Pressable>
+            {photoError ? <Text style={styles.logErrorText}>{photoError}</Text> : null}
+
+            {sortedPhotos.length === 0 ? (
+              <Card style={{ alignItems: "center", paddingVertical: 32, marginTop: 18 }}>
+                <Ionicons name="images-outline" size={32} color={colors.mutedForeground} />
+                <Text style={styles.chartEmptyText}>No progress photos yet</Text>
+              </Card>
+            ) : (
+              <>
+                <View style={styles.photosHead}>
+                  <Text style={styles.section}>BEFORE & AFTER</Text>
+                  <Text style={styles.photosCount}>
+                    {sortedPhotos.length} {sortedPhotos.length === 1 ? "photo" : "photos"}
+                  </Text>
+                </View>
+
+                {hasPair && beforePhoto && afterPhoto ? (
+                  <View style={styles.baRow}>
+                    <View style={styles.baCard}>
+                      <Image source={{ uri: beforePhoto.uri }} style={styles.baImg} contentFit="cover" />
+                      <View style={styles.baLabel}>
+                        <Text style={styles.baLabelText}>Before</Text>
+                      </View>
+                      <LinearGradient
+                        colors={["transparent", "rgba(28,22,20,0.85)"]}
+                        style={styles.baOverlay}
+                      >
+                        <Text style={styles.baDate}>{fmtDay(new Date(beforePhoto.ts))}</Text>
+                        <Text style={styles.baMeta}>
+                          {beforePhoto.weight != null ? `${beforePhoto.weight.toFixed(1)} ${unit} · ` : ""}Start
+                        </Text>
+                      </LinearGradient>
+                    </View>
+                    <View style={styles.baCard}>
+                      <Image source={{ uri: afterPhoto.uri }} style={styles.baImg} contentFit="cover" />
+                      <View style={[styles.baLabel, styles.baLabelAfter]}>
+                        <Text style={styles.baLabelText}>After</Text>
+                      </View>
+                      <LinearGradient
+                        colors={["transparent", "rgba(28,22,20,0.85)"]}
+                        style={styles.baOverlay}
+                      >
+                        <Text style={styles.baDate}>{fmtDay(new Date(afterPhoto.ts))}</Text>
+                        <Text style={styles.baMeta}>
+                          {afterPhoto.weight != null ? `${afterPhoto.weight.toFixed(1)} ${unit} · ` : ""}Now
+                        </Text>
+                      </LinearGradient>
+                    </View>
+                  </View>
+                ) : (
+                  <Card style={{ alignItems: "center", paddingVertical: 24 }}>
+                    <Text style={styles.chartEmptyText}>Add one more photo to compare before & after</Text>
+                  </Card>
+                )}
+
+                <Text style={[styles.section, { marginTop: 22 }]}>PHOTO TIMELINE</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ gap: 12, paddingVertical: 2 }}
+                >
+                  {sortedPhotos.map((p) => (
+                    <View key={p.id} style={styles.timelineItem}>
+                      <Image source={{ uri: p.uri }} style={styles.timelineImg} contentFit="cover" />
+                      <Pressable
+                        onPress={() => removePhoto(p.id)}
+                        hitSlop={8}
+                        style={styles.timelineRemove}
+                      >
+                        <Ionicons name="close" size={14} color={colors.foreground} />
+                      </Pressable>
+                      <Text style={styles.timelineDate}>{fmtDay(new Date(p.ts))}</Text>
+                    </View>
+                  ))}
+                </ScrollView>
+              </>
+            )}
+          </>
         ) : (
           <Card style={styles.comingSoon}>
             <Ionicons name={active.icon} size={34} color={colors.accent} />
@@ -463,4 +609,94 @@ const styles = StyleSheet.create({
   comingSoon: { marginTop: 18, alignItems: "center", paddingVertical: 48, gap: 8 },
   comingTitle: { fontFamily: fonts.serifSemibold, fontSize: 20, color: colors.foreground, marginTop: 6 },
   comingDesc: { fontFamily: fonts.sans, fontSize: 14, color: colors.muted },
+
+  galleryCard: { flexDirection: "row", alignItems: "center", gap: 14, marginTop: 18, padding: 18 },
+  galleryIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: "rgba(242,212,204,0.10)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  galleryTitle: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.foreground },
+  gallerySub: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.muted, marginTop: 3 },
+
+  addPhotoCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    marginTop: 14,
+    padding: 18,
+    borderRadius: colors.radius,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderStyle: "dashed",
+    backgroundColor: colors.card,
+  },
+  addPhotoIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: "rgba(242,212,204,0.10)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addPhotoTitle: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.foreground },
+  addPhotoSub: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.muted, marginTop: 3 },
+
+  photosHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  photosCount: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.primary },
+
+  baRow: { flexDirection: "row", gap: 12 },
+  baCard: {
+    flex: 1,
+    aspectRatio: 0.74,
+    borderRadius: colors.radius,
+    overflow: "hidden",
+    backgroundColor: colors.card,
+  },
+  baImg: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, width: "100%", height: "100%" },
+  baLabel: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    backgroundColor: "rgba(28,22,20,0.7)",
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  baLabelAfter: { backgroundColor: "rgba(242,212,204,0.85)" },
+  baLabelText: { fontFamily: fonts.sansSemibold, fontSize: 12, color: colors.foreground },
+  baOverlay: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 12,
+    paddingTop: 28,
+    paddingBottom: 12,
+  },
+  baDate: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
+  baMeta: { fontFamily: fonts.sans, fontSize: 12, color: colors.accent, marginTop: 2 },
+
+  timelineItem: { width: 92 },
+  timelineImg: {
+    width: 92,
+    height: 116,
+    borderRadius: 14,
+    backgroundColor: colors.card,
+  },
+  timelineRemove: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "rgba(28,22,20,0.7)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  timelineDate: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.muted, marginTop: 6, textAlign: "center" },
 });

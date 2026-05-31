@@ -9,11 +9,13 @@ export async function getJSON<T>(key: string, fallback: T): Promise<T> {
   }
 }
 
-export async function setJSON(key: string, value: unknown): Promise<void> {
+export async function setJSON(key: string, value: unknown): Promise<boolean> {
   try {
     await AsyncStorage.setItem(key, JSON.stringify(value));
+    return true;
   } catch {
-    // ignore write errors (storage full / unavailable)
+    // storage full / unavailable
+    return false;
   }
 }
 

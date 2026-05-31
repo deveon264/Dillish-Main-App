@@ -19,6 +19,7 @@ export type Profile = {
 
 export type WaterLog = { id: string; amountMl: number; ts: number };
 export type WeightLog = { id: string; weight: number; ts: number };
+export type ProgressPhoto = { id: string; uri: string; ts: number; weight: number | null };
 export type CalorieLog = {
   id: string;
   name: string;
@@ -58,6 +59,7 @@ type DataContextType = {
   profile: Profile;
   waterLogs: WaterLog[];
   weightLogs: WeightLog[];
+  progressPhotos: ProgressPhoto[];
   calorieLogs: CalorieLog[];
   completions: WorkoutCompletion[];
   updateProfile: (patch: Partial<Profile>) => Promise<void>;
@@ -65,6 +67,8 @@ type DataContextType = {
   removeWater: (id: string) => Promise<void>;
   addWeight: (weight: number, ts?: number) => Promise<void>;
   removeWeight: (id: string) => Promise<void>;
+  addPhoto: (uri: string, weight: number | null) => Promise<void>;
+  removePhoto: (id: string) => Promise<void>;
   addCalorie: (entry: Omit<CalorieLog, "id" | "ts">) => Promise<void>;
   deleteCalorie: (id: string) => Promise<void>;
   completeWorkout: (c: Omit<WorkoutCompletion, "id" | "ts">) => Promise<void>;
@@ -82,6 +86,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE);
   const [waterLogs, setWaterLogs] = useState<WaterLog[]>([]);
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
+  const [progressPhotos, setProgressPhotos] = useState<ProgressPhoto[]>([]);
   const [calorieLogs, setCalorieLogs] = useState<CalorieLog[]>([]);
   const [completions, setCompletions] = useState<WorkoutCompletion[]>([]);
 
@@ -92,16 +97,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         setProfile(DEFAULT_PROFILE);
         setWaterLogs([]);
         setWeightLogs([]);
+        setProgressPhotos([]);
         setCalorieLogs([]);
         setCompletions([]);
         setReady(false);
         return;
       }
       setReady(false);
-      const [p, w, wt, c, wk] = await Promise.all([
+      const [p, w, wt, ph, c, wk] = await Promise.all([
         getJSON<Profile>(keyFor(uid, "profile"), DEFAULT_PROFILE),
         getJSON<WaterLog[]>(keyFor(uid, "water"), []),
         getJSON<WeightLog[]>(keyFor(uid, "weight"), []),
+        getJSON<ProgressPhoto[]>(keyFor(uid, "photos"), []),
         getJSON<CalorieLog[]>(keyFor(uid, "calories"), []),
         getJSON<WorkoutCompletion[]>(keyFor(uid, "workouts"), []),
       ]);
@@ -109,6 +116,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setProfile({ ...DEFAULT_PROFILE, ...p });
       setWaterLogs(w);
       setWeightLogs([...wt].sort((a, b) => b.ts - a.ts));
+      setProgressPhotos([...ph].sort((a, b) => b.ts - a.ts));
       setCalorieLogs(c);
       setCompletions(wk);
       setReady(true);
@@ -179,6 +187,36 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     [uid]
   );
 
+  const addPhoto = useCallback(
+    async (uri: string, weight: number | null) => {
+      if (!uid) return;
+      const entry: ProgressPhoto = { id: genId(), uri, ts: Date.now(), weight };
+      let nextArr: ProgressPhoto[] = [];
+      setProgressPhotos((prev) => {
+        nextArr = [entry, ...prev].sort((a, b) => b.ts - a.ts);
+        return nextArr;
+      });
+      const ok = await setJSON(keyFor(uid, "photos"), nextArr);
+      if (!ok) {
+        setProgressPhotos((prev) => prev.filter((p) => p.id !== entry.id));
+        throw new Error("Could not save photo — storage may be full.");
+      }
+    },
+    [uid]
+  );
+
+  const removePhoto = useCallback(
+    async (id: string) => {
+      if (!uid) return;
+      setProgressPhotos((prev) => {
+        const next = prev.filter((p) => p.id !== id);
+        setJSON(keyFor(uid, "photos"), next);
+        return next;
+      });
+    },
+    [uid]
+  );
+
   const addCalorie = useCallback(
     async (entry: Omit<CalorieLog, "id" | "ts">) => {
       if (!uid) return;
@@ -221,6 +259,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       profile,
       waterLogs,
       weightLogs,
+      progressPhotos,
       calorieLogs,
       completions,
       updateProfile,
@@ -228,11 +267,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       removeWater,
       addWeight,
       removeWeight,
+      addPhoto,
+      removePhoto,
       addCalorie,
       deleteCalorie,
       completeWorkout,
     }),
-    [ready, profile, waterLogs, weightLogs, calorieLogs, completions, updateProfile, addWater, removeWater, addWeight, removeWeight, addCalorie, deleteCalorie, completeWorkout]
+    [ready, profile, waterLogs, weightLogs, progressPhotos, calorieLogs, completions, updateProfile, addWater, removeWater, addWeight, removeWeight, addPhoto, removePhoto, addCalorie, deleteCalorie, completeWorkout]
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
