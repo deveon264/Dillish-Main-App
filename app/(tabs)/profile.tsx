@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable, Switch } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Card } from "@/components/Card";
@@ -68,6 +69,18 @@ export default function Profile() {
     return Math.max(0, Math.min(1, done / total));
   }, [startWeight, currentWeight, profile.goalWeight]);
 
+  const bmi = useMemo(() => {
+    if (currentWeight == null || profile.height == null || profile.height <= 0) return null;
+    const kg = profile.weightUnit === "lbs" ? currentWeight * 0.453592 : currentWeight;
+    const cm = profile.heightUnit === "ft" ? profile.height * 30.48 : profile.height;
+    if (cm <= 0) return null;
+    const m = cm / 100;
+    return kg / (m * m);
+  }, [currentWeight, profile.height, profile.weightUnit, profile.heightUnit]);
+
+  const fmtStat = (n: number | null, digits = 0) =>
+    n == null ? "—" : Number.isInteger(n) ? String(n) : n.toFixed(digits);
+
   const saveName = async () => {
     if (name.trim()) await updateUser({ name: name.trim() });
     setEditing(false);
@@ -75,18 +88,40 @@ export default function Profile() {
 
   const firstName = (user?.name ?? "F").charAt(0).toUpperCase();
 
+  const PROFILE_TABS = ["Profile", "Plan", "History", "Settings"];
+
   return (
     <GradientBackground>
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 110 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Profile</Text>
+        <Text style={styles.brand}>FLORISH</Text>
+        <Text style={styles.title}>
+          My <Text style={styles.titleItalic}>Profile</Text>
+        </Text>
+
+        <View style={styles.tabBar}>
+          {PROFILE_TABS.map((t) =>
+            t === "Profile" ? (
+              <LinearGradient
+                key={t}
+                colors={colors.gradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.tabActive}
+              >
+                <Text style={styles.tabActiveText}>{t}</Text>
+              </LinearGradient>
+            ) : (
+              <View key={t} style={styles.tab}>
+                <Text style={styles.tabText}>{t}</Text>
+              </View>
+            )
+          )}
+        </View>
 
         <Card style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{firstName}</Text>
-          </View>
           {editing ? (
             <View style={{ flex: 1 }}>
               <Input value={name} onChangeText={setName} placeholder="Your name" style={{ marginBottom: 0 }} />
@@ -96,30 +131,53 @@ export default function Profile() {
               </View>
             </View>
           ) : (
-            <View style={{ flex: 1 }}>
-              <Text style={styles.profileName}>{user?.name}</Text>
-              <Text style={styles.profileEmail}>{user?.email}</Text>
+            <View style={styles.profileRow}>
+              <View style={styles.avatarWrap}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>{firstName}</Text>
+                </View>
+                <Pressable
+                  style={styles.cameraBadge}
+                  onPress={() => { setName(user?.name ?? ""); setEditing(true); }}
+                  hitSlop={8}
+                >
+                  <Ionicons name="camera" size={13} color={colors.onPrimary} />
+                </Pressable>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.profileName}>{user?.name}</Text>
+                <Text style={styles.profileEmail}>{user?.email}</Text>
+                <View style={styles.badgeRow}>
+                  <View style={styles.badge}>
+                    <Ionicons name="sparkles" size={12} color={colors.accent} />
+                    <Text style={styles.badgeText}>Premium</Text>
+                  </View>
+                  <View style={styles.badge}>
+                    <Ionicons name="flame" size={12} color={colors.primary} />
+                    <Text style={styles.badgeText}>{streak} day streak</Text>
+                  </View>
+                </View>
+              </View>
             </View>
           )}
-          {!editing ? (
-            <Pressable onPress={() => { setName(user?.name ?? ""); setEditing(true); }} hitSlop={10}>
-              <Ionicons name="create-outline" size={22} color={colors.mutedForeground} />
-            </Pressable>
-          ) : null}
         </Card>
 
         <View style={styles.statsRow}>
           <Card style={styles.statCard}>
-            <Text style={styles.statNum}>{streak}</Text>
-            <Text style={styles.statLbl}>Day streak</Text>
+            <Text style={styles.statNum}>{fmtStat(profile.age)}</Text>
+            <Text style={styles.statLbl}>Age</Text>
           </Card>
           <Card style={styles.statCard}>
-            <Text style={styles.statNum}>{totalWorkouts}</Text>
-            <Text style={styles.statLbl}>Workouts</Text>
+            <Text style={styles.statNum}>{fmtStat(currentWeight, 1)}</Text>
+            <Text style={styles.statLbl}>{profile.weightUnit}</Text>
           </Card>
           <Card style={styles.statCard}>
-            <Text style={styles.statNum}>{totalMeals}</Text>
-            <Text style={styles.statLbl}>Meals logged</Text>
+            <Text style={styles.statNum}>{fmtStat(profile.height)}</Text>
+            <Text style={styles.statLbl}>{profile.heightUnit}</Text>
+          </Card>
+          <Card style={styles.statCard}>
+            <Text style={styles.statNum}>{fmtStat(bmi, 1)}</Text>
+            <Text style={styles.statLbl}>BMI</Text>
           </Card>
         </View>
 
@@ -223,8 +281,26 @@ function SettingLink({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; la
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 20 },
+  brand: { fontFamily: fonts.sansSemibold, fontSize: 11, letterSpacing: 3, color: colors.mutedForeground, marginBottom: 4 },
   title: { fontFamily: fonts.serif, fontSize: 36, color: colors.foreground, marginBottom: 18 },
-  profileCard: { flexDirection: "row", alignItems: "center", gap: 16 },
+  titleItalic: { fontFamily: fonts.serifItalic, color: colors.foreground },
+  tabBar: {
+    flexDirection: "row",
+    gap: 4,
+    backgroundColor: colors.cardElevated,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: colors.radius,
+    padding: 4,
+    marginBottom: 18,
+  },
+  tab: { flex: 1, paddingVertical: 10, alignItems: "center", justifyContent: "center", borderRadius: colors.radiusSm },
+  tabActive: { flex: 1, paddingVertical: 10, alignItems: "center", justifyContent: "center", borderRadius: colors.radiusSm },
+  tabText: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.muted },
+  tabActiveText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.onPrimary },
+  profileCard: {},
+  profileRow: { flexDirection: "row", alignItems: "center", gap: 16 },
+  avatarWrap: { width: 64, height: 64 },
   avatar: {
     width: 64,
     height: 64,
@@ -236,12 +312,38 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   avatarText: { fontFamily: fonts.serifSemibold, fontSize: 28, color: colors.accent },
+  cameraBadge: {
+    position: "absolute",
+    bottom: -2,
+    right: -2,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    borderWidth: 2,
+    borderColor: colors.background,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   profileName: { fontFamily: fonts.serifSemibold, fontSize: 22, color: colors.foreground },
   profileEmail: { fontFamily: fonts.sans, fontSize: 14, color: colors.muted, marginTop: 2 },
-  statsRow: { flexDirection: "row", gap: 12, marginTop: 16 },
-  statCard: { flex: 1, alignItems: "center", paddingVertical: 18 },
-  statNum: { fontFamily: fonts.serifSemibold, fontSize: 28, color: colors.accent },
-  statLbl: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, marginTop: 2, textAlign: "center" },
+  badgeRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 },
+  badge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: colors.cardElevated,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  badgeText: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.foreground },
+  statsRow: { flexDirection: "row", gap: 10, marginTop: 16 },
+  statCard: { flex: 1, alignItems: "center", paddingVertical: 16, paddingHorizontal: 4 },
+  statNum: { fontFamily: fonts.serifSemibold, fontSize: 24, color: colors.accent },
+  statLbl: { fontFamily: fonts.sans, fontSize: 11, color: colors.muted, marginTop: 2, textAlign: "center" },
   cardTitle: { fontFamily: fonts.serifSemibold, fontSize: 18, color: colors.foreground },
   weightHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   weightVals: { fontFamily: fonts.sansMedium, fontSize: 14, color: colors.accent },
