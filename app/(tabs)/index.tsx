@@ -157,12 +157,12 @@ export default function Dashboard() {
         </Card>
 
         {/* Today's Workout hero */}
-        <View style={styles.sectionHead}>
-          <Text style={styles.sectionTitle}>Today's workout</Text>
-        </View>
-        <Pressable onPress={() => router.push(`/workout/${featured.id}`)}>
+        <Pressable onPress={() => router.push(`/workout/${featured.id}`)} style={{ marginTop: 24 }}>
           <ImageBackground source={featured.image} style={styles.hero} imageStyle={styles.heroImg}>
             <LinearGradient colors={["rgba(44,36,34,0.1)", "rgba(44,36,34,0.88)"]} style={StyleSheet.absoluteFill} />
+            <View style={styles.heroBadge}>
+              <Text style={styles.heroBadgeText}>TODAY'S WORKOUT</Text>
+            </View>
             <View style={styles.heroContent}>
               <Text style={styles.heroTitle}>{featured.title}</Text>
               <View style={styles.heroMeta}>
@@ -384,6 +384,18 @@ const styles = StyleSheet.create({
 
   hero: { height: 190, borderRadius: colors.radiusLg, overflow: "hidden", justifyContent: "flex-end" },
   heroImg: { borderRadius: colors.radiusLg },
+  heroBadge: {
+    position: "absolute",
+    top: 16,
+    left: 16,
+    backgroundColor: "rgba(44,36,34,0.55)",
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(247,235,232,0.18)",
+  },
+  heroBadgeText: { fontFamily: fonts.sansSemibold, fontSize: 11, color: colors.foreground, letterSpacing: 1.5 },
   heroContent: { padding: 20 },
   heroTitle: { fontFamily: fonts.serifSemibold, fontSize: 28, color: colors.foreground },
   heroMeta: { flexDirection: "row", gap: 16, marginTop: 8, flexWrap: "wrap" },
