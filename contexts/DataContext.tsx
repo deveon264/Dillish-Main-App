@@ -18,6 +18,7 @@ export type Profile = {
 };
 
 export type WaterLog = { id: string; amountMl: number; ts: number };
+export type WeightLog = { id: string; weight: number; ts: number };
 export type CalorieLog = {
   id: string;
   name: string;
@@ -56,11 +57,14 @@ type DataContextType = {
   ready: boolean;
   profile: Profile;
   waterLogs: WaterLog[];
+  weightLogs: WeightLog[];
   calorieLogs: CalorieLog[];
   completions: WorkoutCompletion[];
   updateProfile: (patch: Partial<Profile>) => Promise<void>;
   addWater: (amountMl: number) => Promise<void>;
   removeWater: (id: string) => Promise<void>;
+  addWeight: (weight: number, ts?: number) => Promise<void>;
+  removeWeight: (id: string) => Promise<void>;
   addCalorie: (entry: Omit<CalorieLog, "id" | "ts">) => Promise<void>;
   deleteCalorie: (id: string) => Promise<void>;
   completeWorkout: (c: Omit<WorkoutCompletion, "id" | "ts">) => Promise<void>;
@@ -77,6 +81,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE);
   const [waterLogs, setWaterLogs] = useState<WaterLog[]>([]);
+  const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
   const [calorieLogs, setCalorieLogs] = useState<CalorieLog[]>([]);
   const [completions, setCompletions] = useState<WorkoutCompletion[]>([]);
 
@@ -86,21 +91,24 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       if (!uid) {
         setProfile(DEFAULT_PROFILE);
         setWaterLogs([]);
+        setWeightLogs([]);
         setCalorieLogs([]);
         setCompletions([]);
         setReady(false);
         return;
       }
       setReady(false);
-      const [p, w, c, wk] = await Promise.all([
+      const [p, w, wt, c, wk] = await Promise.all([
         getJSON<Profile>(keyFor(uid, "profile"), DEFAULT_PROFILE),
         getJSON<WaterLog[]>(keyFor(uid, "water"), []),
+        getJSON<WeightLog[]>(keyFor(uid, "weight"), []),
         getJSON<CalorieLog[]>(keyFor(uid, "calories"), []),
         getJSON<WorkoutCompletion[]>(keyFor(uid, "workouts"), []),
       ]);
       if (!active) return;
       setProfile({ ...DEFAULT_PROFILE, ...p });
       setWaterLogs(w);
+      setWeightLogs([...wt].sort((a, b) => b.ts - a.ts));
       setCalorieLogs(c);
       setCompletions(wk);
       setReady(true);
@@ -140,6 +148,31 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setWaterLogs((prev) => {
         const next = prev.filter((l) => l.id !== id);
         setJSON(keyFor(uid, "water"), next);
+        return next;
+      });
+    },
+    [uid]
+  );
+
+  const addWeight = useCallback(
+    async (weight: number, ts?: number) => {
+      if (!uid) return;
+      const entryTs = ts ?? Date.now();
+      setWeightLogs((prev) => {
+        const next = [{ id: genId(), weight, ts: entryTs }, ...prev].sort((a, b) => b.ts - a.ts);
+        setJSON(keyFor(uid, "weight"), next);
+        return next;
+      });
+    },
+    [uid]
+  );
+
+  const removeWeight = useCallback(
+    async (id: string) => {
+      if (!uid) return;
+      setWeightLogs((prev) => {
+        const next = prev.filter((l) => l.id !== id);
+        setJSON(keyFor(uid, "weight"), next);
         return next;
       });
     },
@@ -187,16 +220,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       ready,
       profile,
       waterLogs,
+      weightLogs,
       calorieLogs,
       completions,
       updateProfile,
       addWater,
       removeWater,
+      addWeight,
+      removeWeight,
       addCalorie,
       deleteCalorie,
       completeWorkout,
     }),
-    [ready, profile, waterLogs, calorieLogs, completions, updateProfile, addWater, removeWater, addCalorie, deleteCalorie, completeWorkout]
+    [ready, profile, waterLogs, weightLogs, calorieLogs, completions, updateProfile, addWater, removeWater, addWeight, removeWeight, addCalorie, deleteCalorie, completeWorkout]
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

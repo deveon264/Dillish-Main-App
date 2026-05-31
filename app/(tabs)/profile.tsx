@@ -27,7 +27,7 @@ export default function Profile() {
   const router = useRouter();
   const insets = useInsets();
   const { user, logout, updateUser } = useAuth();
-  const { profile, completions, calorieLogs, updateProfile } = useData();
+  const { profile, completions, calorieLogs, weightLogs, updateProfile } = useData();
 
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(user?.name ?? "");
@@ -51,13 +51,22 @@ export default function Profile() {
     return count;
   }, [completions]);
 
+  const sortedWeights = useMemo(
+    () => [...weightLogs].sort((a, b) => b.ts - a.ts),
+    [weightLogs]
+  );
+  const currentWeight = sortedWeights[0]?.weight ?? profile.weight ?? null;
+  const startWeight = sortedWeights.length
+    ? sortedWeights[sortedWeights.length - 1].weight
+    : profile.startWeight ?? currentWeight;
+
   const weightProgress = useMemo(() => {
-    if (!profile.startWeight || !profile.goalWeight || !profile.weight) return null;
-    const total = profile.startWeight - profile.goalWeight;
-    const done = profile.startWeight - profile.weight;
+    if (startWeight == null || currentWeight == null || !profile.goalWeight) return null;
+    const total = startWeight - profile.goalWeight;
+    const done = startWeight - currentWeight;
     if (total === 0) return null;
     return Math.max(0, Math.min(1, done / total));
-  }, [profile]);
+  }, [startWeight, currentWeight, profile.goalWeight]);
 
   const saveName = async () => {
     if (name.trim()) await updateUser({ name: name.trim() });
@@ -119,7 +128,7 @@ export default function Profile() {
             <View style={styles.weightHead}>
               <Text style={styles.cardTitle}>Weight goal</Text>
               <Text style={styles.weightVals}>
-                {profile.weight}{profile.weightUnit} → {profile.goalWeight}{profile.weightUnit}
+                {currentWeight}{profile.weightUnit} → {profile.goalWeight}{profile.weightUnit}
               </Text>
             </View>
             <ProgressBar progress={weightProgress} height={8} style={{ marginTop: 14 }} />
