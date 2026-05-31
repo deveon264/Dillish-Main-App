@@ -22,8 +22,9 @@ export default function WorkoutPlayer() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useInsets();
-  const { completeWorkout, completions } = useData();
+  const { completeWorkout, completions, toggleFavorite, isFavorite } = useData();
   const workout = getWorkout(id);
+  const fav = workout ? isFavorite(workout.id) : false;
 
   const [phase, setPhase] = useState<Phase>("active");
   const [index, setIndex] = useState(0);
@@ -152,8 +153,15 @@ export default function WorkoutPlayer() {
               <View style={styles.nowPlaying}>
                 <Text style={styles.nowPlayingText}>NOW PLAYING</Text>
               </View>
-              <Pressable style={styles.roundBtn} hitSlop={8}>
-                <Ionicons name="heart-outline" size={20} color={colors.foreground} />
+              <Pressable
+                style={styles.roundBtn}
+                hitSlop={8}
+                onPress={() => {
+                  if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  toggleFavorite(workout.id);
+                }}
+              >
+                <Ionicons name={fav ? "heart" : "heart-outline"} size={20} color={fav ? colors.accent : colors.foreground} />
               </Pressable>
             </View>
 
