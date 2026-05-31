@@ -404,31 +404,45 @@ export default function Calories() {
           </View>
         ) : null}
 
-        <Text style={styles.diarySection}>Today's diary</Text>
+        <View style={styles.diaryHead}>
+          <Text style={styles.diaryEyebrow}>TODAY'S MEALS</Text>
+          {todayLogs.length > 0 ? (
+            <Text style={styles.diaryCount}>{todayLogs.length} logged</Text>
+          ) : null}
+        </View>
         {todayLogs.length === 0 ? (
           <Card style={{ alignItems: "center", paddingVertical: 28 }}>
             <Ionicons name="restaurant-outline" size={32} color={colors.mutedForeground} />
             <Text style={styles.emptyText}>No meals logged yet today</Text>
           </Card>
         ) : (
-          <View style={{ gap: 10 }}>
+          <View style={{ gap: 12 }}>
             {todayLogs.map((l) => (
-              <Card key={l.id} style={styles.logRow}>
+              <Card key={l.id} style={styles.logCard}>
                 {l.photoUri ? (
                   <Image source={{ uri: l.photoUri }} style={styles.logThumb} />
                 ) : (
                   <View style={[styles.logThumb, styles.logThumbFallback]}>
-                    <Ionicons name="restaurant-outline" size={18} color={colors.accent} />
+                    <Ionicons name="restaurant-outline" size={20} color={colors.accent} />
                   </View>
                 )}
-                <View style={{ flex: 1 }}>
+                <View style={styles.logMid}>
+                  <View style={styles.logMetaRow}>
+                    {l.mealType ? (
+                      <View style={styles.mealTag}>
+                        <Text style={styles.mealTagText}>{l.mealType}</Text>
+                      </View>
+                    ) : null}
+                    <Text style={styles.logTime}>{formatTime(l.ts)}</Text>
+                  </View>
                   <Text style={styles.logName} numberOfLines={1}>{l.name}</Text>
-                  <Text style={styles.logMacro}>P {l.protein}g · C {l.carbs}g · F {l.fats}g</Text>
+                  <Text style={styles.logMacro}>P: {l.protein}g · C: {l.carbs}g · F: {l.fats}g</Text>
                 </View>
-                <View style={{ alignItems: "flex-end" }}>
+                <View style={styles.logRight}>
                   <Text style={styles.logKcal}>{l.kcal}</Text>
-                  <Pressable onPress={() => deleteCalorie(l.id)} hitSlop={8}>
-                    <Text style={styles.logDelete}>Remove</Text>
+                  <Text style={styles.logKcalUnit}>kcal</Text>
+                  <Pressable style={styles.logTrash} onPress={() => deleteCalorie(l.id)} hitSlop={8}>
+                    <Ionicons name="trash-outline" size={15} color={colors.muted} />
                   </Pressable>
                 </View>
               </Card>
@@ -467,6 +481,10 @@ export default function Calories() {
 const MEALS = ["Breakfast", "Lunch", "Dinner", "Snack"];
 
 const SUGGESTIONS = ["Greek yogurt", "Avocado toast", "Protein shake", "Brown rice", "Salmon fillet"];
+
+function formatTime(ts: number) {
+  return new Date(ts).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
 
 function Macro({ label, value, goal, color }: { label: string; value: number; goal: number; color: string }) {
   return (
@@ -717,13 +735,22 @@ const styles = StyleSheet.create({
   errorText: { fontFamily: fonts.sans, fontSize: 14, color: colors.muted, textAlign: "center", marginTop: 8 },
   inlineError: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12 },
   inlineErrorText: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.foreground, flex: 1 },
-  diarySection: { fontFamily: fonts.serif, fontSize: 22, color: colors.foreground, marginTop: 28, marginBottom: 14 },
+  diaryHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 28, marginBottom: 14 },
+  diaryEyebrow: { fontFamily: fonts.sansSemibold, fontSize: 12, letterSpacing: 1.4, color: colors.muted },
+  diaryCount: { fontFamily: fonts.sansMedium, fontSize: 12.5, color: colors.primary },
   emptyText: { fontFamily: fonts.sans, fontSize: 14, color: colors.muted, marginTop: 10 },
-  logRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 },
-  logThumb: { width: 48, height: 48, borderRadius: 12 },
+  logCard: { flexDirection: "row", gap: 12, paddingVertical: 14, paddingHorizontal: 14 },
+  logThumb: { width: 56, height: 56, borderRadius: 14 },
   logThumbFallback: { backgroundColor: "rgba(242,212,204,0.10)", alignItems: "center", justifyContent: "center" },
-  logName: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
-  logMacro: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, marginTop: 2 },
-  logKcal: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.accent },
-  logDelete: { fontFamily: fonts.sans, fontSize: 12, color: colors.mutedForeground, marginTop: 2 },
+  logMid: { flex: 1, justifyContent: "center" },
+  logMetaRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 },
+  mealTag: { backgroundColor: "rgba(242,212,204,0.14)", borderRadius: 10, paddingHorizontal: 9, paddingVertical: 3 },
+  mealTagText: { fontFamily: fonts.sansSemibold, fontSize: 11, color: colors.accent },
+  logTime: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.mutedForeground },
+  logName: { fontFamily: fonts.serifSemibold, fontSize: 16, color: colors.foreground },
+  logMacro: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, marginTop: 4 },
+  logRight: { alignItems: "flex-end", justifyContent: "space-between" },
+  logKcal: { fontFamily: fonts.sansBold, fontSize: 20, color: colors.foreground },
+  logKcalUnit: { fontFamily: fonts.sans, fontSize: 11, color: colors.mutedForeground, marginTop: 1 },
+  logTrash: { width: 30, height: 30, borderRadius: 15, backgroundColor: colors.cardElevated, alignItems: "center", justifyContent: "center", marginTop: 6 },
 });
