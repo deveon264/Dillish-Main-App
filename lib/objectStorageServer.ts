@@ -10,7 +10,7 @@ function uuid(): string {
   });
 }
 
-function getPrivateDir(): string {
+export function getPrivateDir(): string {
   const dir = process.env.PRIVATE_OBJECT_DIR;
   if (!dir) throw new Error("PRIVATE_OBJECT_DIR is not set");
   return dir.endsWith("/") ? dir.slice(0, -1) : dir;
@@ -125,4 +125,63 @@ export async function deleteObject(objectPath: string): Promise<void> {
   if (!res.ok && res.status !== 404) {
     throw new Error(`Object delete failed (${res.status})`);
   }
+}
+
+// Exchanges the sidecar's credential for a short-lived Google access token usable
+// against the GCS JSON API. We use the JSON API (not the @google-cloud/storage
+// SDK) for listing because that SDK does not bundle in Metro's server runtime.
+async function getStorageAccessToken(): Promise<string> {
+  const res = await fetch(`${REPLIT_SIDECAR_ENDPOINT}/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to get storage access token (${res.status})`);
+  }
+  const { access_token } = (await res.json()) as { access_token: string };
+  if (!access_token) throw new Error("Storage access token was empty");
+  return access_token;
+}
+
+export type StoredObject = { path: string; createdAt: number };
+
+// Lists every object whose full path begins with `prefixPath` (a full
+// `/<bucket>/<object...>` path, e.g. `${getPrivateDir()}/exercise-videos/`).
+// Returns each object's full path (matching what is stored in the DB) and its
+// creation time in epoch ms. Follows pagination so the full set is returned.
+export async function listObjects(prefixPath: string): Promise<StoredObject[]> {
+  const { bucketName, objectName } = parseObjectPath(prefixPath);
+  const token = await getStorageAccessToken();
+  const out: StoredObject[] = [];
+  let pageToken: string | undefined;
+  do {
+    const url = new URL(
+      `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(bucketName)}/o`
+    );
+    url.searchParams.set("prefix", objectName);
+    url.searchParams.set("maxResults", "1000");
+    url.searchParams.set("fields", "items(name,timeCreated),nextPageToken");
+    if (pageToken) url.searchParams.set("pageToken", pageToken);
+    const res = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      throw new Error(`Object list failed (${res.status}) ${detail.slice(0, 200)}`);
+    }
+    const data = (await res.json()) as {
+      items?: { name: string; timeCreated?: string }[];
+      nextPageToken?: string;
+    };
+    for (const item of data.items ?? []) {
+      const created = item.timeCreated ? Date.parse(item.timeCreated) : NaN;
+      out.push({
+        path: `/${bucketName}/${item.name}`,
+        createdAt: Number.isFinite(created) ? created : 0,
+      });
+    }
+    pageToken = data.nextPageToken;
+  } while (pageToken);
+  return out;
 }

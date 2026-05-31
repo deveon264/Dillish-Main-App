@@ -15,6 +15,10 @@ Video **bytes live in Replit Object Storage**; Postgres `exercises` stores only 
 - expo-video player has **no built-in poster prop**: the player screen overlays the poster `<Image>` absolutely over `VideoView` and hides it on the `statusChange`→`readyToPlay` event (`useEventListener` from `expo`).
 - `poster_object_path`/`poster_mime` are added via `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` in `ensureSchema` (CREATE TABLE IF NOT EXISTS won't backfill existing tables).
 
+## Listing objects (orphan cleanup) — sidecar /token + GCS JSON API
+- To **list** objects (e.g. reconcile storage against the DB for orphan cleanup) you cannot use signed URLs (they're per-object) and cannot use `@google-cloud/storage` (doesn't bundle in Metro). Instead: `POST http://127.0.0.1:1106/token` (empty `{}` body) returns a ready-to-use Google `ya29.` access token, then call the GCS JSON API directly: `GET https://storage.googleapis.com/storage/v1/b/<bucket>/o?prefix=<objectName>&pageToken=...`. Follow `nextPageToken`. Each item's `name` is bucket-relative; prepend `/<bucket>/` to match the full path stored in the DB. See `listObjects()` in `lib/objectStorageServer.ts`.
+- Orphan cleanup endpoint: `POST /api/exercise-cleanup` (admin-gated, `?dryRun=1` to preview). Deletes exercise-video objects not referenced by any `exercises.video_object_path` AND older than a 1h grace window (so in-flight uploads — object written before its DB row — are never deleted). Idempotent.
+
 ## Object storage via sidecar (NOT the @google-cloud/storage SDK)
 - **The `@google-cloud/storage` SDK does NOT bundle in Metro's Expo Router server runtime** — it fails at bundle time with `Cannot read properties of undefined (reading 'v1')`. Do not import it in `+api.ts` (or anything they import).
 - Instead talk to the Replit object-storage sidecar at `http://127.0.0.1:1106/object-storage/signed-object-url` with plain `fetch`: POST `{bucket_name, object_name, method, expires_at}` → `{signed_url}`. Upload = signed `PUT`, stream = signed `GET`, delete = signed `DELETE`. See `lib/objectStorageServer.ts`.
