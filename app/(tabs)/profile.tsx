@@ -335,6 +335,8 @@ export default function Profile() {
           </View>
         </View>
 
+        <View style={styles.sectionDivider} />
+
         <Text style={styles.label}>FITNESS GOAL</Text>
         <View style={styles.goalRow}>
           {FITNESS_GOALS.map((g) => {
