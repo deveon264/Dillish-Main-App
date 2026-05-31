@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Calorie Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-3.1.1.min.js"></script>
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        * { -webkit-tap-highlight-color: transparent; }
+        .nav-tab { transition: all 0.2s ease; }
+        .btn-tap { transition: all 0.15s ease; }
+        .btn-tap:active { transform: scale(0.95); }
+        .input-log { transition: all 0.2s ease; }
+        .meal-card { transition: all 0.18s ease; }
+        .meal-card:active { transform: scale(0.98); }
+        .macro-bar { transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+        .scan-ring { animation: scanPulse 2s ease-in-out infinite; }
+        @keyframes scanPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(201,137,122,0.3); }
+            50% { box-shadow: 0 0 0 10px rgba(201,137,122,0); }
+        }
+        .shimmer {
+            background: linear-gradient(90deg, rgba(247,235,232,0.05) 0%, rgba(247,235,232,0.12) 50%, rgba(247,235,232,0.05) 100%);
+            background-size: 200% 100%;
+            animation: shimmer 1.8s infinite;
+        }
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .result-card { animation: slideUp 0.35s cubic-bezier(0.4,0,0.2,1); }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        serif: ['Cormorant Garamond', 'serif'],
+                        sans: ['DM Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        blush: '#F2D4CC',
+                        rose: '#C9897A',
+                        petal: '#F7EBE8',
+                        mauve: '#9B6E6A',
+                        cream: '#FAF6F3',
+                        charcoal: '#2C2422',
+                        mist: '#E8DDD9',
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-charcoal font-sans flex justify-center items-start min-h-screen">
+
+<div id="calorie-tracker-screen" class="relative w-full max-w-[375px] mx-auto overflow-hidden flex flex-col" style="height: 840px; background: linear-gradient(160deg, #2C2422 0%, #1e1614 60%, #2C2422 100%);">
+
+    <div class="absolute inset-0 pointer-events-none" style="background: radial-gradient(ellipse at 75% 8%, rgba(242,212,204,0.07) 0%, transparent 55%), radial-gradient(ellipse at 15% 85%, rgba(201,137,122,0.05) 0%, transparent 50%);"></div>
+
+    <div id="top-header" class="relative z-20 flex-shrink-0 px-5 pt-12 pb-3 flex items-center justify-between">
+        <div>
+            <p class="text-[10px] font-sans font-light tracking-[0.2em] uppercase" style="color: rgba(247,235,232,0.4);">AI Powered</p>
+            <h1 class="font-serif font-light leading-tight" style="font-size: 26px; color: #F7EBE8;">Calorie <em class="italic text-blush">Tracker</em></h1>
+        </div>
+        <div class="flex items-center gap-2.5">
+            <button id="history-btn" class="w-10 h-10 rounded-full flex items-center justify-center btn-tap" style="background: rgba(247,235,232,0.07); border: 1px solid rgba(242,212,204,0.12);">
+                <i class="fa-regular fa-clock-rotate-left text-petal/50 text-[13px]"></i>
+            </button>
+            <div class="w-10 h-10 rounded-full overflow-hidden" style="border: 1.5px solid rgba(201,137,122,0.35);">
+                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-1.jpg" class="w-full h-full object-cover" alt="avatar" />
+            </div>
+        </div>
+    </div>
+
+    <div id="main-scroll" class="relative z-10 flex-1 overflow-y-auto px-5 pb-28">
+
+        <div id="daily-summary-card" class="mb-4 rounded-2xl p-4" style="background: linear-gradient(135deg, rgba(201,137,122,0.18) 0%, rgba(242,212,204,0.07) 100%); border: 1px solid rgba(201,137,122,0.28);">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-[10px] font-sans font-light tracking-[0.18em] uppercase" style="color: rgba(247,235,232,0.5);">Today's Goal</span>
+                <div class="flex items-center gap-1.5">
+                    <i class="fa-solid fa-calendar-day text-rose/60 text-[10px]"></i>
+                    <span class="text-petal/40 text-[10px] font-sans font-light">Sat, 31 May</span>
+                </div>
+            </div>
+            <div class="flex items-end gap-4 mb-4">
+                <div>
+                    <div class="flex items-baseline gap-1.5">
+                        <span class="font-sans font-medium text-petal" style="font-size: 38px; line-height: 1;">1,284</span>
+                        <span class="text-petal/40 text-[12px] font-sans font-light">/ 1,800 kcal</span>
+                    </div>
+                    <p class="text-petal/40 text-[11px] font-sans font-light mt-0.5">516 kcal remaining</p>
+                </div>
+                <div class="flex-1 flex flex-col items-end gap-1">
+                    <div class="relative w-16 h-16">
+                        <svg viewBox="0 0 56 56" class="w-full h-full -rotate-90">
+                            <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(247,235,232,0.08)" stroke-width="5"/>
+                            <circle cx="28" cy="28" r="22" fill="none" stroke="url(#caloGrad)" stroke-width="5" stroke-linecap="round" stroke-dasharray="138.2" stroke-dashoffset="38.7"/>
+                            <defs>
+                                <linearGradient id="caloGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#F2D4CC"/>
+                                    <stop offset="100%" stop-color="#C9897A"/>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <span class="text-petal text-[11px] font-sans font-medium">71%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="macros-row" class="space-y-2.5">
+                <div id="macro-protein">
+                    <div class="flex items-center justify-between mb-1">
+                        <div class="flex items-center gap-1.5">
+                            <div class="w-2 h-2 rounded-full" style="background: #C9897A;"></div>
+                            <span class="text-petal/60 text-[11px] font-sans font-light">Protein</span>
+                        </div>
+                        <span class="text-petal/50 text-[11px] font-sans font-light">68g / 120g</span>
+                    </div>
+                    <div class="w-full rounded-full" style="height: 5px; background: rgba(247,235,232,0.08);">
+                        <div class="macro-bar rounded-full h-full" style="width: 57%; background: linear-gradient(90deg, #F2D4CC 0%, #C9897A 100%);"></div>
+                    </div>
+                </div>
+                <div id="macro-carbs">
+                    <div class="flex items-center justify-between mb-1">
+                        <div class="flex items-center gap-1.5">
+                            <div class="w-2 h-2 rounded-full" style="background: #E8B4A0;"></div>
+                            <span class="text-petal/60 text-[11px] font-sans font-light">Carbs</span>
+                        </div>
+                        <span class="text-petal/50 text-[11px] font-sans font-light">142g / 200g</span>
+                    </div>
+                    <div class="w-full rounded-full" style="height: 5px; background: rgba(247,235,232,0.08);">
+                        <div class="macro-bar rounded-full h-full" style="width: 71%; background: linear-gradient(90deg, #E8B4A0 0%, #C9897A 100%);"></div>
+                    </div>
+                </div>
+                <div id="macro-fats">
+                    <div class="flex items-center justify-between mb-1">
+                        <div class="flex items-center gap-1.5">
+                            <div class="w-2 h-2 rounded-full" style="background: #9B6E6A;"></div>
+                            <span class="text-petal/60 text-[11px] font-sans font-light">Fats</span>
+                        </div>
+                        <span class="text-petal/50 text-[11px] font-sans font-light">38g / 65g</span>
+                    </div>
+                    <div class="w-full rounded-full" style="height: 5px; background: rgba(247,235,232,0.08);">
+                        <div class="macro-bar rounded-full h-full" style="width: 58%; background: linear-gradient(90deg, #B8847A 0%, #9B6E6A 100%);"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="log-input-section" class="mb-4">
+            <p class="text-[10px] font-sans font-light tracking-[0.18em] uppercase mb-2.5" style="color: rgba(247,235,232,0.4);">Log a Meal</p>
+
+            <div id="input-mode-tabs" class="flex gap-2 mb-3 p-1 rounded-2xl" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.08);">
+                <button id="tab-photo" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-sans font-medium text-charcoal min-h-[38px] btn-tap" style="background: linear-gradient(135deg, #F2D4CC 0%, #C9897A 100%);">
+                    <i class="fa-solid fa-camera text-charcoal text-[11px]"></i> Photo
+                </button>
+                <button id="tab-text" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-sans font-light min-h-[38px] btn-tap" style="color: rgba(247,235,232,0.5);">
+                    <i class="fa-solid fa-keyboard text-[11px]"></i> Text
+                </button>
+                <button id="tab-barcode" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-sans font-light min-h-[38px] btn-tap" style="color: rgba(247,235,232,0.5);">
+                    <i class="fa-solid fa-barcode text-[11px]"></i> Scan
+                </button>
+            </div>
+
+            <div id="photo-input-panel">
+                <div id="photo-upload-area" class="relative rounded-2xl overflow-hidden flex flex-col items-center justify-center cursor-pointer btn-tap" style="height: 140px; background: rgba(247,235,232,0.04); border: 1.5px dashed rgba(242,212,204,0.2);">
+                    <div class="w-14 h-14 rounded-full flex items-center justify-center mb-2 scan-ring" style="background: linear-gradient(135deg, rgba(242,212,204,0.15) 0%, rgba(201,137,122,0.1) 100%); border: 1px solid rgba(201,137,122,0.3);">
+                        <i class="fa-solid fa-camera text-rose text-[20px]"></i>
+                    </div>
+                    <p class="text-petal/60 text-[12px] font-sans font-light">Tap to take a photo or upload</p>
+                    <p class="text-petal/30 text-[10px] font-sans font-light mt-0.5">AI will recognize your food instantly</p>
+                    <input type="file" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" id="photo-file-input" />
+                </div>
+
+                <div id="ai-result-card" class="result-card mt-3 rounded-2xl overflow-hidden" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(201,137,122,0.25);">
+                    <div class="relative h-28 overflow-hidden">
+                        <img class="w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/7e87c5f799-21ace66e64e585cb1e24.png" alt="overhead shot of a healthy salad bowl with grilled chicken, avocado, cherry tomatoes, quinoa, elegant food photography, warm tones" />
+                        <div class="absolute inset-0" style="background: linear-gradient(to right, rgba(44,36,34,0.0) 40%, rgba(44,36,34,0.75) 100%);"></div>
+                        <div class="absolute top-2.5 left-2.5 flex items-center gap-1.5 px-2.5 py-1 rounded-full" style="background: rgba(44,36,34,0.7); border: 1px solid rgba(201,137,122,0.4);">
+                            <i class="fa-solid fa-sparkles text-rose text-[9px]"></i>
+                            <span class="text-[9px] font-sans font-medium text-blush tracking-wide">AI Detected</span>
+                        </div>
+                        <div class="absolute inset-y-0 right-0 flex flex-col justify-center pr-3.5">
+                            <p class="text-petal text-[13px] font-sans font-medium text-right">Grilled Chicken</p>
+                            <p class="text-petal/60 text-[11px] font-sans font-light text-right">Salad Bowl</p>
+                            <div class="flex items-center gap-1 justify-end mt-1">
+                                <i class="fa-solid fa-fire text-rose text-[10px]"></i>
+                                <span class="text-rose text-[13px] font-sans font-medium">420 kcal</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="px-3.5 py-3">
+                        <div class="grid grid-cols-3 gap-2 mb-3">
+                            <div class="flex flex-col items-center gap-0.5 py-2 rounded-xl" style="background: rgba(247,235,232,0.05);">
+                                <span class="text-petal text-[13px] font-sans font-medium">38g</span>
+                                <span class="text-petal/40 text-[9px] font-sans font-light">Protein</span>
+                            </div>
+                            <div class="flex flex-col items-center gap-0.5 py-2 rounded-xl" style="background: rgba(247,235,232,0.05);">
+                                <span class="text-petal text-[13px] font-sans font-medium">22g</span>
+                                <span class="text-petal/40 text-[9px] font-sans font-light">Carbs</span>
+                            </div>
+                            <div class="flex flex-col items-center gap-0.5 py-2 rounded-xl" style="background: rgba(247,235,232,0.05);">
+                                <span class="text-petal text-[13px] font-sans font-medium">14g</span>
+                                <span class="text-petal/40 text-[9px] font-sans font-light">Fats</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2 mb-2.5">
+                            <select id="meal-type-select" class="flex-1 text-[11px] font-sans font-light rounded-xl px-3 py-2 outline-none min-h-[38px]" style="background: rgba(247,235,232,0.07); border: 1px solid rgba(242,212,204,0.12); color: rgba(247,235,232,0.7);">
+                                <option value="breakfast">Breakfast</option>
+                                <option value="lunch" selected>Lunch</option>
+                                <option value="dinner">Dinner</option>
+                                <option value="snack">Snack</option>
+                            </select>
+                            <input type="number" value="1" min="0.5" max="5" step="0.5" class="w-16 text-center text-[11px] font-sans font-light rounded-xl px-2 py-2 outline-none min-h-[38px]" style="background: rgba(247,235,232,0.07); border: 1px solid rgba(242,212,204,0.12); color: rgba(247,235,232,0.7);" placeholder="Qty" />
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button id="retake-btn" class="flex-1 py-2.5 rounded-xl text-[11px] font-sans font-light min-h-[40px] btn-tap" style="background: rgba(247,235,232,0.06); border: 1px solid rgba(242,212,204,0.12); color: rgba(247,235,232,0.55);">
+                                <i class="fa-solid fa-rotate-left mr-1 text-[10px]"></i>Retake
+                            </button>
+                            <button id="log-meal-btn" class="flex-[2] py-2.5 rounded-xl text-[12px] font-sans font-medium text-charcoal min-h-[40px] btn-tap" style="background: linear-gradient(135deg, #F2D4CC 0%, #C9897A 100%);">
+                                <i class="fa-solid fa-plus mr-1.5 text-[11px]"></i>Log This Meal
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="text-input-panel" class="hidden">
+                <div class="relative rounded-2xl overflow-hidden" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.12);">
+                    <div class="flex items-center px-4 py-3 gap-3">
+                        <i class="fa-solid fa-magnifying-glass text-petal/30 text-[13px] flex-shrink-0"></i>
+                        <input id="food-text-input" type="text" placeholder="e.g. 2 eggs, oatmeal with berries..." class="flex-1 bg-transparent outline-none text-[12px] font-sans font-light" style="color: rgba(247,235,232,0.8);" />
+                        <button id="analyze-text-btn" class="flex-shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-sans font-medium text-charcoal btn-tap" style="background: linear-gradient(135deg, #F2D4CC 0%, #C9897A 100%);">
+                            <i class="fa-solid fa-wand-magic-sparkles mr-1 text-[9px]"></i>Analyze
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-2 flex flex-wrap gap-1.5">
+                    <button class="px-3 py-1.5 rounded-full text-[10px] font-sans font-light btn-tap" style="background: rgba(247,235,232,0.06); border: 1px solid rgba(242,212,204,0.1); color: rgba(247,235,232,0.5);">Greek yogurt</button>
+                    <button class="px-3 py-1.5 rounded-full text-[10px] font-sans font-light btn-tap" style="background: rgba(247,235,232,0.06); border: 1px solid rgba(242,212,204,0.1); color: rgba(247,235,232,0.5);">Avocado toast</button>
+                    <button class="px-3 py-1.5 rounded-full text-[10px] font-sans font-light btn-tap" style="background: rgba(247,235,232,0.06); border: 1px solid rgba(242,212,204,0.1); color: rgba(247,235,232,0.5);">Protein shake</button>
+                    <button class="px-3 py-1.5 rounded-full text-[10px] font-sans font-light btn-tap" style="background: rgba(247,235,232,0.06); border: 1px solid rgba(242,212,204,0.1); color: rgba(247,235,232,0.5);">Brown rice</button>
+                    <button class="px-3 py-1.5 rounded-full text-[10px] font-sans font-light btn-tap" style="background: rgba(247,235,232,0.06); border: 1px solid rgba(242,212,204,0.1); color: rgba(247,235,232,0.5);">Salmon fillet</button>
+                </div>
+            </div>
+
+            <div id="barcode-input-panel" class="hidden">
+                <div class="relative rounded-2xl overflow-hidden flex flex-col items-center justify-center" style="height: 140px; background: rgba(247,235,232,0.04); border: 1.5px dashed rgba(242,212,204,0.2);">
+                    <div class="w-14 h-14 rounded-full flex items-center justify-center mb-2 scan-ring" style="background: linear-gradient(135deg, rgba(242,212,204,0.15) 0%, rgba(201,137,122,0.1) 100%); border: 1px solid rgba(201,137,122,0.3);">
+                        <i class="fa-solid fa-barcode text-rose text-[22px]"></i>
+                    </div>
+                    <p class="text-petal/60 text-[12px] font-sans font-light">Point camera at barcode</p>
+                    <p class="text-petal/30 text-[10px] font-sans font-light mt-0.5">Supports all food product barcodes</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="todays-meals-section" class="mb-4">
+            <div class="flex items-center justify-between mb-2.5">
+                <p class="text-[10px] font-sans font-light tracking-[0.18em] uppercase" style="color: rgba(247,235,232,0.4);">Today's Meals</p>
+                <span class="text-rose text-[10px] font-sans font-medium">3 logged</span>
+            </div>
+
+            <div id="meal-breakfast" class="meal-card mb-2.5 rounded-2xl p-3.5 flex items-center gap-3" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.08);">
+                <div class="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0">
+                    <img class="w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/763bb2296a-87aa4313925d02a8409a.png" alt="overnight oats with berries and honey in a jar, top view, soft morning light, food photography" />
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-0.5">
+                        <span class="text-[9px] font-sans font-medium px-2 py-0.5 rounded-full" style="background: rgba(201,137,122,0.2); color: #F2D4CC; border: 1px solid rgba(201,137,122,0.3);">Breakfast</span>
+                        <span class="text-petal/30 text-[9px] font-sans font-light">7:30 AM</span>
+                    </div>
+                    <p class="text-petal text-[12px] font-sans font-medium truncate">Overnight Oats</p>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <span class="text-petal/40 text-[10px] font-sans font-light">P: 12g</span>
+                        <span class="text-petal/20 text-[9px]">·</span>
+                        <span class="text-petal/40 text-[10px] font-sans font-light">C: 58g</span>
+                        <span class="text-petal/20 text-[9px]">·</span>
+                        <span class="text-petal/40 text-[10px] font-sans font-light">F: 8g</span>
+                    </div>
+                </div>
+                <div class="flex flex-col items-end gap-1.5 flex-shrink-0">
+                    <span class="text-petal text-[14px] font-sans font-medium">342</span>
+                    <span class="text-petal/35 text-[9px] font-sans font-light">kcal</span>
+                    <button class="w-6 h-6 rounded-full flex items-center justify-center btn-tap" style="background: rgba(247,235,232,0.07);">
+                        <i class="fa-solid fa-trash text-petal/25 text-[9px]"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="meal-snack" class="meal-card mb-2.5 rounded-2xl p-3.5 flex items-center gap-3" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.08);">
+                <div class="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0">
+                    <img class="w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/de62287e80-059ffe31aba00f2028ad.png" alt="greek yogurt with granola and honey in white bowl, clean food photography, soft light, top view" />
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-0.5">
+                        <span class="text-[9px] font-sans font-medium px-2 py-0.5 rounded-full" style="background: rgba(155,110,106,0.2); color: #E8DDD9; border: 1px solid rgba(155,110,106,0.3);">Snack</span>
+                        <span class="text-petal/30 text-[9px] font-sans font-light">10:15 AM</span>
+                    </div>
+                    <p class="text-petal text-[12px] font-sans font-medium truncate">Greek Yogurt & Granola</p>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <span class="text-petal/40 text-[10px] font-sans font-light">P: 18g</span>
+                        <span class="text-petal/20 text-[9px]">·</span>
+                        <span class="text-petal/40 text-[10px] font-sans font-light">C: 32g</span>
+                        <span class="text-petal/20 text-[9px]">·</span>
+                        <span class="text-petal/40 text-[10px] font-sans font-light">F: 6g</span>
+                    </div>
+                </div>
+                <div class="flex flex-col items-end gap-1.5 flex-shrink-0">
+                    <span class="text-petal text-[14px] font-sans font-medium">522</span>
+                    <span class="text-petal/35 text-[9px] font-sans font-light">kcal</span>
+                    <button class="w-6 h-6 rounded-full flex items-center justify-center btn-tap" style="background: rgba(247,235,232,0.07);">
+                        <i class="fa-solid fa-trash text-petal/25 text-[9px]"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="meal-lunch" class="meal-card mb-2.5 rounded-2xl p-3.5 flex items-center gap-3" style="background: linear-gradient(135deg, rgba(201,137,122,0.12) 0%, rgba(242,212,204,0.05) 100%); border: 1px solid rgba(201,137,122,0.22);">
+                <div class="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0">
+                    <img class="w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/12aa823247-070299b5487a02667992.png" alt="grilled chicken salad bowl with avocado and cherry tomatoes, overhead food photography, warm tones" />
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-0.5">
+                        <span class="text-[9px] font-sans font-medium px-2 py-0.5 rounded-full" style="background: rgba(201,137,122,0.25); color: #F2D4CC; border: 1px solid rgba(201,137,122,0.4);">Lunch</span>
+                        <span class="text-petal/30 text-[9px] font-sans font-light">1:00 PM</span>
+                        <div class="flex items-center gap-0.5 ml-auto">
+                            <i class="fa-solid fa-sparkles text-rose/60 text-[8px]"></i>
+                            <span class="text-rose/60 text-[9px] font-sans font-light">AI</span>
+                        </div>
+                    </div>
+                    <p class="text-petal text-[12px] font-sans font-medium truncate">Grilled Chicken Salad</p>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <span class="text-petal/40 text-[10px] font-sans font-light">P: 38g</span>
+                        <span class="text-petal/20 text-[9px]">·</span>
+                        <span class="text-petal/40 text-[10px] font-sans font-light">C: 22g</span>
+                        <span class="text-petal/20 text-[9px]">·</span>
+                        <span class="text-petal/40 text-[10px] font-sans font-light">F: 14g</span>
+                    </div>
+                </div>
+                <div class="flex flex-col items-end gap-1.5 flex-shrink-0">
+                    <span class="text-petal text-[14px] font-sans font-medium">420</span>
+                    <span class="text-petal/35 text-[9px] font-sans font-light">kcal</span>
+                    <button class="w-6 h-6 rounded-full flex items-center justify-center btn-tap" style="background: rgba(247,235,232,0.07);">
+                        <i class="fa-solid fa-trash text-petal/25 text-[9px]"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="nutrition-insight-card" class="mb-4 rounded-2xl p-4" style="background: rgba(247,235,232,0.04); border: 1px solid rgba(242,212,204,0.08);">
+            <div class="flex items-center gap-2 mb-3">
+                <div class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style="background: linear-gradient(135deg, rgba(242,212,204,0.2) 0%, rgba(201,137,122,0.15) 100%); border: 1px solid rgba(201,137,122,0.3);">
+                    <i class="fa-solid fa-lightbulb text-rose text-[11px]"></i>
+                </div>
+                <span class="text-[10px] font-sans font-light tracking-[0.18em] uppercase" style="color: rgba(247,235,232,0.45);">AI Insight</span>
+            </div>
+            <p class="text-petal/70 text-[12px] font-sans font-light leading-relaxed">You're doing great! You still need <span class="text-blush font-medium">52g of protein</span> to hit your daily goal. Consider adding a protein-rich dinner like salmon or lentils.</p>
+            <div class="mt-3 flex items-center gap-2">
+                <div class="flex-1 flex items-center gap-2 py-2 px-3 rounded-xl" style="background: rgba(201,137,122,0.1); border: 1px solid rgba(201,137,122,0.2);">
+                    <i class="fa-solid fa-fish text-rose/70 text-[11px]"></i>
+                    <span class="text-petal/60 text-[11px] font-sans font-light">Salmon fillet</span>
+                    <span class="text-rose text-[10px] font-sans font-medium ml-auto">+35g</span>
+                </div>
+                <div class="flex-1 flex items-center gap-2 py-2 px-3 rounded-xl" style="background: rgba(201,137,122,0.1); border: 1px solid rgba(201,137,122,0.2);">
+                    <i class="fa-solid fa-seedling text-rose/70 text-[11px]"></i>
+                    <span class="text-petal/60 text-[11px] font-sans font-light">Lentil soup</span>
+                    <span class="text-rose text-[10px] font-sans font-medium ml-auto">+18g</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="weekly-calories-chart-section" class="mb-4 rounded-2xl p-4" style="background: rgba(247,235,232,0.04); border: 1px solid rgba(242,212,204,0.08);">
+            <div class="flex items-center justify-between mb-1">
+                <p class="text-[10px] font-sans font-light tracking-[0.18em] uppercase" style="color: rgba(247,235,232,0.4);">Weekly Overview</p>
+                <span class="text-petal/35 text-[10px] font-sans font-light">May 25 – 31</span>
+            </div>
+            <div id="weekly-chart" style="height: 130px;"></div>
+        </div>
+
+    </div>
+
+    <div id="bottom-nav" class="absolute bottom-0 left-0 right-0 z-30 px-3 pb-6 pt-2" style="background: linear-gradient(to top, #1e1614 80%, transparent 100%);">
+        <div class="flex items-center justify-around rounded-2xl px-2 py-2" style="background: rgba(247,235,232,0.06); border: 1px solid rgba(242,212,204,0.10);">
+            <button id="nav-dashboard" class="nav-tab flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[56px] min-h-[52px] justify-center">
+                <i class="fa-solid fa-house text-petal/40 text-[15px]"></i>
+                <span class="text-petal/40 text-[9px] font-sans font-light tracking-wide">Home</span>
+            </button>
+            <button id="nav-workout" class="nav-tab flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[56px] min-h-[52px] justify-center">
+                <i class="fa-solid fa-dumbbell text-petal/40 text-[15px]"></i>
+                <span class="text-petal/40 text-[9px] font-sans font-light tracking-wide">Workouts</span>
+            </button>
+            <button id="nav-calorie" class="nav-tab flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[56px] min-h-[52px] justify-center" style="background: rgba(201,137,122,0.2); border: 1px solid rgba(201,137,122,0.3);">
+                <i class="fa-solid fa-brain text-rose text-[15px]"></i>
+                <span class="text-rose text-[9px] font-sans font-medium tracking-wide">Calories</span>
+            </button>
+            <button id="nav-water" class="nav-tab flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[56px] min-h-[52px] justify-center">
+                <i class="fa-solid fa-droplet text-petal/40 text-[15px]"></i>
+                <span class="text-petal/40 text-[9px] font-sans font-light tracking-wide">Water</span>
+            </button>
+            <button id="nav-profile" class="nav-tab flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[56px] min-h-[52px] justify-center">
+                <i class="fa-regular fa-user text-petal/40 text-[15px]"></i>
+                <span class="text-petal/40 text-[9px] font-sans font-light tracking-wide">Profile</span>
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const navButtons = ['nav-dashboard', 'nav-workout', 'nav-calorie', 'nav-water', 'nav-profile'];
+    navButtons.forEach(id => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        btn.addEventListener('click', function() {
+            navButtons.forEach(nid => {
+                const nb = document.getElementById(nid);
+                if (!nb) return;
+                nb.style.background = 'transparent';
+                nb.style.border = 'none';
+                nb.querySelectorAll('i').forEach(i => { i.style.color = 'rgba(247,235,232,0.4)'; });
+                nb.querySelectorAll('span').forEach(s => { s.style.color = 'rgba(247,235,232,0.4)'; s.style.fontWeight = '300'; });
+            });
+            this.style.background = 'rgba(201,137,122,0.2)';
+            this.style.border = '1px solid rgba(201,137,122,0.3)';
+            this.querySelectorAll('i').forEach(i => { i.style.color = '#C9897A'; });
+            this.querySelectorAll('span').forEach(s => { s.style.color = '#C9897A'; s.style.fontWeight = '500'; });
+        });
+    });
+
+    const tabPhoto = document.getElementById('tab-photo');
+    const tabText = document.getElementById('tab-text');
+    const tabBarcode = document.getElementById('tab-barcode');
+    const photoPanel = document.getElementById('photo-input-panel');
+    const textPanel = document.getElementById('text-input-panel');
+    const barcodePanel = document.getElementById('barcode-input-panel');
+
+    function activateInputTab(activeTab, activePanel) {
+        [tabPhoto, tabText, tabBarcode].forEach(t => {
+            t.style.background = 'transparent';
+            t.style.color = 'rgba(247,235,232,0.5)';
+            t.style.fontWeight = '300';
+            t.querySelectorAll('i').forEach(i => i.style.color = 'rgba(247,235,232,0.5)');
+        });
+        [photoPanel, textPanel, barcodePanel].forEach(p => p.classList.add('hidden'));
+        activeTab.style.background = 'linear-gradient(135deg, #F2D4CC 0%, #C9897A 100%)';
+        activeTab.style.color = '#2C2422';
+        activeTab.style.fontWeight = '500';
+        activeTab.querySelectorAll('i').forEach(i => i.style.color = '#2C2422');
+        activePanel.classList.remove('hidden');
+    }
+
+    tabPhoto.addEventListener('click', () => activateInputTab(tabPhoto, photoPanel));
+    tabText.addEventListener('click', () => activateInputTab(tabText, textPanel));
+    tabBarcode.addEventListener('click', () => activateInputTab(tabBarcode, barcodePanel));
+
+    const photoArea = document.getElementById('photo-upload-area');
+    const aiResult = document.getElementById('ai-result-card');
+    const fileInput = document.getElementById('photo-file-input');
+
+    fileInput.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            aiResult.style.display = 'block';
+        }
+    });
+
+    const logMealBtn = document.getElementById('log-meal-btn');
+    if (logMealBtn) {
+        logMealBtn.addEventListener('click', function() {
+            this.innerHTML = '<i class="fa-solid fa-check mr-1.5 text-[11px]"></i>Logged!';
+            this.style.opacity = '0.7';
+            setTimeout(() => {
+                this.innerHTML = '<i class="fa-solid fa-plus mr-1.5 text-[11px]"></i>Log This Meal';
+                this.style.opacity = '1';
+            }, 2000);
+        });
+    }
+
+    const quickSuggestions = document.querySelectorAll('#text-input-panel button');
+    quickSuggestions.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const input = document.getElementById('food-text-input');
+            if (input) input.value = this.textContent.trim();
+        });
+    });
+
+    window.addEventListener('load', function() {
+        try {
+            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            const cals = [1650, 1820, 1540, 1900, 1720, 1284, 0];
+            const barColors = cals.map((c, i) => i === 5 ? '#C9897A' : (c === 0 ? 'rgba(247,235,232,0.06)' : 'rgba(201,137,122,0.35)'));
+
+            const data = [{
+                type: 'bar',
+                x: days,
+                y: cals,
+                marker: {
+                    color: barColors,
+                    line: { width: 0 }
+                },
+                hovertemplate: '%{x}: %{y} kcal<extra></extra>'
+            }];
+
+            const goalLine = {
+                type: 'scatter',
+                mode: 'lines',
+                x: days,
+                y: [1800, 1800, 1800, 1800, 1800, 1800, 1800],
+                line: { color: 'rgba(242,212,204,0.3)', width: 1, dash: 'dot' },
+                hoverinfo: 'skip',
+                showlegend: false
+            };
+
+            const layout = {
+                margin: { t: 10, r: 10, b: 28, l: 30 },
+                paper_bgcolor: 'transparent',
+                plot_bgcolor: 'transparent',
+                font: { family: 'DM Sans', color: 'rgba(247,235,232,0.4)', size: 9 },
+                xaxis: {
+                    tickfont: { size: 9, color: 'rgba(247,235,232,0.4)' },
+                    gridcolor: 'transparent',
+                    showline: false,
+                    zeroline: false
+                },
+                yaxis: {
+                    tickfont: { size: 9, color: 'rgba(247,235,232,0.3)' },
+                    gridcolor: 'rgba(247,235,232,0.05)',
+                    showline: false,
+                    zeroline: false,
+                    range: [0, 2200],
+                    tickvals: [0, 900, 1800],
+                    ticktext: ['0', '0.9k', '1.8k']
+                },
+                showlegend: false,
+                bargap: 0.4
+            };
+
+            Plotly.newPlot('weekly-chart', [data[0], goalLine], layout, { responsive: true, displayModeBar: false, displaylogo: false });
+        } catch(e) {
+            document.getElementById('weekly-chart').innerHTML = '<div style="color:rgba(247,235,232,0.3);font-size:11px;text-align:center;padding-top:40px;">Chart unavailable</div>';
+        }
+    });
+</script>
+
+</body>
+</html>

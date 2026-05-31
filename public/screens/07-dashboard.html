@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-3.1.1.min.js"></script>
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        * { -webkit-tap-highlight-color: transparent; }
+        .card-glow { box-shadow: 0 4px 24px rgba(201,137,122,0.10); }
+        .nav-tab { transition: all 0.2s ease; }
+        .streak-day { transition: all 0.2s ease; }
+        .quick-btn:active { transform: scale(0.95); }
+        .ring-progress { transform: rotate(-90deg); }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        serif: ['Cormorant Garamond', 'serif'],
+                        sans: ['DM Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        blush: '#F2D4CC',
+                        rose: '#C9897A',
+                        petal: '#F7EBE8',
+                        mauve: '#9B6E6A',
+                        cream: '#FAF6F3',
+                        charcoal: '#2C2422',
+                        mist: '#E8DDD9',
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-charcoal font-sans flex justify-center items-start min-h-screen">
+
+<div id="dashboard-screen" class="relative w-full max-w-[375px] mx-auto overflow-hidden flex flex-col" style="height: 840px; background: linear-gradient(160deg, #2C2422 0%, #1e1614 60%, #2C2422 100%);">
+
+    <div class="absolute inset-0 pointer-events-none" style="background: radial-gradient(ellipse at 80% 10%, rgba(242,212,204,0.07) 0%, transparent 55%), radial-gradient(ellipse at 10% 90%, rgba(201,137,122,0.05) 0%, transparent 50%);"></div>
+
+    <div id="header" class="relative z-20 flex items-center justify-between px-6 pt-12 pb-3">
+        <div class="flex flex-col gap-0.5">
+            <p class="text-petal/40 text-[11px] font-sans font-light tracking-[0.22em] uppercase">Good morning</p>
+            <div class="flex items-baseline gap-2">
+                <h1 class="font-serif text-petal font-light leading-tight" style="font-size: 26px;">Sofia <em class="italic text-blush">✦</em></h1>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <button id="notif-btn" class="w-10 h-10 rounded-full flex items-center justify-center relative" style="background: rgba(247,235,232,0.07); border: 1px solid rgba(242,212,204,0.12);">
+                <i class="fa-regular fa-bell text-petal/70 text-[15px]"></i>
+                <span class="absolute top-2 right-2 w-2 h-2 rounded-full" style="background: #C9897A;"></span>
+            </button>
+            <div class="w-10 h-10 rounded-full overflow-hidden border-2" style="border-color: rgba(201,137,122,0.5);">
+                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-1.jpg" class="w-full h-full object-cover" />
+            </div>
+        </div>
+    </div>
+
+    <div id="main-scroll" class="relative z-10 flex-1 overflow-y-auto px-5 pb-24 space-y-4">
+
+        <div id="streak-section" class="rounded-2xl px-4 py-3.5 card-glow" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.10);">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-fire text-rose text-[14px]"></i>
+                    <span class="text-petal text-[13px] font-sans font-medium tracking-wide">Weekly Streak</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <span class="font-serif text-blush font-light" style="font-size: 18px;">14</span>
+                    <span class="text-petal/40 text-[11px] font-sans font-light">days</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="streak-day flex flex-col items-center gap-1.5 flex-1">
+                    <div class="w-full h-1.5 rounded-full" style="background: linear-gradient(135deg, #F2D4CC 0%, #C9897A 100%);"></div>
+                    <span class="text-petal/40 text-[10px] font-sans font-light">M</span>
+                </div>
+                <div class="streak-day flex flex-col items-center gap-1.5 flex-1">
+                    <div class="w-full h-1.5 rounded-full" style="background: linear-gradient(135deg, #F2D4CC 0%, #C9897A 100%);"></div>
+                    <span class="text-petal/40 text-[10px] font-sans font-light">T</span>
+                </div>
+                <div class="streak-day flex flex-col items-center gap-1.5 flex-1">
+                    <div class="w-full h-1.5 rounded-full" style="background: linear-gradient(135deg, #F2D4CC 0%, #C9897A 100%);"></div>
+                    <span class="text-petal/40 text-[10px] font-sans font-light">W</span>
+                </div>
+                <div class="streak-day flex flex-col items-center gap-1.5 flex-1">
+                    <div class="w-full h-1.5 rounded-full" style="background: linear-gradient(135deg, #F2D4CC 0%, #C9897A 100%);"></div>
+                    <span class="text-petal/40 text-[10px] font-sans font-light">T</span>
+                </div>
+                <div class="streak-day flex flex-col items-center gap-1.5 flex-1">
+                    <div class="w-full h-1.5 rounded-full" style="background: rgba(247,235,232,0.15); border: 1px solid rgba(201,137,122,0.4);"></div>
+                    <span class="text-rose text-[10px] font-sans font-medium">F</span>
+                </div>
+                <div class="streak-day flex flex-col items-center gap-1.5 flex-1">
+                    <div class="w-full h-1.5 rounded-full" style="background: rgba(247,235,232,0.08);"></div>
+                    <span class="text-petal/25 text-[10px] font-sans font-light">S</span>
+                </div>
+                <div class="streak-day flex flex-col items-center gap-1.5 flex-1">
+                    <div class="w-full h-1.5 rounded-full" style="background: rgba(247,235,232,0.08);"></div>
+                    <span class="text-petal/25 text-[10px] font-sans font-light">S</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="daily-workout-card" class="relative rounded-3xl overflow-hidden card-glow cursor-pointer" style="height: 180px;">
+            <img class="absolute inset-0 w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/cfcbc79224-17b0323dd115dd4baedd.png" alt="woman doing pilates workout in elegant studio, soft warm lighting, fitness photography" />
+            <div class="absolute inset-0" style="background: linear-gradient(135deg, rgba(44,36,34,0.85) 0%, rgba(44,36,34,0.4) 60%, rgba(44,36,34,0.2) 100%);"></div>
+            <div class="absolute top-3 left-4">
+                <span class="text-[10px] font-sans font-medium tracking-[0.18em] uppercase px-2.5 py-1 rounded-full" style="background: rgba(201,137,122,0.3); border: 1px solid rgba(201,137,122,0.5); color: #F2D4CC;">Today's Workout</span>
+            </div>
+            <div class="absolute bottom-0 left-0 right-0 p-4">
+                <div class="flex items-end justify-between">
+                    <div class="flex flex-col gap-1">
+                        <h3 class="font-serif text-petal font-light leading-tight" style="font-size: 21px;">Full Body <em class="italic text-blush">Sculpt</em></h3>
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-1.5">
+                                <i class="fa-regular fa-clock text-petal/50 text-[10px]"></i>
+                                <span class="text-petal/60 text-[11px] font-sans font-light">35 min</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <i class="fa-solid fa-fire text-petal/50 text-[10px]"></i>
+                                <span class="text-petal/60 text-[11px] font-sans font-light">280 kcal</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <i class="fa-solid fa-signal text-petal/50 text-[10px]"></i>
+                                <span class="text-petal/60 text-[11px] font-sans font-light">Intermediate</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="w-11 h-11 rounded-full flex items-center justify-center" style="background: linear-gradient(135deg, #F2D4CC 0%, #C9897A 100%);">
+                        <i class="fa-solid fa-play text-charcoal text-[13px] ml-0.5"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="stats-row" class="grid grid-cols-3 gap-3">
+            <div id="calorie-stat" class="rounded-2xl p-3.5 flex flex-col gap-2 card-glow" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.10);">
+                <div class="flex items-center justify-between">
+                    <div class="w-7 h-7 rounded-xl flex items-center justify-center" style="background: rgba(201,137,122,0.18);">
+                        <i class="fa-solid fa-fire text-rose text-[11px]"></i>
+                    </div>
+                    <span class="text-petal/30 text-[9px] font-sans font-light">today</span>
+                </div>
+                <div class="flex flex-col gap-0.5">
+                    <div class="flex items-baseline gap-0.5">
+                        <span class="font-serif text-petal font-light" style="font-size: 20px;">1,240</span>
+                    </div>
+                    <span class="text-petal/40 text-[10px] font-sans font-light">of 1,800 kcal</span>
+                </div>
+                <div class="w-full h-1 rounded-full" style="background: rgba(247,235,232,0.08);">
+                    <div class="h-full rounded-full" style="width: 69%; background: linear-gradient(90deg, #F2D4CC 0%, #C9897A 100%);"></div>
+                </div>
+            </div>
+
+            <div id="protein-stat" class="rounded-2xl p-3.5 flex flex-col gap-2 card-glow" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.10);">
+                <div class="flex items-center justify-between">
+                    <div class="w-7 h-7 rounded-xl flex items-center justify-center" style="background: rgba(201,137,122,0.18);">
+                        <i class="fa-solid fa-egg text-rose text-[11px]"></i>
+                    </div>
+                    <span class="text-petal/30 text-[9px] font-sans font-light">today</span>
+                </div>
+                <div class="flex flex-col gap-0.5">
+                    <div class="flex items-baseline gap-0.5">
+                        <span class="font-serif text-petal font-light" style="font-size: 20px;">68</span>
+                        <span class="text-petal/35 text-[10px] font-sans font-light">g</span>
+                    </div>
+                    <span class="text-petal/40 text-[10px] font-sans font-light">of 120g protein</span>
+                </div>
+                <div class="w-full h-1 rounded-full" style="background: rgba(247,235,232,0.08);">
+                    <div class="h-full rounded-full" style="width: 57%; background: linear-gradient(90deg, #F2D4CC 0%, #C9897A 100%);"></div>
+                </div>
+            </div>
+
+            <div id="water-stat" class="rounded-2xl p-3.5 flex flex-col gap-2 card-glow" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.10);">
+                <div class="flex items-center justify-between">
+                    <div class="w-7 h-7 rounded-xl flex items-center justify-center" style="background: rgba(201,137,122,0.18);">
+                        <i class="fa-solid fa-droplet text-rose text-[11px]"></i>
+                    </div>
+                    <span class="text-petal/30 text-[9px] font-sans font-light">today</span>
+                </div>
+                <div class="flex flex-col gap-0.5">
+                    <div class="flex items-baseline gap-0.5">
+                        <span class="font-serif text-petal font-light" style="font-size: 20px;">1.6</span>
+                        <span class="text-petal/35 text-[10px] font-sans font-light">L</span>
+                    </div>
+                    <span class="text-petal/40 text-[10px] font-sans font-light">of 2.5L goal</span>
+                </div>
+                <div class="w-full h-1 rounded-full" style="background: rgba(247,235,232,0.08);">
+                    <div class="h-full rounded-full" style="width: 64%; background: linear-gradient(90deg, #F2D4CC 0%, #C9897A 100%);"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="hydration-card" class="rounded-2xl px-4 py-4 card-glow" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.10);">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-droplet text-rose text-[13px]"></i>
+                    <span class="text-petal text-[13px] font-sans font-medium">Hydration</span>
+                </div>
+                <button class="text-rose text-[11px] font-sans font-medium tracking-wide py-1.5 px-3 rounded-full min-h-[36px] flex items-center" style="background: rgba(201,137,122,0.15); border: 1px solid rgba(201,137,122,0.25);">
+                    <i class="fa-solid fa-plus text-[10px] mr-1.5"></i> Add water
+                </button>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="relative flex-shrink-0" style="width: 72px; height: 72px;">
+                    <svg width="72" height="72" viewBox="0 0 72 72" class="ring-progress">
+                        <circle cx="36" cy="36" r="28" fill="none" stroke="rgba(247,235,232,0.08)" stroke-width="7"/>
+                        <circle cx="36" cy="36" r="28" fill="none" stroke="url(#hydGrad)" stroke-width="7" stroke-linecap="round" stroke-dasharray="175.9" stroke-dashoffset="63.3"/>
+                        <defs>
+                            <linearGradient id="hydGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#F2D4CC"/>
+                                <stop offset="100%" stop-color="#C9897A"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="text-petal font-sans font-medium text-[13px]">64%</span>
+                    </div>
+                </div>
+                <div class="flex-1 flex flex-col gap-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-petal/50 text-[11px] font-sans font-light">Consumed</span>
+                        <span class="text-petal text-[12px] font-sans font-medium">1.6 L</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-petal/50 text-[11px] font-sans font-light">Remaining</span>
+                        <span class="text-petal/70 text-[12px] font-sans font-medium">0.9 L</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-petal/50 text-[11px] font-sans font-light">Daily Goal</span>
+                        <span class="text-petal/70 text-[12px] font-sans font-medium">2.5 L</span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-2 mt-3">
+                <button class="flex-1 py-2 rounded-xl text-[11px] font-sans font-light text-petal/60 min-h-[36px]" style="background: rgba(247,235,232,0.06); border: 1px solid rgba(242,212,204,0.08);">+ 250ml</button>
+                <button class="flex-1 py-2 rounded-xl text-[11px] font-sans font-light text-petal/60 min-h-[36px]" style="background: rgba(247,235,232,0.06); border: 1px solid rgba(242,212,204,0.08);">+ 500ml</button>
+                <button class="flex-1 py-2 rounded-xl text-[11px] font-sans font-medium text-petal min-h-[36px]" style="background: rgba(201,137,122,0.2); border: 1px solid rgba(201,137,122,0.3);">+ 750ml</button>
+            </div>
+        </div>
+
+        <div id="calorie-summary-card" class="rounded-2xl px-4 py-4 card-glow" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.10);">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-utensils text-rose text-[13px]"></i>
+                    <span class="text-petal text-[13px] font-sans font-medium">Calorie Summary</span>
+                </div>
+                <button class="text-rose text-[11px] font-sans font-medium py-1.5 px-3 rounded-full min-h-[36px] flex items-center" style="background: rgba(201,137,122,0.15); border: 1px solid rgba(201,137,122,0.25);">
+                    <i class="fa-solid fa-camera text-[10px] mr-1.5"></i> Log meal
+                </button>
+            </div>
+            <div class="flex items-center gap-3 mb-3">
+                <div class="relative flex-shrink-0" style="width: 72px; height: 72px;">
+                    <svg width="72" height="72" viewBox="0 0 72 72" class="ring-progress">
+                        <circle cx="36" cy="36" r="28" fill="none" stroke="rgba(247,235,232,0.08)" stroke-width="7"/>
+                        <circle cx="36" cy="36" r="28" fill="none" stroke="url(#calGrad)" stroke-width="7" stroke-linecap="round" stroke-dasharray="175.9" stroke-dashoffset="54.5"/>
+                        <defs>
+                            <linearGradient id="calGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#F2D4CC"/>
+                                <stop offset="100%" stop-color="#C9897A"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="text-petal font-sans font-medium text-[13px]">69%</span>
+                    </div>
+                </div>
+                <div class="flex-1 flex flex-col gap-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-petal/50 text-[11px] font-sans font-light">Consumed</span>
+                        <span class="text-petal text-[12px] font-sans font-medium">1,240 kcal</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-petal/50 text-[11px] font-sans font-light">Burned</span>
+                        <span class="text-petal/70 text-[12px] font-sans font-medium">320 kcal</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-petal/50 text-[11px] font-sans font-light">Remaining</span>
+                        <span class="text-rose text-[12px] font-sans font-medium">880 kcal</span>
+                    </div>
+                </div>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+                <div class="rounded-xl py-2.5 px-2 flex flex-col items-center gap-1" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.08);">
+                    <span class="text-petal text-[13px] font-sans font-medium">68g</span>
+                    <span class="text-petal/40 text-[10px] font-sans font-light">Protein</span>
+                    <div class="w-full h-1 rounded-full" style="background: rgba(247,235,232,0.08);">
+                        <div class="h-full rounded-full" style="width: 57%; background: #C9897A;"></div>
+                    </div>
+                </div>
+                <div class="rounded-xl py-2.5 px-2 flex flex-col items-center gap-1" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.08);">
+                    <span class="text-petal text-[13px] font-sans font-medium">142g</span>
+                    <span class="text-petal/40 text-[10px] font-sans font-light">Carbs</span>
+                    <div class="w-full h-1 rounded-full" style="background: rgba(247,235,232,0.08);">
+                        <div class="h-full rounded-full" style="width: 71%; background: #C9897A;"></div>
+                    </div>
+                </div>
+                <div class="rounded-xl py-2.5 px-2 flex flex-col items-center gap-1" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.08);">
+                    <span class="text-petal text-[13px] font-sans font-medium">38g</span>
+                    <span class="text-petal/40 text-[10px] font-sans font-light">Fats</span>
+                    <div class="w-full h-1 rounded-full" style="background: rgba(247,235,232,0.08);">
+                        <div class="h-full rounded-full" style="width: 48%; background: #C9897A;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="quick-access-section" class="flex flex-col gap-2.5">
+            <h4 class="text-petal/50 text-[11px] font-sans font-light tracking-[0.22em] uppercase px-1">Quick Access</h4>
+            <div class="grid grid-cols-2 gap-3">
+                <button id="qa-workout" class="quick-btn rounded-2xl p-4 flex flex-col gap-2.5 text-left card-glow" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.10);">
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background: rgba(201,137,122,0.18);">
+                        <i class="fa-solid fa-dumbbell text-rose text-[13px]"></i>
+                    </div>
+                    <div class="flex flex-col gap-0.5">
+                        <span class="text-petal text-[13px] font-sans font-medium">Workout Library</span>
+                        <span class="text-petal/40 text-[10px] font-sans font-light">200+ videos</span>
+                    </div>
+                    <i class="fa-solid fa-arrow-right text-rose/60 text-[11px]"></i>
+                </button>
+                <button id="qa-calorie" class="quick-btn rounded-2xl p-4 flex flex-col gap-2.5 text-left card-glow" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.10);">
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background: rgba(201,137,122,0.18);">
+                        <i class="fa-solid fa-brain text-rose text-[13px]"></i>
+                    </div>
+                    <div class="flex flex-col gap-0.5">
+                        <span class="text-petal text-[13px] font-sans font-medium">AI Food Log</span>
+                        <span class="text-petal/40 text-[10px] font-sans font-light">Snap & track</span>
+                    </div>
+                    <i class="fa-solid fa-arrow-right text-rose/60 text-[11px]"></i>
+                </button>
+                <button id="qa-water" class="quick-btn rounded-2xl p-4 flex flex-col gap-2.5 text-left card-glow" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.10);">
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background: rgba(201,137,122,0.18);">
+                        <i class="fa-solid fa-droplet text-rose text-[13px]"></i>
+                    </div>
+                    <div class="flex flex-col gap-0.5">
+                        <span class="text-petal text-[13px] font-sans font-medium">Water & Progress</span>
+                        <span class="text-petal/40 text-[10px] font-sans font-light">Track & analyse</span>
+                    </div>
+                    <i class="fa-solid fa-arrow-right text-rose/60 text-[11px]"></i>
+                </button>
+                <button id="qa-profile" class="quick-btn rounded-2xl p-4 flex flex-col gap-2.5 text-left card-glow" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.10);">
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background: rgba(201,137,122,0.18);">
+                        <i class="fa-solid fa-chart-line text-rose text-[13px]"></i>
+                    </div>
+                    <div class="flex flex-col gap-0.5">
+                        <span class="text-petal text-[13px] font-sans font-medium">My Progress</span>
+                        <span class="text-petal/40 text-[10px] font-sans font-light">Photos & stats</span>
+                    </div>
+                    <i class="fa-solid fa-arrow-right text-rose/60 text-[11px]"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="recommended-section" class="flex flex-col gap-2.5">
+            <div class="flex items-center justify-between px-1">
+                <h4 class="text-petal/50 text-[11px] font-sans font-light tracking-[0.22em] uppercase">Saved Workouts</h4>
+                <button class="text-rose text-[11px] font-sans font-medium min-h-[36px] flex items-center">See all</button>
+            </div>
+            <div class="flex gap-3 overflow-x-auto pb-1" style="-webkit-overflow-scrolling: touch;">
+                <div class="flex-shrink-0 rounded-2xl overflow-hidden relative cursor-pointer" style="width: 150px; height: 110px;">
+                    <img class="absolute inset-0 w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/1365ea7ce2-e43ed97d897ccc7c71b4.png" alt="woman yoga stretching morning light studio feminine" />
+                    <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(44,36,34,0.90) 0%, transparent 60%);"></div>
+                    <div class="absolute bottom-0 left-0 right-0 p-2.5">
+                        <p class="text-petal text-[12px] font-sans font-medium leading-tight">Morning Yoga</p>
+                        <p class="text-petal/50 text-[10px] font-sans font-light">20 min · Beginner</p>
+                    </div>
+                    <div class="absolute top-2 right-2">
+                        <i class="fa-solid fa-heart text-rose text-[11px]"></i>
+                    </div>
+                </div>
+                <div class="flex-shrink-0 rounded-2xl overflow-hidden relative cursor-pointer" style="width: 150px; height: 110px;">
+                    <img class="absolute inset-0 w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/f542bc1f29-baf20e6a381b7a1bac39.png" alt="woman HIIT cardio workout gym athletic feminine" />
+                    <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(44,36,34,0.90) 0%, transparent 60%);"></div>
+                    <div class="absolute bottom-0 left-0 right-0 p-2.5">
+                        <p class="text-petal text-[12px] font-sans font-medium leading-tight">HIIT Cardio</p>
+                        <p class="text-petal/50 text-[10px] font-sans font-light">25 min · Advanced</p>
+                    </div>
+                    <div class="absolute top-2 right-2">
+                        <i class="fa-solid fa-heart text-rose text-[11px]"></i>
+                    </div>
+                </div>
+                <div class="flex-shrink-0 rounded-2xl overflow-hidden relative cursor-pointer" style="width: 150px; height: 110px;">
+                    <img class="absolute inset-0 w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/a72d61dc1f-aadac859e0701cadd736.png" alt="woman barre ballet fitness workout elegant studio" />
+                    <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(44,36,34,0.90) 0%, transparent 60%);"></div>
+                    <div class="absolute bottom-0 left-0 right-0 p-2.5">
+                        <p class="text-petal text-[12px] font-sans font-medium leading-tight">Barre Burn</p>
+                        <p class="text-petal/50 text-[10px] font-sans font-light">30 min · Intermediate</p>
+                    </div>
+                    <div class="absolute top-2 right-2">
+                        <i class="fa-solid fa-heart text-rose text-[11px]"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="bottom-nav" class="absolute bottom-0 left-0 right-0 z-30 px-3 pb-6 pt-2" style="background: linear-gradient(to top, #1e1614 80%, transparent 100%);">
+        <div class="flex items-center justify-around rounded-2xl px-2 py-2" style="background: rgba(247,235,232,0.06); border: 1px solid rgba(242,212,204,0.10);">
+            <button id="nav-dashboard" class="nav-tab flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[56px] min-h-[52px] justify-center" style="background: rgba(201,137,122,0.2); border: 1px solid rgba(201,137,122,0.3);">
+                <i class="fa-solid fa-house text-rose text-[15px]"></i>
+                <span class="text-rose text-[9px] font-sans font-medium tracking-wide">Home</span>
+            </button>
+            <button id="nav-workout" class="nav-tab flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[56px] min-h-[52px] justify-center">
+                <i class="fa-solid fa-dumbbell text-petal/40 text-[15px]"></i>
+                <span class="text-petal/40 text-[9px] font-sans font-light tracking-wide">Workouts</span>
+            </button>
+            <button id="nav-calorie" class="nav-tab flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[56px] min-h-[52px] justify-center">
+                <i class="fa-solid fa-brain text-petal/40 text-[15px]"></i>
+                <span class="text-petal/40 text-[9px] font-sans font-light tracking-wide">Calories</span>
+            </button>
+            <button id="nav-water" class="nav-tab flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[56px] min-h-[52px] justify-center">
+                <i class="fa-solid fa-droplet text-petal/40 text-[15px]"></i>
+                <span class="text-petal/40 text-[9px] font-sans font-light tracking-wide">Water</span>
+            </button>
+            <button id="nav-profile" class="nav-tab flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[56px] min-h-[52px] justify-center">
+                <i class="fa-regular fa-user text-petal/40 text-[15px]"></i>
+                <span class="text-petal/40 text-[9px] font-sans font-light tracking-wide">Profile</span>
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const navButtons = ['nav-dashboard', 'nav-workout', 'nav-calorie', 'nav-water', 'nav-profile'];
+    navButtons.forEach(id => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        btn.addEventListener('click', function() {
+            navButtons.forEach(nid => {
+                const nb = document.getElementById(nid);
+                if (!nb) return;
+                nb.style.background = 'transparent';
+                nb.style.border = 'none';
+                nb.querySelectorAll('i').forEach(i => {
+                    i.style.color = 'rgba(247,235,232,0.4)';
+                });
+                nb.querySelectorAll('span').forEach(s => {
+                    s.style.color = 'rgba(247,235,232,0.4)';
+                    s.style.fontWeight = '300';
+                });
+            });
+            this.style.background = 'rgba(201,137,122,0.2)';
+            this.style.border = '1px solid rgba(201,137,122,0.3)';
+            this.querySelectorAll('i').forEach(i => {
+                i.style.color = '#C9897A';
+            });
+            this.querySelectorAll('span').forEach(s => {
+                s.style.color = '#C9897A';
+                s.style.fontWeight = '500';
+            });
+        });
+    });
+
+    const waterBtns = document.querySelectorAll('#hydration-card button:not([class*="justify-between"])');
+    const addWaterAmounts = [250, 500, 750];
+    let currentWater = 1600;
+    const waterGoal = 2500;
+
+    document.querySelectorAll('#hydration-card .flex.gap-2.mt-3 button').forEach((btn, idx) => {
+        btn.addEventListener('click', function() {
+            currentWater = Math.min(currentWater + addWaterAmounts[idx], waterGoal);
+            const pct = Math.round((currentWater / waterGoal) * 100);
+            const liters = (currentWater / 1000).toFixed(1);
+            const remaining = ((waterGoal - currentWater) / 1000).toFixed(1);
+            const dashoffset = 175.9 - (175.9 * pct / 100);
+
+            const ring = document.querySelector('#hydration-card circle:nth-child(2)');
+            if (ring) ring.setAttribute('stroke-dashoffset', dashoffset.toString());
+
+            const pctEl = document.querySelector('#hydration-card .absolute.inset-0.flex span');
+            if (pctEl) pctEl.textContent = pct + '%';
+
+            const rows = document.querySelectorAll('#hydration-card .flex-1.flex.flex-col.gap-2 .flex.items-center.justify-between span:last-child');
+            if (rows[0]) rows[0].textContent = liters + ' L';
+            if (rows[1]) rows[1].textContent = remaining + ' L';
+        });
+    });
+</script>
+
+</body>
+</html>

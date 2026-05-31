@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Onboarding</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        * { -webkit-tap-highlight-color: transparent; }
+        .cta-btn:active { transform: scale(0.97); }
+        .plan-card { transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1); }
+        .plan-card.selected { border-color: rgba(201,137,122,0.8); background: rgba(201,137,122,0.13); }
+        .plan-card:active { transform: scale(0.98); }
+        .recommended-badge { background: linear-gradient(135deg, #F2D4CC 0%, #C9897A 100%); }
+        .toggle-pill { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .shine-line { background: linear-gradient(90deg, transparent 0%, rgba(242,212,204,0.08) 50%, transparent 100%); }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        serif: ['Cormorant Garamond', 'serif'],
+                        sans: ['DM Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        blush: '#F2D4CC',
+                        rose: '#C9897A',
+                        petal: '#F7EBE8',
+                        mauve: '#9B6E6A',
+                        cream: '#FAF6F3',
+                        charcoal: '#2C2422',
+                        mist: '#E8DDD9',
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-charcoal font-sans flex justify-center items-start min-h-screen">
+
+    <div id="subscription-screen" class="relative w-full max-w-[375px] mx-auto overflow-hidden flex flex-col" style="height: 840px; background: linear-gradient(160deg, #2C2422 0%, #1e1614 60%, #2C2422 100%);">
+
+        <div class="absolute inset-0 pointer-events-none" style="background: radial-gradient(ellipse at 80% 10%, rgba(242,212,204,0.07) 0%, transparent 55%), radial-gradient(ellipse at 10% 90%, rgba(201,137,122,0.05) 0%, transparent 50%);"></div>
+
+        <div id="top-bar" class="relative z-20 flex items-center justify-between px-6 pt-12 pb-3">
+            <div id="logo-mark" class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-full border border-blush/60 flex items-center justify-center">
+                    <i class="fa-solid fa-leaf text-blush text-[10px]"></i>
+                </div>
+                <span class="font-serif text-petal text-lg font-light tracking-[0.12em]">florish</span>
+            </div>
+            <button id="skip-btn" class="text-petal/50 text-sm font-sans font-light tracking-widest uppercase py-2 px-1 min-h-[44px] flex items-center">
+                Skip
+            </button>
+        </div>
+
+        <div id="progress-indicator" class="relative z-20 flex items-center justify-center gap-[6px] px-6 mb-5">
+            <div class="h-[2px] flex-1 rounded-full bg-petal/30"></div>
+            <div class="h-[2px] flex-1 rounded-full bg-petal/30"></div>
+            <div class="h-[2px] flex-1 rounded-full bg-petal/30"></div>
+            <div class="h-[2px] flex-1 rounded-full bg-petal/30"></div>
+            <div class="h-[2px] flex-1 rounded-full bg-petal/30"></div>
+            <div class="h-[2px] flex-1 rounded-full bg-petal/90"></div>
+        </div>
+
+        <div id="main-content" class="relative z-10 flex flex-col flex-1 px-6 overflow-y-auto pb-2">
+
+            <div id="header-block" class="mb-4">
+                <p class="text-blush/70 text-[11px] font-sans font-light tracking-[0.28em] uppercase mb-2">Step 6 of 6</p>
+                <h2 class="font-serif text-petal font-light leading-tight mb-1.5" style="font-size: 30px;">
+                    Start your<br/><em class="italic text-blush font-light">florish journey</em>
+                </h2>
+                <p class="text-petal/45 text-[13px] font-sans font-light leading-relaxed">Unlock personalized workouts, calorie tracking, and full wellness features.</p>
+            </div>
+
+            <div id="free-trial-toggle" class="flex items-center justify-between mb-4 px-4 py-3 rounded-2xl" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.1);">
+                <div class="flex flex-col gap-0.5">
+                    <span class="text-petal text-[13px] font-sans font-medium tracking-wide">Free trial included</span>
+                    <span class="text-petal/40 text-[11px] font-sans font-light">7 days free, cancel anytime</span>
+                </div>
+                <div id="trial-toggle" class="relative w-[46px] h-[26px] rounded-full cursor-pointer toggle-pill flex items-center px-1" style="background: linear-gradient(135deg, #F2D4CC 0%, #C9897A 100%);" onclick="toggleTrial()">
+                    <div id="toggle-thumb" class="w-[20px] h-[20px] rounded-full bg-charcoal shadow-md transition-all duration-300 translate-x-[18px]"></div>
+                </div>
+            </div>
+
+            <div id="plans-section" class="flex flex-col gap-3 mb-4">
+
+                <div id="plan-yearly" class="plan-card selected relative rounded-2xl px-4 py-4 cursor-pointer" style="border: 1.5px solid rgba(201,137,122,0.75); background: rgba(201,137,122,0.13);" onclick="selectPlan('yearly')">
+                    <div class="absolute -top-3 left-4">
+                        <span class="recommended-badge text-charcoal text-[10px] font-sans font-medium tracking-[0.14em] uppercase px-3 py-1 rounded-full">Recommended</span>
+                    </div>
+                    <div class="flex items-center justify-between mt-1">
+                        <div class="flex items-center gap-3">
+                            <div id="yearly-radio" class="w-5 h-5 min-w-[20px] rounded-full border-2 flex items-center justify-center" style="border-color: #C9897A; background: rgba(201,137,122,0.2);">
+                                <div class="w-2.5 h-2.5 rounded-full" style="background: #C9897A;"></div>
+                            </div>
+                            <div class="flex flex-col gap-0.5">
+                                <span class="text-petal text-[15px] font-sans font-medium">Yearly</span>
+                                <span class="text-petal/40 text-[11px] font-sans font-light">Billed annually · Save 60%</span>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-end gap-0.5">
+                            <div class="flex items-baseline gap-1">
+                                <span class="font-serif text-petal font-light" style="font-size: 22px;">$4.99</span>
+                                <span class="text-petal/40 text-[11px] font-sans font-light">/mo</span>
+                            </div>
+                            <span class="text-petal/35 text-[10px] font-sans font-light">$59.99 / year</span>
+                        </div>
+                    </div>
+                    <div class="mt-2.5 pt-2.5 flex gap-3" style="border-top: 1px solid rgba(242,212,204,0.08);">
+                        <div class="flex items-center gap-1.5">
+                            <i class="fa-solid fa-check text-rose text-[10px]"></i>
+                            <span class="text-petal/55 text-[11px] font-sans font-light">All workouts</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <i class="fa-solid fa-check text-rose text-[10px]"></i>
+                            <span class="text-petal/55 text-[11px] font-sans font-light">AI calorie tracker</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <i class="fa-solid fa-check text-rose text-[10px]"></i>
+                            <span class="text-petal/55 text-[11px] font-sans font-light">Progress analytics</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="plan-monthly" class="plan-card relative rounded-2xl px-4 py-4 cursor-pointer" style="border: 1.5px solid rgba(247,235,232,0.1); background: rgba(247,235,232,0.04);" onclick="selectPlan('monthly')">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div id="monthly-radio" class="w-5 h-5 min-w-[20px] rounded-full border-2 flex items-center justify-center" style="border-color: rgba(247,235,232,0.25);">
+                            </div>
+                            <div class="flex flex-col gap-0.5">
+                                <span class="text-petal text-[15px] font-sans font-medium">Monthly</span>
+                                <span class="text-petal/40 text-[11px] font-sans font-light">Billed every month</span>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-end gap-0.5">
+                            <div class="flex items-baseline gap-1">
+                                <span class="font-serif text-petal font-light" style="font-size: 22px;">$12.99</span>
+                                <span class="text-petal/40 text-[11px] font-sans font-light">/mo</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="plan-weekly" class="plan-card relative rounded-2xl px-4 py-4 cursor-pointer" style="border: 1.5px solid rgba(247,235,232,0.1); background: rgba(247,235,232,0.04);" onclick="selectPlan('weekly')">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div id="weekly-radio" class="w-5 h-5 min-w-[20px] rounded-full border-2 flex items-center justify-center" style="border-color: rgba(247,235,232,0.25);">
+                            </div>
+                            <div class="flex flex-col gap-0.5">
+                                <span class="text-petal text-[15px] font-sans font-medium">Weekly</span>
+                                <span class="text-petal/40 text-[11px] font-sans font-light">Billed every week</span>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-end gap-0.5">
+                            <div class="flex items-baseline gap-1">
+                                <span class="font-serif text-petal font-light" style="font-size: 22px;">$4.49</span>
+                                <span class="text-petal/40 text-[11px] font-sans font-light">/wk</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div id="features-row" class="flex gap-2 mb-4">
+                <div class="flex-1 flex flex-col items-center gap-1.5 rounded-2xl py-3 px-2" style="background: rgba(247,235,232,0.04); border: 1px solid rgba(242,212,204,0.08);">
+                    <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background: rgba(201,137,122,0.15);">
+                        <i class="fa-solid fa-dumbbell text-rose text-[12px]"></i>
+                    </div>
+                    <span class="text-petal/55 text-[10px] font-sans font-light text-center leading-tight">200+ Workouts</span>
+                </div>
+                <div class="flex-1 flex flex-col items-center gap-1.5 rounded-2xl py-3 px-2" style="background: rgba(247,235,232,0.04); border: 1px solid rgba(242,212,204,0.08);">
+                    <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background: rgba(201,137,122,0.15);">
+                        <i class="fa-solid fa-brain text-rose text-[12px]"></i>
+                    </div>
+                    <span class="text-petal/55 text-[10px] font-sans font-light text-center leading-tight">AI Food Log</span>
+                </div>
+                <div class="flex-1 flex flex-col items-center gap-1.5 rounded-2xl py-3 px-2" style="background: rgba(247,235,232,0.04); border: 1px solid rgba(242,212,204,0.08);">
+                    <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background: rgba(201,137,122,0.15);">
+                        <i class="fa-solid fa-chart-line text-rose text-[12px]"></i>
+                    </div>
+                    <span class="text-petal/55 text-[10px] font-sans font-light text-center leading-tight">Progress Tracking</span>
+                </div>
+                <div class="flex-1 flex flex-col items-center gap-1.5 rounded-2xl py-3 px-2" style="background: rgba(247,235,232,0.04); border: 1px solid rgba(242,212,204,0.08);">
+                    <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background: rgba(201,137,122,0.15);">
+                        <i class="fa-solid fa-droplet text-rose text-[12px]"></i>
+                    </div>
+                    <span class="text-petal/55 text-[10px] font-sans font-light text-center leading-tight">Hydration Goals</span>
+                </div>
+            </div>
+
+            <div id="trust-note" class="flex items-center justify-center gap-4 mb-1">
+                <div class="flex items-center gap-1.5">
+                    <i class="fa-solid fa-lock text-petal/30 text-[10px]"></i>
+                    <span class="text-petal/35 text-[10px] font-sans font-light">Secure payment</span>
+                </div>
+                <div class="w-[1px] h-3 bg-petal/15"></div>
+                <div class="flex items-center gap-1.5">
+                    <i class="fa-solid fa-rotate-left text-petal/30 text-[10px]"></i>
+                    <span class="text-petal/35 text-[10px] font-sans font-light">Cancel anytime</span>
+                </div>
+                <div class="w-[1px] h-3 bg-petal/15"></div>
+                <div class="flex items-center gap-1.5">
+                    <i class="fa-brands fa-apple text-petal/30 text-[10px]"></i>
+                    <span class="text-petal/35 text-[10px] font-sans font-light">RevenueCat</span>
+                </div>
+            </div>
+
+        </div>
+
+        <div id="bottom-actions" class="relative z-20 px-6 pb-10 pt-3" style="background: linear-gradient(to top, #1e1614 70%, transparent 100%);">
+            <div id="trial-label" class="text-center mb-3">
+                <span id="cta-sub-text" class="text-petal/40 text-[12px] font-sans font-light">Start your 7-day free trial, then $59.99/year</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <button id="back-btn" class="min-w-[54px] min-h-[54px] rounded-2xl border border-petal/15 bg-white/5 flex items-center justify-center transition-all active:scale-95">
+                    <i class="fa-solid fa-arrow-left text-petal/60 text-sm"></i>
+                </button>
+                <button id="next-btn" class="cta-btn flex-1 min-h-[54px] rounded-2xl flex items-center justify-center gap-3 font-sans font-medium tracking-wide text-charcoal text-[15px] transition-all" style="background: linear-gradient(135deg, #F2D4CC 0%, #C9897A 100%);">
+                    <span id="cta-label">Start Free Trial</span>
+                    <i class="fa-solid fa-arrow-right text-charcoal/80 text-sm"></i>
+                </button>
+            </div>
+            <p class="text-center text-petal/25 text-[10px] font-sans font-light mt-3 leading-relaxed px-2">By continuing you agree to our Terms of Service and Privacy Policy. Subscription auto-renews unless cancelled.</p>
+        </div>
+
+    </div>
+
+    <script>
+        let selectedPlan = 'yearly';
+        let trialEnabled = true;
+
+        const planData = {
+            yearly: {
+                trialCta: 'Start Free Trial',
+                noTrialCta: 'Get Yearly Plan',
+                trialSub: 'Start your 7-day free trial, then $59.99/year',
+                noTrialSub: 'Billed as $59.99/year · Save 60%',
+            },
+            monthly: {
+                trialCta: 'Start Free Trial',
+                noTrialCta: 'Get Monthly Plan',
+                trialSub: 'Start your 7-day free trial, then $12.99/month',
+                noTrialSub: 'Billed as $12.99 every month',
+            },
+            weekly: {
+                trialCta: 'Start Free Trial',
+                noTrialCta: 'Get Weekly Plan',
+                trialSub: 'Start your 7-day free trial, then $4.49/week',
+                noTrialSub: 'Billed as $4.49 every week',
+            }
+        };
+
+        function selectPlan(plan) {
+            selectedPlan = plan;
+
+            const cards = {
+                yearly: document.getElementById('plan-yearly'),
+                monthly: document.getElementById('plan-monthly'),
+                weekly: document.getElementById('plan-weekly'),
+            };
+            const radios = {
+                yearly: document.getElementById('yearly-radio'),
+                monthly: document.getElementById('monthly-radio'),
+                weekly: document.getElementById('weekly-radio'),
+            };
+
+            Object.keys(cards).forEach(key => {
+                cards[key].classList.remove('selected');
+                if (key === plan) {
+                    cards[key].classList.add('selected');
+                    cards[key].style.borderColor = 'rgba(201,137,122,0.75)';
+                    cards[key].style.background = 'rgba(201,137,122,0.13)';
+                    radios[key].style.borderColor = '#C9897A';
+                    radios[key].style.background = 'rgba(201,137,122,0.2)';
+                    radios[key].innerHTML = '<div class="w-2.5 h-2.5 rounded-full" style="background: #C9897A;"></div>';
+                } else {
+                    cards[key].style.borderColor = 'rgba(247,235,232,0.1)';
+                    cards[key].style.background = 'rgba(247,235,232,0.04)';
+                    radios[key].style.borderColor = 'rgba(247,235,232,0.25)';
+                    radios[key].style.background = 'transparent';
+                    radios[key].innerHTML = '';
+                }
+            });
+
+            updateCTA();
+        }
+
+        function toggleTrial() {
+            trialEnabled = !trialEnabled;
+            const thumb = document.getElementById('toggle-thumb');
+            const pill = document.getElementById('trial-toggle');
+
+            if (trialEnabled) {
+                thumb.style.transform = 'translateX(18px)';
+                pill.style.background = 'linear-gradient(135deg, #F2D4CC 0%, #C9897A 100%)';
+            } else {
+                thumb.style.transform = 'translateX(0px)';
+                pill.style.background = 'rgba(247,235,232,0.12)';
+            }
+
+            updateCTA();
+        }
+
+        function updateCTA() {
+            const data = planData[selectedPlan];
+            const ctaLabel = document.getElementById('cta-label');
+            const ctaSub = document.getElementById('cta-sub-text');
+
+            if (trialEnabled) {
+                ctaLabel.textContent = data.trialCta;
+                ctaSub.textContent = data.trialSub;
+            } else {
+                ctaLabel.textContent = data.noTrialCta;
+                ctaSub.textContent = data.noTrialSub;
+            }
+        }
+
+        updateCTA();
+    </script>
+
+</body>
+</html>
