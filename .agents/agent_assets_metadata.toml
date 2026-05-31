@@ -1,0 +1,37 @@
+uploads = []
+
+[[generated]]
+id = "Yf5DdJxmrFP_IZEi8f5aL"
+uri = "file://assets/images/icon.png"
+type = "image"
+title = "generated_image"
+
+[[outputs]]
+id = "KmpG-YsopX8HoAwCw5oyy"
+uri = "file://attached_assets/stock_images/pilates.jpg"
+type = "image"
+title = "woman doing reformer pilates in a bright studio, calm aesthetic"
+
+[[outputs]]
+id = "ivx2Pcrn0DNJkm4ED-gSp"
+uri = "file://attached_assets/stock_images/yoga.jpg"
+type = "image"
+title = "woman practicing yoga on a mat, serene soft natural light"
+
+[[outputs]]
+id = "TrKprNysxZePS674D8B3n"
+uri = "file://attached_assets/stock_images/strength.jpg"
+type = "image"
+title = "woman strength training with dumbbells, warm tones"
+
+[[outputs]]
+id = "79UTvW3l0-2UM8r0V5KZ8"
+uri = "file://attached_assets/stock_images/hiit.jpg"
+type = "image"
+title = "woman doing HIIT workout, energetic, soft warm light"
+
+[[outputs]]
+id = "r4ed4-iGYuNlcEl_cjACB"
+uri = "file://attached_assets/stock_images/welcomehero.jpg"
+type = "image"
+title = "elegant wellness portrait of a confident woman, soft warm light, beauty"
