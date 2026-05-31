@@ -32,7 +32,7 @@ export default function Welcome() {
       />
       <View style={[styles.content, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 28 }]}>
         <View style={styles.top}>
-          <Logo size="md" />
+          <Logo size="md" tagline="by dillish" />
         </View>
 
         <View style={styles.center}>
