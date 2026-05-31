@@ -19,14 +19,49 @@ const GRACE_MS = 60 * 60 * 1000; // 1 hour
 // objects older than GRACE_MS. Pass `?dryRun=1` to preview what would be deleted
 // without removing anything.
 
+// Storage IO the sweep depends on. Defaults to the real object-storage helpers;
+// tests inject fakes so the reconciliation logic can be exercised without
+// touching real storage.
+export type SweepIO = {
+  listObjects: typeof listObjects;
+  deleteObject: typeof deleteObject;
+};
+
+// A single row's media paths as stored in the `exercises` table. The poster is
+// nullable because posters were added after the initial release and older rows
+// may not have one.
+export type ExerciseMediaRow = {
+  video_object_path: string;
+  poster_object_path: string | null;
+};
+
+// Builds the sets of object paths the database still references. A row with a
+// null `poster_object_path` contributes nothing to the poster set, so an
+// unrelated poster object is never accidentally treated as referenced (and a
+// null is never added to the set where it could match a stray value).
+export function referencedPaths(rows: ExerciseMediaRow[]): {
+  videos: Set<string>;
+  posters: Set<string>;
+} {
+  return {
+    videos: new Set(rows.map((r) => r.video_object_path)),
+    posters: new Set(
+      rows
+        .map((r) => r.poster_object_path)
+        .filter((p): p is string => p != null)
+    ),
+  };
+}
+
 // Reconciles a single storage folder against the set of paths the database
 // still references, deleting any object that is orphaned and older than the
 // grace window. Returns per-folder stats.
-async function sweepFolder(
+export async function sweepFolder(
   prefix: string,
   referenced: Set<string>,
   cutoff: number,
-  dryRun: boolean
+  dryRun: boolean,
+  io: SweepIO = { listObjects, deleteObject }
 ): Promise<{
   scanned: number;
   orphans: number;
@@ -34,7 +69,7 @@ async function sweepFolder(
   failed: number;
   orphanPaths: string[];
 }> {
-  const objects = await listObjects(prefix);
+  const objects = await io.listObjects(prefix);
   const orphans = objects.filter(
     (o) => !referenced.has(o.path) && o.createdAt > 0 && o.createdAt < cutoff
   );
@@ -44,7 +79,7 @@ async function sweepFolder(
   if (!dryRun) {
     for (const o of orphans) {
       try {
-        await deleteObject(o.path);
+        await io.deleteObject(o.path);
         deleted++;
       } catch (err: any) {
         failures.push(o.path);
@@ -75,16 +110,11 @@ export async function POST(request: Request): Promise<Response> {
     // `poster_object_path` is nullable, so skip rows without a poster.
     await ensureSchema();
     const pool = getPool();
-    const { rows } = await pool.query<{
-      video_object_path: string;
-      poster_object_path: string | null;
-    }>(`SELECT video_object_path, poster_object_path FROM exercises`);
-    const referencedVideos = new Set(rows.map((r) => r.video_object_path));
-    const referencedPosters = new Set(
-      rows
-        .map((r) => r.poster_object_path)
-        .filter((p): p is string => p != null)
+    const { rows } = await pool.query<ExerciseMediaRow>(
+      `SELECT video_object_path, poster_object_path FROM exercises`
     );
+    const { videos: referencedVideos, posters: referencedPosters } =
+      referencedPaths(rows);
 
     const cutoff = Date.now() - GRACE_MS;
     const videos = await sweepFolder(
