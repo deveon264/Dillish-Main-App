@@ -135,9 +135,7 @@ export default function Dashboard() {
         <Card style={styles.streakCard}>
           <View style={styles.streakHead}>
             <View style={styles.rowCenter}>
-              <View style={styles.streakIcon}>
-                <Ionicons name="flame" size={16} color={colors.accent} />
-              </View>
+              <Text style={styles.streakFlame}>🔥</Text>
               <Text style={styles.streakTitle}>Weekly Streak</Text>
             </View>
             <Text style={styles.streakDays}>
@@ -368,20 +366,13 @@ const styles = StyleSheet.create({
 
   streakCard: { paddingVertical: 18 },
   streakHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  streakIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "rgba(242,212,204,0.10)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  streakFlame: { fontSize: 18, marginRight: 8 },
   streakTitle: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.foreground },
   streakDays: { fontFamily: fonts.serifSemibold, fontSize: 26, color: colors.foreground },
   streakDaysUnit: { fontFamily: fonts.sans, fontSize: 13, color: colors.muted },
   streakRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 18 },
-  streakDayCol: { alignItems: "center", flex: 1, gap: 8 },
-  streakPill: { width: "70%", height: 6, borderRadius: 3 },
+  streakDayCol: { alignItems: "center", flex: 1, gap: 10 },
+  streakPill: { width: "74%", height: 26, borderRadius: 13 },
   streakPillOff: { backgroundColor: colors.track },
   streakDayLabel: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.muted },
   streakDayToday: { color: colors.accent },
