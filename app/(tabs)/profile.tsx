@@ -33,7 +33,7 @@ export default function Profile() {
   const router = useRouter();
   const insets = useInsets();
   const { user, logout, updateUser } = useAuth();
-  const { profile, completions, calorieLogs, weightLogs, updateProfile } = useData();
+  const { profile, completions, calorieLogs, weightLogs, waterLogs, updateProfile } = useData();
 
   const [editing, setEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("Profile");
@@ -94,6 +94,18 @@ export default function Profile() {
     if (total === 0) return null;
     return Math.max(0, Math.min(1, done / total));
   }, [startWeight, currentWeight, profile.goalWeight]);
+
+  const todayWaterMl = useMemo(() => {
+    const tk = todayKey();
+    return waterLogs
+      .filter((l) => todayKey(new Date(l.ts)) === tk)
+      .reduce((s, l) => s + l.amountMl, 0);
+  }, [waterLogs]);
+
+  const waterProgress = useMemo(
+    () => (profile.waterGoalMl > 0 ? Math.min(1, todayWaterMl / profile.waterGoalMl) : 0),
+    [todayWaterMl, profile.waterGoalMl]
+  );
 
   const bmi = useMemo(() => {
     if (currentWeight == null || profile.height == null || profile.height <= 0) return null;
@@ -505,6 +517,12 @@ export default function Profile() {
           </Pressable>
         </View>
         {waterGoalError ? <Text style={styles.goalWeightError}>{waterGoalError}</Text> : null}
+
+        <ProgressBar progress={waterProgress} height={8} style={{ marginTop: 16 }} />
+        <View style={styles.goalScaleRow}>
+          <Text style={styles.goalScaleText}>Today: {(todayWaterMl / 1000).toFixed(2)} L</Text>
+          <Text style={styles.goalScaleText}>Goal: {(profile.waterGoalMl / 1000).toFixed(2)} L</Text>
+        </View>
 
         <View style={styles.sectionDivider} />
 
