@@ -245,7 +245,7 @@ export default function WorkoutPlayer() {
                         {isCurrent && <Text style={styles.exEyebrow}>EXERCISE {i + 1}</Text>}
                         <Text style={[styles.exCardTitle, done && styles.exCardTitleDone]}>{e.name}</Text>
                         <View style={styles.exCardMeta}>
-                          <Text style={styles.exCardMetaText}>{e.seconds} sec</Text>
+                          <Text style={styles.exCardMetaText}>{e.sets} sets · {e.seconds} sec</Text>
                           {isCurrent && (
                             <View style={styles.exChip}>
                               <Text style={styles.exChipText}>{e.detail}</Text>
