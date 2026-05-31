@@ -1,4 +1,5 @@
 import { Tabs, Redirect } from "expo-router";
+import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { View, ActivityIndicator } from "react-native";
 import { TabBar } from "@/components/TabBar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,7 +21,7 @@ export default function TabsLayout() {
 
   return (
     <Tabs
-      tabBar={(props) => <TabBar {...props} />}
+      tabBar={(props) => <TabBar {...(props as unknown as BottomTabBarProps)} />}
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: colors.background },

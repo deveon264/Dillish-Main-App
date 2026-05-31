@@ -21,7 +21,9 @@ const CONF: Record<string, { label: string; icon: IconConf }> = {
 
 const ORDER = ["index", "workouts", "calories", "water", "profile"];
 
-export function TabBar({ state, navigation }: BottomTabBarProps) {
+type TabBarProps = Pick<BottomTabBarProps, "state" | "navigation">;
+
+export function TabBar({ state, navigation }: TabBarProps) {
   const insets = useInsets();
 
   const routesByName = Object.fromEntries(state.routes.map((r) => [r.name, r]));
