@@ -6,6 +6,24 @@ uri = "file://assets/images/icon.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "z_-RNJNJ038pJeZR4Y4Zs"
+uri = "file://artifacts/mockup-sandbox/public/images/avatar1.png"
+type = "image"
+title = "Woman avatar smiling natural"
+
+[[generated]]
+id = "CfPsVC9Ze_ksEotTzENTs"
+uri = "file://artifacts/mockup-sandbox/public/images/avatar2.png"
+type = "image"
+title = "Woman avatar smiling serene"
+
+[[generated]]
+id = "W3H396YrOcXTQZZT1c-FS"
+uri = "file://artifacts/mockup-sandbox/public/images/avatar3.png"
+type = "image"
+title = "Woman avatar athletic happy"
+
 [[outputs]]
 id = "KmpG-YsopX8HoAwCw5oyy"
 uri = "file://attached_assets/stock_images/pilates.jpg"

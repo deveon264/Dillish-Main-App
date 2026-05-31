@@ -1,0 +1,31 @@
+.wrf-animate-fade-in {
+  animation: wrfFadeIn 1.2s ease-out forwards;
+}
+
+.wrf-animate-fade-in-up {
+  animation: wrfFadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.wrf-delay-100 { animation-delay: 100ms; }
+.wrf-delay-200 { animation-delay: 200ms; }
+.wrf-delay-300 { animation-delay: 300ms; }
+.wrf-delay-400 { animation-delay: 400ms; }
+.wrf-delay-500 { animation-delay: 500ms; }
+.wrf-delay-600 { animation-delay: 600ms; }
+.wrf-delay-700 { animation-delay: 700ms; }
+
+@keyframes wrfFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes wrfFadeInUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(16px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
