@@ -13,7 +13,7 @@ import { fonts } from "@/constants/fonts";
 export default function Workouts() {
   const router = useRouter();
   const insets = useInsets();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const firstName = (user?.name ?? "there").split(" ")[0];
   const [category, setCategory] = useState("All");
   const [query, setQuery] = useState("");
@@ -57,6 +57,19 @@ export default function Workouts() {
             onChangeText={setQuery}
           />
         </View>
+
+        <Pressable style={styles.videoBanner} onPress={() => router.push("/exercises")}>
+          <View style={styles.videoBannerIcon}>
+            <Ionicons name="play-circle" size={24} color={colors.onPrimary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.videoBannerTitle}>Exercise Videos</Text>
+            <Text style={styles.videoBannerSub}>
+              {isAdmin ? "Upload & manage member videos" : "Guided demos from your coach"}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+        </Pressable>
 
         <ScrollView
           horizontal
@@ -181,6 +194,27 @@ const styles = StyleSheet.create({
     marginTop: 18,
   },
   searchInput: { flex: 1, fontFamily: fonts.sans, fontSize: 15, color: colors.foreground, paddingVertical: 12 },
+  videoBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: "rgba(201,137,122,0.35)",
+    borderRadius: colors.radiusLg,
+    padding: 14,
+    marginTop: 16,
+  },
+  videoBannerIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: colors.accent,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  videoBannerTitle: { fontFamily: fonts.serifSemibold, fontSize: 18, color: colors.foreground },
+  videoBannerSub: { fontFamily: fonts.sans, fontSize: 13, color: colors.muted, marginTop: 2 },
   cats: { gap: 10, paddingVertical: 18, paddingRight: 8 },
   cat: {
     paddingHorizontal: 20,

@@ -1,4 +1,5 @@
-- [Expo on Replit quirks](expo-replit-quirks.md) — gotchas: SecureStore web no-op, server-output API routes, Expo Go SDK lag, web font-load timeouts, .npmrc legacy-peer-deps.
-- [Streak/week math duplication](streak-week-math.md) — weekly streak + Mon-start week-marks logic is copy-pasted in home and workout player; keep both in sync or extract a shared helper.
-- [Weight tracking derivation](weight-tracking-derivation.md) — weight display is log-driven (current=latest, start=earliest by ts); never mutate profile from log add/remove; keep Progress + Profile tabs in sync.
-- [Profile header panel theming](profile-light-panel.md) — Profile card + 4-stat block is a dark "glass pill" (matches the dark app); user reverted the old light blush panel — don't reintroduce it.
+- [Exercise video streaming & admin uploads](exercise-video-streaming.md) — Range/206 + 416 matrix, 1-indexed PG substring, mock-auth header gating limit, Expo Router API TS casts.
+- [Expo + Replit quirks](expo-replit-quirks.md) — SDK54 pinning, fonts, --tunnel, legacy-peer-deps.
+- [Profile header panel theming](profile-light-panel.md) — Profile header is dark "glass" matching the rest of the app.
+- [Streak/week math duplication](streak-week-math.md) — weekly-streak/week-day computation has copies that must stay in sync.
+- [Weight tracking derivation](weight-tracking-derivation.md) — how current/start weight are computed for Progress + Profile; logs decoupled from profile.

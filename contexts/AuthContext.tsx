@@ -3,6 +3,7 @@ import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 import { getJSON, setJSON, genId } from "@/lib/storage";
+import { isAdminEmail } from "@/constants/admin";
 
 export type User = {
   id: string;
@@ -15,6 +16,7 @@ type StoredUser = User & { password: string };
 
 type AuthContextType = {
   user: User | null;
+  isAdmin: boolean;
   loading: boolean;
   signup: (name: string, email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
@@ -144,7 +146,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <AuthContext.Provider value={{ user, loading, signup, login, logout, completeOnboarding, updateUser }}>
+    <AuthContext.Provider
+      value={{ user, isAdmin: isAdminEmail(user?.email), loading, signup, login, logout, completeOnboarding, updateUser }}
+    >
       {children}
     </AuthContext.Provider>
   );
