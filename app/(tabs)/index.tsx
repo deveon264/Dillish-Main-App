@@ -37,7 +37,7 @@ export default function Dashboard() {
   const router = useRouter();
   const insets = useInsets();
   const { user } = useAuth();
-  const { profile, waterLogs, calorieLogs, completions, addWater } = useData();
+  const { profile, waterLogs, calorieLogs, completions, addWater, favorites, toggleFavorite } = useData();
 
   const tk = todayKey();
   const firstName = (user?.name ?? "there").split(" ")[0];
@@ -105,7 +105,7 @@ export default function Dashboard() {
   }, [completionDays, tk]);
 
   const featured = WORKOUTS.find((w) => w.featured) ?? WORKOUTS[0];
-  const saved = WORKOUTS.filter((w) => w.featured);
+  const saved = useMemo(() => WORKOUTS.filter((w) => favorites.includes(w.id)), [favorites]);
 
   return (
     <GradientBackground>
@@ -292,22 +292,40 @@ export default function Dashboard() {
             <Text style={styles.seeAll}>See all</Text>
           </Pressable>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.savedRow}>
-          {saved.map((w) => (
-            <Pressable key={w.id} style={styles.savedCard} onPress={() => router.push(`/workout/${w.id}`)}>
-              <ImageBackground source={w.image} style={styles.savedImg} imageStyle={{ borderRadius: colors.radiusLg }}>
-                <LinearGradient colors={["transparent", "rgba(44,36,34,0.92)"]} style={styles.savedOverlay} />
-                <View style={styles.savedHeart}>
-                  <Ionicons name="heart" size={15} color={colors.accent} />
-                </View>
-                <View style={styles.savedInfo}>
-                  <Text style={styles.savedTitle} numberOfLines={1}>{w.title}</Text>
-                  <Text style={styles.savedMeta}>{w.durationMin} min · {w.level}</Text>
-                </View>
-              </ImageBackground>
+        {saved.length === 0 ? (
+          <Card style={styles.savedEmpty}>
+            <Ionicons name="heart-outline" size={26} color={colors.muted} />
+            <Text style={styles.savedEmptyText}>No saved workouts yet</Text>
+            <Text style={styles.savedEmptySub}>Tap the heart on a workout to save it here</Text>
+            <Pressable style={styles.savedEmptyBtn} onPress={() => router.navigate("/(tabs)/workouts")}>
+              <Text style={styles.savedEmptyBtnText}>Browse library</Text>
             </Pressable>
-          ))}
-        </ScrollView>
+          </Card>
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.savedRow}>
+            {saved.map((w) => (
+              <Pressable key={w.id} style={styles.savedCard} onPress={() => router.push(`/workout/${w.id}`)}>
+                <ImageBackground source={w.image} style={styles.savedImg} imageStyle={{ borderRadius: colors.radiusLg }}>
+                  <LinearGradient colors={["transparent", "rgba(44,36,34,0.92)"]} style={styles.savedOverlay} />
+                  <Pressable
+                    style={styles.savedHeart}
+                    hitSlop={8}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      toggleFavorite(w.id);
+                    }}
+                  >
+                    <Ionicons name="heart" size={15} color={colors.accent} />
+                  </Pressable>
+                  <View style={styles.savedInfo}>
+                    <Text style={styles.savedTitle} numberOfLines={1}>{w.title}</Text>
+                    <Text style={styles.savedMeta}>{w.durationMin} min · {w.level}</Text>
+                  </View>
+                </ImageBackground>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
       </ScrollView>
     </GradientBackground>
   );
@@ -497,4 +515,16 @@ const styles = StyleSheet.create({
   savedInfo: { padding: 14 },
   savedTitle: { fontFamily: fonts.serifSemibold, fontSize: 17, color: colors.foreground },
   savedMeta: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, marginTop: 2 },
+
+  savedEmpty: { alignItems: "center", paddingVertical: 28, gap: 6 },
+  savedEmptyText: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground, marginTop: 4 },
+  savedEmptySub: { fontFamily: fonts.sans, fontSize: 13, color: colors.muted, textAlign: "center" },
+  savedEmptyBtn: {
+    marginTop: 14,
+    backgroundColor: colors.accent,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 999,
+  },
+  savedEmptyBtnText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.onPrimary },
 });
