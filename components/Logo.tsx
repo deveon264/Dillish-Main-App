@@ -16,7 +16,7 @@ export function Logo({
 }) {
   const mark = size === "lg" ? 56 : size === "sm" ? 34 : 44;
   const icon = size === "lg" ? 28 : size === "sm" ? 17 : 22;
-  const fontSize = size === "lg" ? 30 : size === "sm" ? 20 : 24;
+  const fontSize = size === "lg" ? 58 : size === "sm" ? 20 : 24;
   const taglineSize = size === "lg" ? 12 : size === "sm" ? 9 : 10;
 
   return (
