@@ -358,6 +358,8 @@ export default function Profile() {
           })}
         </View>
 
+        <View style={styles.sectionDivider} />
+
         <View style={styles.goalWeightHead}>
           <Text style={styles.label}>GOAL WEIGHT</Text>
           {kgToGo != null ? (
@@ -408,6 +410,8 @@ export default function Profile() {
           </>
         ) : null}
 
+        <View style={styles.sectionDivider} />
+
         <View style={styles.goalWeightHead}>
           <Text style={styles.label}>HYDRATION GOAL</Text>
           <Text style={styles.toGo}>{(profile.waterGoalMl / 1000).toFixed(2)} L / day</Text>
@@ -429,6 +433,8 @@ export default function Profile() {
             <Ionicons name="add" size={20} color={colors.foreground} />
           </Pressable>
         </View>
+
+        <View style={styles.sectionDivider} />
 
         <Button
           label="Log Out"
@@ -486,6 +492,7 @@ const styles = StyleSheet.create({
   notifSub: { fontFamily: fonts.sans, fontSize: 13, color: colors.mutedForeground, marginTop: 3 },
   settingsCard: { paddingVertical: 4 },
   settingsDivider: { height: 1, backgroundColor: colors.cardBorder, marginHorizontal: 14 },
+  sectionDivider: { height: 1, backgroundColor: colors.cardBorder, marginTop: 24 },
   prefRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 14, paddingHorizontal: 14 },
   prefLeft: { flex: 1, paddingRight: 12 },
   prefTitle: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
