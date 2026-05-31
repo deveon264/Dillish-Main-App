@@ -161,7 +161,7 @@ export default function Profile() {
         </View>
 
         <LinearGradient
-          colors={["#FBF1ED", "#F2D4CC"]}
+          colors={["#EADDD6", "#C6A697"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.lightPanel}
@@ -418,16 +418,16 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   profileCard: {
-    backgroundColor: "rgba(255,255,255,0.45)",
-    borderColor: "rgba(201,137,122,0.18)",
+    backgroundColor: "rgba(245,235,228,0.5)",
+    borderColor: "rgba(124,94,86,0.2)",
   },
   editName: {
     fontFamily: fonts.sans,
     fontSize: 16,
     color: palette.charcoal,
-    backgroundColor: "rgba(255,255,255,0.75)",
+    backgroundColor: "rgba(250,243,238,0.8)",
     borderWidth: 1,
-    borderColor: "rgba(201,137,122,0.3)",
+    borderColor: "rgba(124,94,86,0.28)",
     borderRadius: colors.radius,
     paddingHorizontal: 14,
     paddingVertical: 14,
@@ -444,8 +444,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: colors.radius,
     borderWidth: 1,
-    borderColor: "rgba(201,137,122,0.4)",
-    backgroundColor: "rgba(255,255,255,0.5)",
+    borderColor: "rgba(124,94,86,0.32)",
+    backgroundColor: "rgba(245,235,228,0.55)",
   },
   editCancelText: { fontFamily: fonts.sansSemibold, fontSize: 15, color: palette.charcoal },
   profileRow: { flexDirection: "row", alignItems: "center", gap: 16 },
@@ -481,9 +481,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: "rgba(255,255,255,0.55)",
+    backgroundColor: "rgba(245,235,228,0.6)",
     borderWidth: 1,
-    borderColor: "rgba(201,137,122,0.18)",
+    borderColor: "rgba(124,94,86,0.2)",
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
@@ -500,13 +500,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 16,
     paddingHorizontal: 4,
-    backgroundColor: "rgba(255,255,255,0.5)",
-    borderColor: "rgba(201,137,122,0.16)",
+    backgroundColor: "rgba(245,235,228,0.55)",
+    borderColor: "rgba(124,94,86,0.18)",
     borderRadius: colors.radius,
   },
   statCardAccent: {
-    backgroundColor: "rgba(201,137,122,0.18)",
-    borderColor: "rgba(201,137,122,0.3)",
+    backgroundColor: "rgba(201,137,122,0.26)",
+    borderColor: "rgba(201,137,122,0.4)",
   },
   statNum: { fontFamily: fonts.serifSemibold, fontSize: 24, color: palette.charcoal },
   statNumAccent: { color: colors.primary },
