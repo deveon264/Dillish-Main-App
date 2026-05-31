@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, ImageBackground } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, ImageBackground, Image } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -40,7 +40,7 @@ export default function WorkoutPlayer() {
   }, []);
 
   useEffect(() => {
-    if (phase !== "active" || paused || !current) return;
+    if (phase !== "active" || paused || !current || remaining <= 0) return;
     timer.current = setInterval(() => {
       setRemaining((r) => {
         if (r <= 1) {
@@ -59,7 +59,8 @@ export default function WorkoutPlayer() {
     if (phase === "active" && remaining === 0 && current) {
       goNext();
     }
-  }, [remaining, phase]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remaining, phase, index, current]);
 
   if (!workout) {
     return (
@@ -223,23 +224,45 @@ export default function WorkoutPlayer() {
             </View>
 
             {tab === "exercises" && (
-              <View style={{ gap: 10, marginTop: 16 }}>
-                {workout.exercises.map((e, i) => (
-                  <View key={e.id} style={[styles.exRow, i === index && styles.exRowActive]}>
-                    <View style={[styles.exNum, i < index && styles.exNumDone, i === index && styles.exNumActive]}>
-                      {i < index ? (
-                        <Ionicons name="checkmark" size={16} color={colors.onPrimary} />
-                      ) : (
-                        <Text style={[styles.exNumText, i === index && { color: colors.onPrimary }]}>{i + 1}</Text>
+              <View style={{ gap: 14, marginTop: 20 }}>
+                {workout.exercises.map((e, i) => {
+                  const done = i < index;
+                  const isCurrent = i === index;
+                  return (
+                    <View key={e.id} style={[styles.exCard, isCurrent && styles.exCardActive]}>
+                      {isCurrent && (
+                        <View style={styles.nowTag}>
+                          <Text style={styles.nowTagText}>Now</Text>
+                        </View>
                       )}
+                      {done && (
+                        <View style={styles.exCheck}>
+                          <Ionicons name="checkmark" size={15} color={colors.onPrimary} />
+                        </View>
+                      )}
+                      <Image source={workout.image} style={styles.exThumb} />
+                      <View style={{ flex: 1 }}>
+                        {isCurrent && <Text style={styles.exEyebrow}>EXERCISE {i + 1}</Text>}
+                        <Text style={[styles.exCardTitle, done && styles.exCardTitleDone]}>{e.name}</Text>
+                        <View style={styles.exCardMeta}>
+                          <Text style={styles.exCardMetaText}>{e.seconds} sec</Text>
+                          {isCurrent && (
+                            <View style={styles.exChip}>
+                              <Text style={styles.exChipText}>{e.detail}</Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                      {isCurrent ? (
+                        <Pressable style={styles.exPlay} onPress={() => setPaused((p) => !p)} hitSlop={6}>
+                          <Ionicons name={paused ? "play" : "pause"} size={18} color={colors.onPrimary} />
+                        </Pressable>
+                      ) : done ? (
+                        <Text style={styles.exDoneLabel}>Done</Text>
+                      ) : null}
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.exName}>{e.name}</Text>
-                      <Text style={styles.exDetail}>{e.detail}</Text>
-                    </View>
-                    <Text style={styles.exTime}>{e.seconds}s</Text>
-                  </View>
-                ))}
+                  );
+                })}
               </View>
             )}
 
@@ -313,52 +336,7 @@ export default function WorkoutPlayer() {
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   notFound: { fontFamily: fonts.serif, fontSize: 22, color: colors.foreground },
-  cover: { height: 320, justifyContent: "flex-end" },
-  closeBtn: {
-    position: "absolute",
-    right: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(44,36,34,0.5)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  coverContent: { padding: 24 },
-  badge: { alignSelf: "flex-start", backgroundColor: "rgba(247,235,232,0.18)", paddingHorizontal: 12, paddingVertical: 5, borderRadius: 16, marginBottom: 10 },
-  badgeText: { fontFamily: fonts.sansSemibold, fontSize: 11, color: colors.foreground, letterSpacing: 0.5 },
-  coverCat: { fontFamily: fonts.sansSemibold, fontSize: 12, color: colors.accent, letterSpacing: 1 },
-  coverTitle: { fontFamily: fonts.serifSemibold, fontSize: 34, color: colors.foreground, marginTop: 4 },
-  coverMeta: { flexDirection: "row", gap: 20, marginTop: 12 },
   metaItem: { flexDirection: "row", alignItems: "center", gap: 6 },
-  metaText: { fontFamily: fonts.sansMedium, fontSize: 14, color: colors.foreground },
-  body: { padding: 24 },
-  desc: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted, lineHeight: 23 },
-  sectionTitle: { fontFamily: fonts.serif, fontSize: 24, color: colors.foreground, marginTop: 26, marginBottom: 14 },
-  exRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    borderRadius: colors.radius,
-    padding: 14,
-  },
-  exNum: { width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(242,212,204,0.10)", alignItems: "center", justifyContent: "center" },
-  exNumText: { fontFamily: fonts.sansSemibold, fontSize: 14, color: colors.accent },
-  exName: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
-  exDetail: { fontFamily: fonts.sans, fontSize: 13, color: colors.muted, marginTop: 1 },
-  exTime: { fontFamily: fonts.sansMedium, fontSize: 14, color: colors.accent },
-  footer: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    backgroundColor: "rgba(30,22,20,0.9)",
-  },
   rowCenter: { flexDirection: "row", alignItems: "center", gap: 10 },
   player: { height: 360, justifyContent: "space-between" },
   playerTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20 },
@@ -461,9 +439,6 @@ const styles = StyleSheet.create({
   tabOn: { backgroundColor: colors.accent },
   tabText: { fontFamily: fonts.sansMedium, fontSize: 13.5, color: colors.muted },
   tabTextOn: { color: colors.onPrimary },
-  exRowActive: { borderColor: colors.accent },
-  exNumActive: { backgroundColor: colors.accent },
-  exNumDone: { backgroundColor: colors.accent },
   guidanceName: { fontFamily: fonts.serifSemibold, fontSize: 24, color: colors.foreground },
   guidanceDetail: { fontFamily: fonts.sans, fontSize: 14, color: colors.muted },
   cueBox: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.card, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 16, marginTop: 6 },
@@ -483,6 +458,39 @@ const styles = StyleSheet.create({
     borderColor: colors.accent,
   },
   endBtnText: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.accent },
+  exCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: colors.radius,
+    padding: 12,
+    position: "relative",
+  },
+  exCardActive: { borderColor: colors.accent, backgroundColor: "rgba(201,137,122,0.12)" },
+  nowTag: {
+    position: "absolute",
+    top: -9,
+    left: 14,
+    backgroundColor: colors.accent,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  nowTagText: { fontFamily: fonts.sansSemibold, fontSize: 10, color: colors.onPrimary, letterSpacing: 0.5 },
+  exCheck: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
+  exThumb: { width: 46, height: 46, borderRadius: 12, backgroundColor: colors.track },
+  exEyebrow: { fontFamily: fonts.sansMedium, fontSize: 10, color: colors.accent, letterSpacing: 1, marginBottom: 2 },
+  exCardTitle: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
+  exCardTitleDone: { color: colors.muted, textDecorationLine: "line-through" },
+  exCardMeta: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 3 },
+  exCardMetaText: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.muted },
+  exChip: { backgroundColor: "rgba(247,235,232,0.10)", paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999 },
+  exChipText: { fontFamily: fonts.sansMedium, fontSize: 11, color: colors.accent },
+  exPlay: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
+  exDoneLabel: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.muted },
   doneIcon: { width: 96, height: 96, borderRadius: 48, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
   doneTitle: { fontFamily: fonts.serifSemibold, fontSize: 34, color: colors.foreground, marginTop: 24 },
   doneSub: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted, textAlign: "center", marginTop: 10, lineHeight: 23 },
