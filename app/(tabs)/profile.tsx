@@ -197,21 +197,23 @@ export default function Profile() {
         {activeTab === "Settings" ? (
           <>
             <Text style={styles.label}>NOTIFICATIONS</Text>
-            {NOTIF_ROWS.map((row, i) => (
-              <View key={row.key}>
-                {i > 0 ? <View style={styles.notifDivider} /> : null}
-                <View style={styles.notifRow}>
-                  <View style={styles.notifTextWrap}>
-                    <Text style={styles.notifTitle}>{row.title}</Text>
-                    <Text style={styles.notifSub}>{row.sub}</Text>
+            <Card style={styles.settingsCard}>
+              {NOTIF_ROWS.map((row, i) => (
+                <View key={row.key}>
+                  {i > 0 ? <View style={styles.settingsDivider} /> : null}
+                  <View style={styles.notifRow}>
+                    <View style={styles.notifTextWrap}>
+                      <Text style={styles.notifTitle}>{row.title}</Text>
+                      <Text style={styles.notifSub}>{row.sub}</Text>
+                    </View>
+                    <Toggle
+                      value={notifs[row.key]}
+                      onValueChange={(v) => setNotifs((prev) => ({ ...prev, [row.key]: v }))}
+                    />
                   </View>
-                  <Toggle
-                    value={notifs[row.key]}
-                    onValueChange={(v) => setNotifs((prev) => ({ ...prev, [row.key]: v }))}
-                  />
                 </View>
-              </View>
-            ))}
+              ))}
+            </Card>
 
             <Text style={styles.label}>PREFERENCES</Text>
             <Card style={styles.settingsCard}>
@@ -483,9 +485,8 @@ const styles = StyleSheet.create({
   tabActive: { flex: 1, paddingVertical: 10, alignItems: "center", justifyContent: "center", borderRadius: colors.radiusSm },
   tabText: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.muted },
   tabActiveText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.onPrimary },
-  notifRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 16 },
+  notifRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 16, paddingHorizontal: 14 },
   notifTextWrap: { flex: 1, paddingRight: 12 },
-  notifDivider: { height: 1, backgroundColor: colors.cardBorder },
   notifTitle: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
   notifSub: { fontFamily: fonts.sans, fontSize: 13, color: colors.mutedForeground, marginTop: 3 },
   settingsCard: { paddingVertical: 4 },
