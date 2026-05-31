@@ -1,3 +1,4 @@
 - [Expo on Replit quirks](expo-replit-quirks.md) — SecureStore web no-op, API routes need server output + absolute URL on native, OpenAI integration env/model rules.
 - [Streak/week math duplication](streak-week-math.md) — weekly streak + Mon-start week-marks logic is copy-pasted in home and workout player; keep both in sync or extract a shared helper.
 - [Weight tracking derivation](weight-tracking-derivation.md) — weight display is log-driven (current=latest, start=earliest by ts); never mutate profile from log add/remove; keep Progress + Profile tabs in sync.
+- [Profile light blush panel](profile-light-panel.md) — Profile card + stats block is intentionally light-themed in a dark app (user-chosen); don't "fix" the contrast by darkening it.

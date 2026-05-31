@@ -5,14 +5,13 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Card } from "@/components/Card";
-import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { ProgressBar } from "@/components/ProgressBar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
 import { useInsets } from "@/hooks/useInsets";
 import { todayKey } from "@/lib/storage";
-import { colors } from "@/constants/colors";
+import { colors, palette } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
 const FITNESS_GOALS = [
@@ -161,65 +160,93 @@ export default function Profile() {
           )}
         </View>
 
-        <Card style={styles.profileCard}>
-          {editing ? (
-            <View style={{ flex: 1 }}>
-              <Input value={name} onChangeText={setName} placeholder="Your name" style={{ marginBottom: 0 }} />
-              <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
-                <Button label="Save" onPress={saveName} style={{ flex: 1 }} />
-                <Button label="Cancel" variant="outline" onPress={() => setEditing(false)} style={{ flex: 1 }} />
-              </View>
-            </View>
-          ) : (
-            <View style={styles.profileRow}>
-              <View style={styles.avatarWrap}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{firstName}</Text>
-                </View>
-                <Pressable
-                  style={styles.cameraBadge}
-                  onPress={() => { setName(user?.name ?? ""); setEditing(true); }}
-                  hitSlop={8}
-                >
-                  <Ionicons name="camera" size={13} color={colors.onPrimary} />
-                </Pressable>
-              </View>
+        <LinearGradient
+          colors={["#FBF1ED", "#F2D4CC"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.lightPanel}
+        >
+          <Card style={styles.profileCard}>
+            {editing ? (
               <View style={{ flex: 1 }}>
-                <Text style={styles.profileName}>{user?.name}</Text>
-                <Text style={styles.profileEmail}>{user?.email}</Text>
-                <View style={styles.badgeRow}>
-                  <View style={styles.badge}>
-                    <Ionicons name="sparkles" size={12} color={colors.accent} />
-                    <Text style={styles.badgeText}>Premium</Text>
+                <TextInput
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Your name"
+                  placeholderTextColor={palette.mauve}
+                  style={styles.editName}
+                  autoFocus
+                />
+                <View style={styles.editBtnRow}>
+                  <Pressable onPress={saveName} style={({ pressed }) => [styles.editSave, { opacity: pressed ? 0.9 : 1 }]}>
+                    <LinearGradient
+                      colors={colors.gradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.editSaveInner}
+                    >
+                      <Text style={styles.editSaveText}>Save</Text>
+                    </LinearGradient>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setEditing(false)}
+                    style={({ pressed }) => [styles.editCancel, { opacity: pressed ? 0.85 : 1 }]}
+                  >
+                    <Text style={styles.editCancelText}>Cancel</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.profileRow}>
+                <View style={styles.avatarWrap}>
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>{firstName}</Text>
                   </View>
-                  <View style={styles.badge}>
-                    <Ionicons name="flame" size={12} color={colors.primary} />
-                    <Text style={styles.badgeText}>{streak} day streak</Text>
+                  <Pressable
+                    style={styles.cameraBadge}
+                    onPress={() => { setName(user?.name ?? ""); setEditing(true); }}
+                    hitSlop={8}
+                  >
+                    <Ionicons name="camera" size={13} color={colors.foreground} />
+                  </Pressable>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.profileName}>{user?.name}</Text>
+                  <Text style={styles.profileEmail}>{user?.email}</Text>
+                  <View style={styles.badgeRow}>
+                    <View style={[styles.badge, styles.badgePremium]}>
+                      <Ionicons name="sparkles" size={12} color={palette.petal} />
+                      <Text style={[styles.badgeText, styles.badgeTextPremium]}>Premium</Text>
+                    </View>
+                    <View style={styles.badge}>
+                      <Ionicons name="flame" size={12} color={colors.primary} />
+                      <Text style={styles.badgeText}>{streak} day streak</Text>
+                    </View>
                   </View>
                 </View>
               </View>
-            </View>
-          )}
-        </Card>
+            )}
+          </Card>
 
-        <View style={styles.statsRow}>
-          <Card style={styles.statCard}>
-            <Text style={styles.statNum}>{fmtStat(profile.age)}</Text>
-            <Text style={styles.statLbl}>Age</Text>
-          </Card>
-          <Card style={styles.statCard}>
-            <Text style={styles.statNum}>{fmtStat(currentWeight, 1)}</Text>
-            <Text style={styles.statLbl}>{profile.weightUnit}</Text>
-          </Card>
-          <Card style={styles.statCard}>
-            <Text style={styles.statNum}>{fmtStat(profile.height)}</Text>
-            <Text style={styles.statLbl}>{profile.heightUnit}</Text>
-          </Card>
-          <Card style={styles.statCard}>
-            <Text style={styles.statNum}>{fmtStat(bmi, 1)}</Text>
-            <Text style={styles.statLbl}>BMI</Text>
-          </Card>
-        </View>
+          <View style={styles.statsRow}>
+            <Card style={styles.statCard}>
+              <Text style={styles.statNum}>{fmtStat(profile.age)}</Text>
+              <Text style={styles.statLbl}>Age</Text>
+            </Card>
+            <Card style={styles.statCard}>
+              <Text style={styles.statNum}>{fmtStat(currentWeight, 1)}</Text>
+              <Text style={styles.statLbl}>{profile.weightUnit}</Text>
+            </Card>
+            <Card style={styles.statCard}>
+              <Text style={styles.statNum}>{fmtStat(profile.height)}</Text>
+              <Text style={styles.statLbl}>{profile.heightUnit}</Text>
+            </Card>
+            <Card style={[styles.statCard, styles.statCardAccent]}>
+              <Text style={[styles.statNum, styles.statNumAccent]}>{fmtStat(bmi, 1)}</Text>
+              <Text style={styles.statLbl}>BMI</Text>
+            </Card>
+          </View>
+        </LinearGradient>
 
         <Text style={styles.label}>FITNESS GOAL</Text>
         <View style={styles.goalRow}>
@@ -385,20 +412,55 @@ const styles = StyleSheet.create({
   tabActive: { flex: 1, paddingVertical: 10, alignItems: "center", justifyContent: "center", borderRadius: colors.radiusSm },
   tabText: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.muted },
   tabActiveText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.onPrimary },
-  profileCard: {},
+  lightPanel: {
+    borderRadius: colors.radiusLg,
+    padding: 14,
+    overflow: "hidden",
+  },
+  profileCard: {
+    backgroundColor: "rgba(255,255,255,0.45)",
+    borderColor: "rgba(201,137,122,0.18)",
+  },
+  editName: {
+    fontFamily: fonts.sans,
+    fontSize: 16,
+    color: palette.charcoal,
+    backgroundColor: "rgba(255,255,255,0.75)",
+    borderWidth: 1,
+    borderColor: "rgba(201,137,122,0.3)",
+    borderRadius: colors.radius,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    minHeight: 54,
+  },
+  editBtnRow: { flexDirection: "row", gap: 8, marginTop: 10 },
+  editSave: { flex: 1, borderRadius: colors.radius, overflow: "hidden" },
+  editSaveInner: { minHeight: 48, alignItems: "center", justifyContent: "center", borderRadius: colors.radius },
+  editSaveText: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.onPrimary },
+  editCancel: {
+    flex: 1,
+    minHeight: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: colors.radius,
+    borderWidth: 1,
+    borderColor: "rgba(201,137,122,0.4)",
+    backgroundColor: "rgba(255,255,255,0.5)",
+  },
+  editCancelText: { fontFamily: fonts.sansSemibold, fontSize: 15, color: palette.charcoal },
   profileRow: { flexDirection: "row", alignItems: "center", gap: 16 },
   avatarWrap: { width: 64, height: 64 },
   avatar: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: colors.cardElevated,
+    backgroundColor: colors.primary,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: "rgba(201,137,122,0.4)",
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarText: { fontFamily: fonts.serifSemibold, fontSize: 28, color: colors.accent },
+  avatarText: { fontFamily: fonts.serifSemibold, fontSize: 28, color: palette.petal },
   cameraBadge: {
     position: "absolute",
     bottom: -2,
@@ -408,29 +470,47 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: colors.primary,
     borderWidth: 2,
-    borderColor: colors.background,
+    borderColor: palette.cream,
     alignItems: "center",
     justifyContent: "center",
   },
-  profileName: { fontFamily: fonts.serifSemibold, fontSize: 22, color: colors.foreground },
-  profileEmail: { fontFamily: fonts.sans, fontSize: 14, color: colors.muted, marginTop: 2 },
+  profileName: { fontFamily: fonts.serifSemibold, fontSize: 22, color: palette.charcoal },
+  profileEmail: { fontFamily: fonts.sans, fontSize: 14, color: palette.mauve, marginTop: 2 },
   badgeRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 },
   badge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: colors.cardElevated,
+    backgroundColor: "rgba(255,255,255,0.55)",
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: "rgba(201,137,122,0.18)",
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
   },
-  badgeText: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.foreground },
-  statsRow: { flexDirection: "row", gap: 10, marginTop: 16 },
-  statCard: { flex: 1, alignItems: "center", paddingVertical: 16, paddingHorizontal: 4 },
-  statNum: { fontFamily: fonts.serifSemibold, fontSize: 24, color: colors.accent },
-  statLbl: { fontFamily: fonts.sans, fontSize: 11, color: colors.muted, marginTop: 2, textAlign: "center" },
+  badgePremium: {
+    backgroundColor: "rgba(201,137,122,0.9)",
+    borderColor: colors.primary,
+  },
+  badgeText: { fontFamily: fonts.sansMedium, fontSize: 12, color: palette.charcoal },
+  badgeTextPremium: { color: palette.petal },
+  statsRow: { flexDirection: "row", gap: 10, marginTop: 12 },
+  statCard: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 4,
+    backgroundColor: "rgba(255,255,255,0.5)",
+    borderColor: "rgba(201,137,122,0.16)",
+    borderRadius: colors.radius,
+  },
+  statCardAccent: {
+    backgroundColor: "rgba(201,137,122,0.18)",
+    borderColor: "rgba(201,137,122,0.3)",
+  },
+  statNum: { fontFamily: fonts.serifSemibold, fontSize: 24, color: palette.charcoal },
+  statNumAccent: { color: colors.primary },
+  statLbl: { fontFamily: fonts.sans, fontSize: 11, color: palette.mauve, marginTop: 2, textAlign: "center" },
   cardTitle: { fontFamily: fonts.serifSemibold, fontSize: 18, color: colors.foreground },
   section: { fontFamily: fonts.serif, fontSize: 22, color: colors.foreground, marginTop: 26, marginBottom: 14 },
   label: {
