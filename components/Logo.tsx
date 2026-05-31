@@ -17,7 +17,7 @@ export function Logo({
   const mark = size === "lg" ? 56 : size === "sm" ? 34 : 44;
   const icon = size === "lg" ? 28 : size === "sm" ? 17 : 22;
   const fontSize = size === "lg" ? 30 : size === "sm" ? 20 : 24;
-  const taglineSize = size === "lg" ? 14 : size === "sm" ? 11 : 12;
+  const taglineSize = size === "lg" ? 12 : size === "sm" ? 9 : 10;
 
   return (
     <View style={styles.row}>
@@ -31,12 +31,16 @@ export function Logo({
       </LinearGradient>
       {showText ? (
         <View style={styles.textCol}>
+          {tagline ? (
+            <View style={styles.taglinePill}>
+              <Text style={[styles.tagline, { fontSize: taglineSize }]}>
+                {tagline.toUpperCase()}
+              </Text>
+            </View>
+          ) : null}
           <Text style={[styles.text, { fontSize }]}>
             Florish
           </Text>
-          {tagline ? (
-            <Text style={[styles.tagline, { fontSize: taglineSize }]}>{tagline}</Text>
-          ) : null}
         </View>
       ) : null}
     </View>
@@ -46,16 +50,22 @@ export function Logo({
 const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center" },
   mark: { alignItems: "center", justifyContent: "center" },
-  textCol: { marginLeft: 10 },
+  textCol: { marginLeft: 10, alignItems: "flex-start" },
   text: {
     fontFamily: fonts.serifSemibold,
     color: colors.foreground,
     letterSpacing: 0.5,
   },
+  taglinePill: {
+    backgroundColor: colors.primary,
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 2,
+    marginBottom: 4,
+  },
   tagline: {
-    fontFamily: fonts.sans,
-    color: colors.mutedForeground,
-    letterSpacing: 0.3,
-    marginTop: 1,
+    fontFamily: fonts.sansSemibold,
+    color: colors.foreground,
+    letterSpacing: 1.2,
   },
 });
