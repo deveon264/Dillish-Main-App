@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, TextInput } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, Switch, TextInput } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -36,6 +36,14 @@ export default function Profile() {
   const { profile, completions, calorieLogs, weightLogs, updateProfile } = useData();
 
   const [editing, setEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState("Profile");
+  const [notifs, setNotifs] = useState({
+    workout: true,
+    hydration: true,
+    streak: true,
+    content: false,
+    weekly: true,
+  });
   const [name, setName] = useState(user?.name ?? "");
   const [goalWeightInput, setGoalWeightInput] = useState(
     profile.goalWeight != null ? String(profile.goalWeight) : ""
@@ -128,6 +136,14 @@ export default function Profile() {
 
   const PROFILE_TABS = ["Profile", "Plan", "History", "Settings"];
 
+  const NOTIF_ROWS: { key: keyof typeof notifs; title: string; sub: string }[] = [
+    { key: "workout", title: "Workout Reminders", sub: "Daily at 7:00 AM" },
+    { key: "hydration", title: "Hydration Reminders", sub: "Every 2 hours" },
+    { key: "streak", title: "Streak Alerts", sub: "Don't break your streak!" },
+    { key: "content", title: "New Content Alerts", sub: "New workouts from Dillish" },
+    { key: "weekly", title: "Weekly Progress Report", sub: "Every Sunday evening" },
+  ];
+
   return (
     <GradientBackground>
       <ScrollView
@@ -140,25 +156,52 @@ export default function Profile() {
         </Text>
 
         <View style={styles.tabBar}>
-          {PROFILE_TABS.map((t) =>
-            t === "Profile" ? (
-              <LinearGradient
-                key={t}
-                colors={colors.gradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.tabActive}
-              >
-                <Text style={styles.tabActiveText}>{t}</Text>
-              </LinearGradient>
-            ) : (
-              <View key={t} style={styles.tab}>
-                <Text style={styles.tabText}>{t}</Text>
-              </View>
-            )
-          )}
+          {PROFILE_TABS.map((t) => {
+            const active = t === activeTab;
+            return (
+              <Pressable key={t} style={styles.tabPress} onPress={() => setActiveTab(t)}>
+                {active ? (
+                  <LinearGradient
+                    colors={colors.gradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.tabActive}
+                  >
+                    <Text style={styles.tabActiveText}>{t}</Text>
+                  </LinearGradient>
+                ) : (
+                  <View style={styles.tab}>
+                    <Text style={styles.tabText}>{t}</Text>
+                  </View>
+                )}
+              </Pressable>
+            );
+          })}
         </View>
 
+        {activeTab === "Settings" ? (
+          <>
+            <Text style={styles.label}>NOTIFICATIONS</Text>
+            {NOTIF_ROWS.map((row, i) => (
+              <View key={row.key}>
+                {i > 0 ? <View style={styles.notifDivider} /> : null}
+                <View style={styles.notifRow}>
+                  <View style={styles.notifTextWrap}>
+                    <Text style={styles.notifTitle}>{row.title}</Text>
+                    <Text style={styles.notifSub}>{row.sub}</Text>
+                  </View>
+                  <Switch
+                    value={notifs[row.key]}
+                    onValueChange={(v) => setNotifs((prev) => ({ ...prev, [row.key]: v }))}
+                    trackColor={{ false: colors.track, true: colors.primary }}
+                    thumbColor={colors.foreground}
+                  />
+                </View>
+              </View>
+            ))}
+          </>
+        ) : (
+        <>
         <LinearGradient
           colors={["#EADDD6", "#C6A697"]}
           start={{ x: 0, y: 0 }}
@@ -353,6 +396,8 @@ export default function Profile() {
           style={{ marginTop: 24 }}
         />
         <Text style={styles.version}>Florish · v1.0</Text>
+        </>
+        )}
       </ScrollView>
     </GradientBackground>
   );
@@ -373,10 +418,16 @@ const styles = StyleSheet.create({
     padding: 4,
     marginBottom: 18,
   },
+  tabPress: { flex: 1 },
   tab: { flex: 1, paddingVertical: 10, alignItems: "center", justifyContent: "center", borderRadius: colors.radiusSm },
   tabActive: { flex: 1, paddingVertical: 10, alignItems: "center", justifyContent: "center", borderRadius: colors.radiusSm },
   tabText: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.muted },
   tabActiveText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.onPrimary },
+  notifRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 16 },
+  notifTextWrap: { flex: 1, paddingRight: 12 },
+  notifDivider: { height: 1, backgroundColor: colors.cardBorder },
+  notifTitle: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
+  notifSub: { fontFamily: fonts.sans, fontSize: 13, color: colors.mutedForeground, marginTop: 3 },
   lightPanel: {
     borderRadius: colors.radiusLg,
     padding: 14,

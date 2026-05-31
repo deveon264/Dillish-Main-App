@@ -1,0 +1,118 @@
+{
+  "apiRoutes": [
+    {
+      "file": "_expo/functions/api/analyze+api.js",
+      "page": "/api/analyze",
+      "namedRegex": "^/api/analyze(?:/)?$",
+      "routeKeys": {}
+    }
+  ],
+  "htmlRoutes": [
+    {
+      "file": "./(tabs)/index.tsx",
+      "page": "/(tabs)/index",
+      "namedRegex": "^(?:/\\(tabs\\))?(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./index.tsx",
+      "page": "/index",
+      "namedRegex": "^/(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./(auth)/login.tsx",
+      "page": "/(auth)/login",
+      "namedRegex": "^(?:/\\(auth\\))?/login(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./(auth)/signup.tsx",
+      "page": "/(auth)/signup",
+      "namedRegex": "^(?:/\\(auth\\))?/signup(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./onboarding/goal.tsx",
+      "page": "/onboarding/goal",
+      "namedRegex": "^/onboarding/goal(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./onboarding/water.tsx",
+      "page": "/onboarding/water",
+      "namedRegex": "^/onboarding/water(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./(tabs)/water.tsx",
+      "page": "/(tabs)/water",
+      "namedRegex": "^(?:/\\(tabs\\))?/water(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./onboarding/profile.tsx",
+      "page": "/onboarding/profile",
+      "namedRegex": "^/onboarding/profile(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./(tabs)/profile.tsx",
+      "page": "/(tabs)/profile",
+      "namedRegex": "^(?:/\\(tabs\\))?/profile(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./welcome.tsx",
+      "page": "/welcome",
+      "namedRegex": "^/welcome(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./(tabs)/workouts.tsx",
+      "page": "/(tabs)/workouts",
+      "namedRegex": "^(?:/\\(tabs\\))?/workouts(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./(tabs)/progress.tsx",
+      "page": "/(tabs)/progress",
+      "namedRegex": "^(?:/\\(tabs\\))?/progress(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./(tabs)/calories.tsx",
+      "page": "/(tabs)/calories",
+      "namedRegex": "^(?:/\\(tabs\\))?/calories(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "expo-router/build/views/Sitemap.js",
+      "page": "/_sitemap",
+      "namedRegex": "^/_sitemap(?:/)?$",
+      "routeKeys": {},
+      "generated": true
+    },
+    {
+      "file": "./workout/[id].tsx",
+      "page": "/workout/[id]",
+      "namedRegex": "^/workout/(?<id>[^/]+?)(?:/)?$",
+      "routeKeys": {
+        "id": "id"
+      }
+    }
+  ],
+  "notFoundRoutes": [
+    {
+      "file": "expo-router/build/views/Unmatched.js",
+      "page": "/+not-found",
+      "namedRegex": "^(?:/(?<notfound>.+?))?(?:/)?$",
+      "routeKeys": {
+        "notfound": "not-found"
+      },
+      "generated": true
+    }
+  ],
+  "redirects": [],
+  "rewrites": []
+}
