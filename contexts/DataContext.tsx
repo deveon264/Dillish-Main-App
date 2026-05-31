@@ -78,6 +78,20 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 
 const keyFor = (uid: string, slice: string) => `florish:u:${uid}:${slice}`;
 
+function seedWeightLogsFromProfile(profile: Profile): WeightLog[] | null {
+  if (profile.weight == null) return null;
+  const now = Date.now();
+  const seeded: WeightLog[] = [{ id: genId(), weight: profile.weight, ts: now }];
+  if (profile.startWeight != null && profile.startWeight !== profile.weight) {
+    seeded.push({
+      id: genId(),
+      weight: profile.startWeight,
+      ts: now - 28 * 24 * 60 * 60 * 1000,
+    });
+  }
+  return seeded.sort((a, b) => b.ts - a.ts);
+}
+
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const uid = user?.id ?? null;
@@ -113,9 +127,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         getJSON<WorkoutCompletion[]>(keyFor(uid, "workouts"), []),
       ]);
       if (!active) return;
-      setProfile({ ...DEFAULT_PROFILE, ...p });
+      const mergedProfile = { ...DEFAULT_PROFILE, ...p };
+      setProfile(mergedProfile);
       setWaterLogs(w);
-      setWeightLogs([...wt].sort((a, b) => b.ts - a.ts));
+
+      let weightArr = [...wt].sort((a, b) => b.ts - a.ts);
+      if (weightArr.length === 0) {
+        const seeded = seedWeightLogsFromProfile(mergedProfile);
+        if (seeded) {
+          weightArr = seeded;
+          setJSON(keyFor(uid, "weight"), weightArr);
+        }
+      }
+      setWeightLogs(weightArr);
       setProgressPhotos([...ph].sort((a, b) => b.ts - a.ts));
       setCalorieLogs(c);
       setCompletions(wk);
@@ -125,6 +149,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       active = false;
     };
   }, [uid]);
+
+  useEffect(() => {
+    if (!uid || !ready || weightLogs.length > 0 || profile.weight == null) return;
+    const seeded = seedWeightLogsFromProfile(profile);
+    if (!seeded) return;
+    setWeightLogs(seeded);
+    setJSON(keyFor(uid, "weight"), seeded);
+  }, [uid, ready, weightLogs.length, profile.weight, profile.startWeight]);
 
   const updateProfile = useCallback(
     async (patch: Partial<Profile>) => {

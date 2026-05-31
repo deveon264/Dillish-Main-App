@@ -107,11 +107,10 @@ export default function Progress() {
 
   const chartData: LinePoint[] = useMemo(() => {
     const cutoff = Date.now() - 28 * 24 * 60 * 60 * 1000;
-    const recent = [...weightLogs]
-      .filter((l) => l.ts >= cutoff)
-      .sort((a, b) => a.ts - b.ts)
-      .slice(-8);
-    return recent.map((l) => ({ label: fmtDay(new Date(l.ts)), value: l.weight }));
+    const sorted = [...weightLogs].sort((a, b) => a.ts - b.ts);
+    const recent = sorted.filter((l) => l.ts >= cutoff);
+    const points = (recent.length >= 2 ? recent : sorted).slice(-8);
+    return points.map((l) => ({ label: fmtDay(new Date(l.ts)), value: l.weight }));
   }, [weightLogs]);
 
   const logWeight = () => {
