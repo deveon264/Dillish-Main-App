@@ -38,17 +38,43 @@ function mapRow(r: any) {
     videoMime: r.video_mime,
     videoSize: Number(r.video_size),
     hasPoster: !!r.poster_object_path,
+    workoutId: r.workout_id ?? null,
+    workoutExerciseId: r.workout_exercise_id ?? null,
     createdAt: Number(r.created_at),
   };
 }
 
-export async function GET(): Promise<Response> {
+// Optionally filters by workoutId (and workoutExerciseId) so the workout player
+// can fetch only the videos tied to a given workout. Without those params it
+// returns the full library, newest first.
+export async function GET(request: Request): Promise<Response> {
   try {
     await ensureSchema();
     const pool = getPool();
+    const params = new URL(request.url).searchParams;
+    const workoutId = (params.get("workoutId") ?? "").trim();
+    const exerciseId = (params.get("exerciseId") ?? "").trim();
+
+    const where: string[] = [];
+    const values: any[] = [];
+    if (workoutId) {
+      values.push(workoutId);
+      where.push(`workout_id = $${values.length}`);
+      if (exerciseId) {
+        values.push(exerciseId);
+        where.push(`workout_exercise_id = $${values.length}`);
+      }
+    } else {
+      // The generic library must NOT show videos that were uploaded for a
+      // specific exercise inside a workout; those belong to the workout only.
+      where.push(`workout_id IS NULL`);
+    }
+    const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+
     const { rows } = await pool.query(
-      `SELECT id, title, description, cues, category, level, duration, video_mime, video_size, poster_object_path, created_by, created_at
-       FROM exercises ORDER BY created_at DESC`
+      `SELECT id, title, description, cues, category, level, duration, video_mime, video_size, poster_object_path, workout_id, workout_exercise_id, created_by, created_at
+       FROM exercises ${whereSql} ORDER BY created_at DESC`,
+      values
     );
     return Response.json({ items: rows.map(mapRow) });
   } catch (e: any) {
@@ -76,6 +102,10 @@ export async function POST(request: Request): Promise<Response> {
     const duration = (params.get("duration") ?? "").trim();
     let category = (params.get("category") ?? "Strength").trim();
     let level = (params.get("level") ?? "Beginner").trim();
+    // When the upload comes from the per-exercise button inside a workout, these
+    // tie the video to that exact exercise. Empty for generic library uploads.
+    const workoutId = (params.get("workoutId") ?? "").trim() || null;
+    const workoutExerciseId = (params.get("exerciseId") ?? "").trim() || null;
 
     // Title is optional: when the coach doesn't provide one, derive a clean
     // title from the uploaded video's filename (strip extension, turn
@@ -140,9 +170,9 @@ export async function POST(request: Request): Promise<Response> {
     try {
       await pool.query(
         `INSERT INTO exercises
-           (id, title, description, cues, category, level, duration, video_object_path, video_mime, video_size, created_by, created_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-        [id, title, description, cues, category, level, duration, objectPath, mime, contentLength, String(email).toLowerCase(), createdAt]
+           (id, title, description, cues, category, level, duration, video_object_path, video_mime, video_size, workout_id, workout_exercise_id, created_by, created_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+        [id, title, description, cues, category, level, duration, objectPath, mime, contentLength, workoutId, workoutExerciseId, String(email).toLowerCase(), createdAt]
       );
     } catch (dbErr) {
       // Don't leave orphaned objects if the DB write fails.
@@ -162,6 +192,8 @@ export async function POST(request: Request): Promise<Response> {
         videoMime: mime,
         videoSize: contentLength,
         hasPoster: false,
+        workoutId,
+        workoutExerciseId,
         createdAt,
       },
     });
@@ -209,7 +241,7 @@ export async function PATCH(request: Request): Promise<Response> {
       `UPDATE exercises
          SET title = $1, description = $2, cues = $3, category = $4, level = $5, duration = $6
        WHERE id = $7
-       RETURNING id, title, description, cues, category, level, duration, video_mime, video_size, poster_object_path, created_at`,
+       RETURNING id, title, description, cues, category, level, duration, video_mime, video_size, poster_object_path, workout_id, workout_exercise_id, created_at`,
       [title, description, cues, category, level, duration, id]
     );
     if (rows.length === 0) {

@@ -10,7 +10,7 @@ import {
   Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Button } from "@/components/Button";
@@ -32,6 +32,18 @@ export default function UploadExercise() {
   const router = useRouter();
   const insets = useInsets();
   const { isAdmin, adminToken } = useAuth();
+  // When the coach taps the upload button on a specific exercise inside a
+  // workout, these arrive so the video is tied to THAT exercise. They're absent
+  // for a generic library upload.
+  const params = useLocalSearchParams<{
+    workoutId?: string;
+    exerciseId?: string;
+    title?: string;
+    category?: string;
+    level?: string;
+  }>();
+  const forWorkout = !!params.workoutId && !!params.exerciseId;
+  const exerciseName = (params.title ?? "").trim();
 
   const [asset, setAsset] = useState<(VideoAsset & { size?: number }) | null>(null);
   const [poster, setPoster] = useState<PosterAsset | null>(null);
@@ -93,19 +105,31 @@ export default function UploadExercise() {
     setProgress({ sent: 0, total: asset.size ?? 0 });
     try {
       await uploadExercise({
-        title: "",
+        title: exerciseName,
         description: "",
         cues: "",
-        category: "Strength",
-        level: "Beginner",
+        category: (params.category ?? "Strength").trim() || "Strength",
+        level: (params.level ?? "Beginner").trim() || "Beginner",
         duration: "",
         asset,
         poster,
+        workoutId: params.workoutId ?? null,
+        workoutExerciseId: params.exerciseId ?? null,
         token: adminToken ?? "",
         onProgress: (sent, total) => setProgress({ sent, total }),
       });
-      if (Platform.OS !== "web") Alert.alert("Uploaded", "Your exercise video is now live for all members.");
-      router.replace("/exercises");
+      if (Platform.OS !== "web") {
+        Alert.alert(
+          "Uploaded",
+          forWorkout
+            ? `This video is now tied to ${exerciseName || "this exercise"}.`
+            : "Your exercise video is now live for all members."
+        );
+      }
+      // Return to the workout so the coach lands back on the exercise they
+      // uploaded for; otherwise show the standalone library.
+      if (forWorkout) router.back();
+      else router.replace("/exercises");
     } catch (e: any) {
       notify("Upload failed", e?.message ?? "Please try again.");
     } finally {
@@ -139,6 +163,15 @@ export default function UploadExercise() {
             </Text>
           </View>
         </View>
+
+        {forWorkout && (
+          <View style={styles.forCard}>
+            <Ionicons name="link-outline" size={18} color={colors.accent} />
+            <Text style={styles.forText} numberOfLines={2}>
+              This video will play for <Text style={styles.forName}>{exerciseName || "this exercise"}</Text> in the workout.
+            </Text>
+          </View>
+        )}
 
         <Text style={styles.label}>Video</Text>
         <Pressable style={styles.videoPick} onPress={pickVideo}>
@@ -207,6 +240,20 @@ const styles = StyleSheet.create({
   eyebrow: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.muted, letterSpacing: 3 },
   title: { fontFamily: fonts.serif, fontSize: 30, color: colors.foreground, marginTop: 2 },
   titleItalic: { fontFamily: fonts.serifItalic, fontStyle: "italic", color: colors.foreground },
+  forCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 18,
+    backgroundColor: "rgba(201,137,122,0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(201,137,122,0.28)",
+    borderRadius: colors.radius,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+  },
+  forText: { flex: 1, fontFamily: fonts.sans, fontSize: 14, color: colors.foreground, lineHeight: 20 },
+  forName: { fontFamily: fonts.sansSemibold, color: colors.accent },
   label: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.foreground, marginTop: 22, marginBottom: 10 },
   videoPick: {
     flexDirection: "row",

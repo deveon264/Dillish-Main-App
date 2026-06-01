@@ -51,6 +51,16 @@ export function ensureSchema(): Promise<void> {
              ADD COLUMN IF NOT EXISTS poster_mime TEXT`
         )
       )
+      // Per-exercise uploads tie a video to a specific exercise inside a
+      // specific workout (constants/workouts.ts ids). Both stay null for
+      // generic library uploads so the standalone library is unaffected.
+      .then(() =>
+        pool.query(
+          `ALTER TABLE exercises
+             ADD COLUMN IF NOT EXISTS workout_id TEXT,
+             ADD COLUMN IF NOT EXISTS workout_exercise_id TEXT`
+        )
+      )
       // Small key/value table for server settings the coach can change in-app,
       // such as a rotated admin passcode that overrides the ADMIN_PASSCODE env.
       .then(() =>

@@ -18,6 +18,8 @@ export type UploadedExercise = {
   videoMime: string;
   videoSize: number;
   hasPoster: boolean;
+  workoutId?: string | null;
+  workoutExerciseId?: string | null;
   createdAt: number;
 };
 
@@ -43,6 +45,17 @@ export function posterUrl(id: string): string {
 export async function listExercises(): Promise<UploadedExercise[]> {
   const resp = await fetch(`${getApiUrl()}/api/exercises`);
   if (!resp.ok) throw new Error("Could not load exercises");
+  const data = (await resp.json()) as { items: UploadedExercise[] };
+  return data.items ?? [];
+}
+
+// Returns the uploaded videos tied to a specific workout, newest first, so the
+// workout player can map each exercise to its own video.
+export async function listWorkoutExercises(workoutId: string): Promise<UploadedExercise[]> {
+  const resp = await fetch(
+    `${getApiUrl()}/api/exercises?workoutId=${encodeURIComponent(workoutId)}`
+  );
+  if (!resp.ok) throw new Error("Could not load workout videos");
   const data = (await resp.json()) as { items: UploadedExercise[] };
   return data.items ?? [];
 }
@@ -120,11 +133,25 @@ export async function uploadExercise(params: {
   duration: string;
   asset: VideoAsset;
   poster?: PosterAsset | null;
+  workoutId?: string | null;
+  workoutExerciseId?: string | null;
   token: string;
   onProgress?: UploadProgress;
 }): Promise<UploadedExercise> {
-  const { title, description, cues, category, level, duration, asset, poster, token, onProgress } =
-    params;
+  const {
+    title,
+    description,
+    cues,
+    category,
+    level,
+    duration,
+    asset,
+    poster,
+    workoutId,
+    workoutExerciseId,
+    token,
+    onProgress,
+  } = params;
   const type = asset.mimeType || "video/mp4";
 
   // Metadata travels in query params so the video can be sent as the raw request
@@ -139,6 +166,8 @@ export async function uploadExercise(params: {
     level,
     duration,
     filename: asset.fileName ?? "",
+    workoutId: workoutId ?? "",
+    exerciseId: workoutExerciseId ?? "",
   }).toString();
 
   const { status, body } = await postBinary(

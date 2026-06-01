@@ -5,9 +5,11 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Platform } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useVideoPlayer, VideoView } from "expo-video";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Button } from "@/components/Button";
 import { getWorkout } from "@/constants/workouts";
+import { listWorkoutExercises, videoUrl } from "@/lib/exercises";
 import { useData } from "@/contexts/DataContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { todayKey } from "@/lib/storage";
@@ -39,6 +41,20 @@ export default function WorkoutPlayer() {
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toastAnim = useRef(new Animated.Value(0)).current;
   const savedRef = useRef(false);
+
+  // Each exercise in this workout can have its OWN uploaded video, keyed by the
+  // exercise id. We load them up front and play the matching one in the header.
+  const [videoMap, setVideoMap] = useState<Record<string, { id: string; hasPoster: boolean }>>({});
+  const player = useVideoPlayer(null, (p) => {
+    p.loop = false;
+  });
+  // Read inside effects that must NOT re-run when paused toggles (reloading the
+  // source would restart the video from the beginning).
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
+  // Monotonic token so a slow video load for a previous exercise can't apply
+  // (or auto-play) after the user has already moved to another exercise.
+  const loadSeq = useRef(0);
 
   const overlayOpacity = useRef(new Animated.Value(1)).current;
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -91,6 +107,83 @@ export default function WorkoutPlayer() {
 
   const current = workout?.exercises[index];
   const total = workout?.exercises.length ?? 0;
+  const currentVideo = current ? videoMap[current.id] : undefined;
+
+  // Fetch the videos uploaded for this workout and map each to its exercise.
+  // Newest first from the server, so the first row per exercise wins.
+  useEffect(() => {
+    if (!workout) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const items = await listWorkoutExercises(workout.id);
+        if (cancelled) return;
+        const map: Record<string, { id: string; hasPoster: boolean }> = {};
+        for (const it of items) {
+          const exId = it.workoutExerciseId;
+          if (exId && !map[exId]) map[exId] = { id: it.id, hasPoster: it.hasPoster };
+        }
+        setVideoMap(map);
+      } catch {
+        // No videos / offline: the player falls back to the workout image.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [workout?.id]);
+
+  // Load the current exercise's video into the player when it changes. A
+  // monotonic token makes the swap race-safe: if the exercise changes again
+  // while a load is in flight, the stale load is ignored on completion. We read
+  // `paused` via a ref so this never re-runs (and restarts the clip) on a
+  // play/pause toggle. The player only plays here if the user has ALREADY
+  // started the session — opening a workout stays paused.
+  useEffect(() => {
+    const seq = ++loadSeq.current;
+    const isStale = () => seq !== loadSeq.current;
+    (async () => {
+      if (!currentVideo) {
+        try {
+          await player.replaceAsync(null);
+        } catch {
+          // ignore
+        }
+        return;
+      }
+      try {
+        let finalUrl = videoUrl(currentVideo.id);
+        if (Platform.OS !== "web") {
+          const resp = await fetch(finalUrl, {
+            redirect: "follow",
+            headers: { Range: "bytes=0-0" },
+          });
+          if (!resp.ok) throw new Error(`status ${resp.status}`);
+          finalUrl = resp.url || finalUrl;
+        }
+        if (isStale()) return;
+        await player.replaceAsync(finalUrl);
+        if (!isStale() && !pausedRef.current) player.play();
+      } catch {
+        // Leave the header image fallback in place if the video can't load.
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentVideo?.id]);
+
+  // Mirror the user's play/pause onto the real video so the existing play button
+  // (and the simulated countdown) drive it together. Keyed only on `paused` so
+  // it reacts to user intent, not to exercise changes (those are handled above).
+  useEffect(() => {
+    if (!currentVideo) return;
+    try {
+      if (paused) player.pause();
+      else player.play();
+    } catch {
+      // ignore transient player state errors
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paused]);
 
   useEffect(() => {
     return () => {
@@ -241,6 +334,15 @@ export default function WorkoutPlayer() {
       <GradientBackground>
         <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 24 }} showsVerticalScrollIndicator={false}>
           <ImageBackground source={workout.image} style={styles.player}>
+            {currentVideo && (
+              <VideoView
+                player={player}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+                nativeControls={false}
+                pointerEvents="none"
+              />
+            )}
             <LinearGradient
               colors={["rgba(44,36,34,0.5)", "rgba(44,36,34,0.2)", "rgba(44,36,34,0.85)"]}
               style={StyleSheet.absoluteFill}
@@ -417,7 +519,18 @@ export default function WorkoutPlayer() {
                         {isAdmin && (
                           <Pressable
                             style={styles.exUpload}
-                            onPress={() => router.push("/admin/upload-exercise")}
+                            onPress={() =>
+                              router.push({
+                                pathname: "/admin/upload-exercise",
+                                params: {
+                                  workoutId: workout.id,
+                                  exerciseId: e.id,
+                                  title: e.name,
+                                  category: workout.category,
+                                  level: workout.level,
+                                },
+                              })
+                            }
                             hitSlop={6}
                           >
                             <Ionicons name="cloud-upload-outline" size={17} color={colors.accent} />
