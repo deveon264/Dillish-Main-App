@@ -6,6 +6,7 @@ import * as Haptics from "expo-haptics";
 import { Platform } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
+import { useEventListener } from "expo";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Button } from "@/components/Button";
 import { getWorkout } from "@/constants/workouts";
@@ -45,8 +46,14 @@ export default function WorkoutPlayer() {
   // Each exercise in this workout can have its OWN uploaded video, keyed by the
   // exercise id. We load them up front and play the matching one in the header.
   const [videoMap, setVideoMap] = useState<Record<string, { id: string; hasPoster: boolean }>>({});
+  // Live playback position/length of the currently loaded video. When a video is
+  // present the progress bar reflects THESE (the real clip), not the simulated
+  // per-exercise countdown.
+  const [videoTime, setVideoTime] = useState(0);
+  const [videoDuration, setVideoDuration] = useState(0);
   const player = useVideoPlayer(null, (p) => {
     p.loop = false;
+    p.timeUpdateEventInterval = 0.5;
   });
   // Read inside effects that must NOT re-run when paused toggles (reloading the
   // source would restart the video from the beginning).
@@ -55,6 +62,17 @@ export default function WorkoutPlayer() {
   // Monotonic token so a slow video load for a previous exercise can't apply
   // (or auto-play) after the user has already moved to another exercise.
   const loadSeq = useRef(0);
+
+  // Keep the progress bar in sync with the real video clip.
+  useEventListener(player, "timeUpdate", (e: { currentTime: number }) => {
+    setVideoTime(e?.currentTime ?? 0);
+  });
+  useEventListener(player, "statusChange", ({ status }: { status: string }) => {
+    if (status === "readyToPlay") {
+      const d = player.duration;
+      if (typeof d === "number" && isFinite(d) && d > 0) setVideoDuration(d);
+    }
+  });
 
   const overlayOpacity = useRef(new Animated.Value(1)).current;
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -109,6 +127,29 @@ export default function WorkoutPlayer() {
   const total = workout?.exercises.length ?? 0;
   const currentVideo = current ? videoMap[current.id] : undefined;
 
+  // Jump forward/back by a fixed step. On a real video we seek the clip; with
+  // no video we nudge the simulated countdown so the controls still do something.
+  const SEEK_STEP = 15;
+  const seekRelative = (delta: number) => {
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    showToast(delta > 0 ? "Forward 15s" : "Back 15s", delta > 0 ? "play-forward" : "play-back");
+    // Only seek the clip when a video is actually loaded (duration known). If a
+    // mapped video failed to load we fall through to nudging the countdown so
+    // the buttons stay responsive.
+    if (currentVideo && videoDuration > 0.1) {
+      try {
+        player.seekBy(delta);
+      } catch {
+        // ignore transient player state errors
+      }
+      return;
+    }
+    setRemaining((r) => {
+      const max = current?.seconds ?? r;
+      return Math.max(0, Math.min(max, r - delta));
+    });
+  };
+
   // Fetch the videos uploaded for this workout and map each to its exercise.
   // Newest first from the server, so the first row per exercise wins.
   useEffect(() => {
@@ -142,6 +183,8 @@ export default function WorkoutPlayer() {
   useEffect(() => {
     const seq = ++loadSeq.current;
     const isStale = () => seq !== loadSeq.current;
+    setVideoTime(0);
+    setVideoDuration(0);
     (async () => {
       if (!currentVideo) {
         try {
@@ -279,14 +322,6 @@ export default function WorkoutPlayer() {
     }
   };
 
-  const goPrev = () => {
-    if (index > 0) {
-      const pi = index - 1;
-      setIndex(pi);
-      setRemaining(workout.exercises[pi].seconds);
-    }
-  };
-
   const finish = () => {
     if (timer.current) clearInterval(timer.current);
     if (!savedRef.current) {
@@ -303,6 +338,12 @@ export default function WorkoutPlayer() {
     const elapsed = priorSeconds + (current.seconds - remaining);
     const overall = totalSeconds > 0 ? elapsed / totalSeconds : 0;
     const overallPct = `${Math.round(overall * 100)}%` as const;
+    // The progress bar tracks the real video clip when one is loaded; otherwise
+    // it falls back to the whole-workout simulated timeline.
+    const hasVideo = !!currentVideo && videoDuration > 0.1;
+    const barElapsed = hasVideo ? Math.min(videoTime, videoDuration) : elapsed;
+    const barTotal = hasVideo ? videoDuration : totalSeconds;
+    const barPct = `${Math.round((barTotal > 0 ? barElapsed / barTotal : 0) * 100)}%` as const;
     const kcalBurned = Math.round(workout.kcal * overall);
     const kcalPct = `${Math.round(overall * 100)}%` as const;
     const bpm = 96 + Math.round(overall * 44);
@@ -361,24 +402,26 @@ export default function WorkoutPlayer() {
               </View>
 
               <View style={[styles.playerControls, { pointerEvents: "box-none" }]}>
-                <Pressable style={styles.playerCtrl} onPress={goPrev} disabled={index === 0}>
-                  <Ionicons name="play-skip-back" size={26} color={index === 0 ? colors.mutedForeground : colors.foreground} />
+                <Pressable style={styles.playerCtrl} onPress={() => seekRelative(-SEEK_STEP)} hitSlop={8}>
+                  <Ionicons name="play-back" size={24} color={colors.foreground} />
+                  <Text style={styles.seekLabel}>15</Text>
                 </Pressable>
                 <Pressable style={styles.playerPlay} onPress={togglePause}>
                   <Ionicons name={paused ? "play" : "pause"} size={34} color={colors.foreground} />
                 </Pressable>
-                <Pressable style={styles.playerCtrl} onPress={goNext}>
-                  <Ionicons name="play-skip-forward" size={26} color={colors.foreground} />
+                <Pressable style={styles.playerCtrl} onPress={() => seekRelative(SEEK_STEP)} hitSlop={8}>
+                  <Ionicons name="play-forward" size={24} color={colors.foreground} />
+                  <Text style={styles.seekLabel}>15</Text>
                 </Pressable>
               </View>
 
               <View style={[styles.playerBar, { pointerEvents: "none" }]}>
-                <Text style={styles.playerTime}>{fmt(elapsed)}</Text>
+                <Text style={styles.playerTime}>{fmt(barElapsed)}</Text>
                 <View style={styles.playerTrack}>
-                  <View style={[styles.playerFill, { width: overallPct }]} />
-                  <View style={[styles.playerThumb, { left: overallPct }]} />
+                  <View style={[styles.playerFill, { width: barPct }]} />
+                  <View style={[styles.playerThumb, { left: barPct }]} />
                 </View>
-                <Text style={styles.playerTime}>{fmt(totalSeconds)}</Text>
+                <Text style={styles.playerTime}>{fmt(barTotal)}</Text>
               </View>
             </Animated.View>
           </ImageBackground>
@@ -771,6 +814,12 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(44,36,34,0.4)",
     alignItems: "center",
     justifyContent: "center",
+  },
+  seekLabel: {
+    fontFamily: fonts.sansSemibold,
+    fontSize: 10,
+    color: colors.foreground,
+    marginTop: 1,
   },
   playerPlay: {
     width: 76,
