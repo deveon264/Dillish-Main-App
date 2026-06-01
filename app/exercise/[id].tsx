@@ -8,23 +8,28 @@ import { useEventListener } from "expo";
 import { GradientBackground } from "@/components/GradientBackground";
 import { useInsets } from "@/hooks/useInsets";
 import { videoUrl, posterUrl } from "@/lib/exercises";
+import { findExerciseImage } from "@/constants/workouts";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
 export default function ExercisePlayer() {
-  const { id, title, description, cues, category, level, duration, hasPoster } = useLocalSearchParams<{
-    id: string;
-    title?: string;
-    description?: string;
-    cues?: string;
-    category?: string;
-    level?: string;
-    duration?: string;
-    hasPoster?: string;
-  }>();
+  const { id, title, description, cues, category, level, duration, hasPoster, workoutId, workoutExerciseId } =
+    useLocalSearchParams<{
+      id: string;
+      title?: string;
+      description?: string;
+      cues?: string;
+      category?: string;
+      level?: string;
+      duration?: string;
+      hasPoster?: string;
+      workoutId?: string;
+      workoutExerciseId?: string;
+    }>();
   const router = useRouter();
   const insets = useInsets();
-  const [showPoster, setShowPoster] = useState(!!hasPoster);
+  const localImage = findExerciseImage({ workoutId, workoutExerciseId, name: title });
+  const [showPoster, setShowPoster] = useState(!!hasPoster || !!localImage);
   const [posterError, setPosterError] = useState(false);
   const [videoState, setVideoState] = useState<"loading" | "ready" | "error">("loading");
   const [retry, setRetry] = useState(0);
@@ -105,6 +110,15 @@ export default function ExercisePlayer() {
               transition={150}
               pointerEvents="none"
               onError={() => setPosterError(true)}
+            />
+          )}
+          {showPoster && videoState !== "error" && (!hasPoster || posterError) && !!localImage && (
+            <Image
+              source={localImage}
+              style={styles.poster}
+              contentFit="cover"
+              transition={150}
+              pointerEvents="none"
             />
           )}
           {videoState === "loading" && (

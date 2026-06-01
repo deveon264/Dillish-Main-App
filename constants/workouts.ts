@@ -723,3 +723,38 @@ export const WORKOUTS: Workout[] = [
 export function getWorkout(id: string): Workout | undefined {
   return WORKOUTS.find((w) => w.id === id);
 }
+
+// Finds the local exercise photo for a coach-uploaded video. Matches first by
+// the workout + in-workout exercise id (e.g. "reformer-pilates" + "e1"), then
+// falls back to a case-insensitive exercise-name match so the right photo is
+// chosen even when the upload wasn't linked to a specific workout exercise.
+export function findExerciseImage(opts: {
+  workoutId?: string | null;
+  workoutExerciseId?: string | null;
+  name?: string | null;
+}): ImageSourcePropType | undefined {
+  const { workoutId, workoutExerciseId, name } = opts;
+
+  if (workoutId && workoutExerciseId) {
+    const workout = WORKOUTS.find((w) => w.id === workoutId);
+    const ex = workout?.exercises.find((e) => e.id === workoutExerciseId);
+    if (ex?.image) return ex.image;
+  }
+
+  if (workoutExerciseId) {
+    for (const w of WORKOUTS) {
+      const ex = w.exercises.find((e) => e.id === workoutExerciseId);
+      if (ex?.image) return ex.image;
+    }
+  }
+
+  if (name) {
+    const target = name.trim().toLowerCase();
+    for (const w of WORKOUTS) {
+      const ex = w.exercises.find((e) => e.name.trim().toLowerCase() === target);
+      if (ex?.image) return ex.image;
+    }
+  }
+
+  return undefined;
+}

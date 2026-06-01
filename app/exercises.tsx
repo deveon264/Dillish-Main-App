@@ -137,6 +137,8 @@ export default function ExerciseLibrary() {
                         level: item.level,
                         duration: item.duration,
                         hasPoster: item.hasPoster ? "1" : "",
+                        workoutId: item.workoutId ?? "",
+                        workoutExerciseId: item.workoutExerciseId ?? "",
                       },
                     })
                   }
