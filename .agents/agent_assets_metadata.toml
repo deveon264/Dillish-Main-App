@@ -48,6 +48,234 @@ uri = "file://assets/images/photos/hiit.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "FKxhAYz7RdASVBvNsnynM"
+uri = "file://assets/exercises/the-hundred.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "upxczXFE7pwEXHeLQIPnJ"
+uri = "file://assets/exercises/roll-up.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Nn93Wpg_VxNtoWPzl48Xe"
+uri = "file://assets/exercises/single-leg-circles.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "-wM7dUl536voq3BApUa0B"
+uri = "file://assets/exercises/rolling-like-a-ball.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "_kXZTB9lXIDIu1FL1gzjM"
+uri = "file://assets/exercises/single-leg-stretch.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "8Q7FbVjiMUV6Yl8rcKKwv"
+uri = "file://assets/exercises/spine-stretch-forward.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "aiudk2JWj15n7-ky8dJVv"
+uri = "file://assets/exercises/saw.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "3FBG3xK4odGTOJTov5psR"
+uri = "file://assets/exercises/seal.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "nMdm6YXL1Yy1xwlZXekOi"
+uri = "file://assets/exercises/childs-pose.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "_HgQoPFf9EuRup6mu8OPw"
+uri = "file://assets/exercises/cat-cow.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "cAS_lglA3EEHT0WamEn6r"
+uri = "file://assets/exercises/downward-dog.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Vk5dPfqohCdqKtri7tQxL"
+uri = "file://assets/exercises/low-lunge.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "G-QprRhrmudWdD4IYtluT"
+uri = "file://assets/exercises/forward-fold.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "EouMVMybO_lfDZM-qD5Jd"
+uri = "file://assets/exercises/seated-twist.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "0kI5jP-bpXWYp_76bLass"
+uri = "file://assets/exercises/savasana.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "5xJl2AQ_12PKjUfRTQnMO"
+uri = "file://assets/exercises/goblet-squat.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "sgRI7h69dYajwog6aNwlC"
+uri = "file://assets/exercises/romanian-deadlift.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Z94PwDzU7Rd5msQnvs0Ve"
+uri = "file://assets/exercises/shoulder-press.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "c7DVHgsWNjvZTZeDzqdEx"
+uri = "file://assets/exercises/reverse-lunge.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "-klxIOHlJPOmXS6XiAfxG"
+uri = "file://assets/exercises/bent-over-row.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "DjN1uFakq0SWQbzY_znlN"
+uri = "file://assets/exercises/glute-bridge.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "aIIfR5NjqbKbxxZpY9FDp"
+uri = "file://assets/exercises/plank.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "vjvkxDM6fGH8bmQwLtJUB"
+uri = "file://assets/exercises/jumping-jacks.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "GzrO2exp-xIAmKrad5cAZ"
+uri = "file://assets/exercises/squat-jumps.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Mdr-kx1adPowxbaROTko-"
+uri = "file://assets/exercises/mountain-climbers.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "VE_AI55F8LoPQSRMIqovW"
+uri = "file://assets/exercises/burpees.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "eTij5KKLnWW8ecgV4RsCg"
+uri = "file://assets/exercises/high-knees.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "UYmbf5pGJ18EsLFecG7XS"
+uri = "file://assets/exercises/plank-shoulder-taps.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "peRatSRiOe9kOPolzVP7z"
+uri = "file://assets/exercises/neck-rolls.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "wFlHGUyxdt0CfxHytzTc7"
+uri = "file://assets/exercises/thread-the-needle.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "piNI19faJ0cIBdal4exDO"
+uri = "file://assets/exercises/hip-flexor-stretch.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "udpvn_BCIvLKI9h9UQn2H"
+uri = "file://assets/exercises/figure-four.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "MPL4lSJaDimdlWzqE-jRP"
+uri = "file://assets/exercises/supine-twist.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "uN6145XzfjVi6NzejAKwM"
+uri = "file://assets/exercises/dead-bug.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "n2-EJEukRp45fAyji-oT6"
+uri = "file://assets/exercises/bicycle-crunch.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "kRC-TrTJxrYIESqmQ_HKd"
+uri = "file://assets/exercises/hollow-hold.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "KS0pN2r7Wjiz3bSUJq2MA"
+uri = "file://assets/exercises/side-plank.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "U7trGR8LgWcpk4xB8mzVC"
+uri = "file://assets/exercises/leg-lowers.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "KmpG-YsopX8HoAwCw5oyy"
 uri = "file://attached_assets/stock_images/pilates.jpg"

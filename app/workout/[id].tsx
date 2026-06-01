@@ -333,7 +333,7 @@ export default function WorkoutPlayer() {
     return (
       <GradientBackground>
         <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 24 }} showsVerticalScrollIndicator={false}>
-          <ImageBackground source={workout.image} style={styles.player}>
+          <ImageBackground source={current.image ?? workout.image} style={styles.player}>
             {currentVideo && (
               <VideoView
                 player={player}
@@ -488,7 +488,7 @@ export default function WorkoutPlayer() {
                           <Ionicons name="checkmark" size={15} color={colors.onPrimary} />
                         </View>
                       )}
-                      <Image source={workout.image} style={styles.exThumb} />
+                      <Image source={e.image ?? workout.image} style={styles.exThumb} />
                       <View style={{ flex: 1, minWidth: 0 }}>
                         {isCurrent && <Text style={styles.exEyebrow}>EXERCISE {i + 1}</Text>}
                         <Text style={[styles.exCardTitle, done && styles.exCardTitleDone]}>{e.name}</Text>
