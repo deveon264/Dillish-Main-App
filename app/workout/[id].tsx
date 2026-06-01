@@ -9,6 +9,7 @@ import { GradientBackground } from "@/components/GradientBackground";
 import { Button } from "@/components/Button";
 import { getWorkout } from "@/constants/workouts";
 import { useData } from "@/contexts/DataContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { todayKey } from "@/lib/storage";
 import { useInsets } from "@/hooks/useInsets";
 import { colors } from "@/constants/colors";
@@ -23,6 +24,7 @@ export default function WorkoutPlayer() {
   const router = useRouter();
   const insets = useInsets();
   const { completeWorkout, completions, toggleFavorite, isFavorite } = useData();
+  const { isAdmin } = useAuth();
   const workout = getWorkout(id);
   const fav = workout ? isFavorite(workout.id) : false;
 
@@ -292,6 +294,15 @@ export default function WorkoutPlayer() {
                       ) : done ? (
                         <Text style={styles.exDoneLabel}>Done</Text>
                       ) : null}
+                      {isAdmin && (
+                        <Pressable
+                          style={styles.exUpload}
+                          onPress={() => router.push("/admin/upload-exercise")}
+                          hitSlop={6}
+                        >
+                          <Ionicons name="cloud-upload-outline" size={17} color={colors.accent} />
+                        </Pressable>
+                      )}
                     </View>
                   );
                 })}
@@ -684,6 +695,17 @@ const styles = StyleSheet.create({
   exChipText: { fontFamily: fonts.sansMedium, fontSize: 11, color: colors.accent },
   exPlay: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
   exDoneLabel: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.muted },
+  exUpload: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "rgba(242,212,204,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(242,212,204,0.3)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 8,
+  },
   doneIcon: { width: 96, height: 96, borderRadius: 48, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
   doneTitle: { fontFamily: fonts.serifSemibold, fontSize: 34, color: colors.foreground, marginTop: 24 },
   doneSub: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted, textAlign: "center", marginTop: 10, lineHeight: 23 },
