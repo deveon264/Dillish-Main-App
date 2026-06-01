@@ -83,12 +83,13 @@ async function putObjectStream(
   }
 }
 
-// Reserves a fresh exercise-video object path and returns a short-lived signed
-// PUT URL the client can upload to directly (no server relay). The bytes never
-// touch this server — native clients PUT straight to GCS. 15-minute TTL gives a
-// large upload plenty of time; an abandoned slot leaves only an orphaned object
-// that the scheduled cleanup job reclaims. Returns both the URL and the full
-// object path so the caller can persist the path on confirm.
+// DEPRECATED — only referenced by the deprecated /api/exercise-upload-url route,
+// which the client no longer calls. This reserved a fresh exercise-video object
+// path and returned a short-lived signed PUT URL for the native direct-to-storage
+// upload flow. That flow was reverted because the object-storage sidecar's
+// signed-URL endpoint isn't reliably available here; native now relays bytes
+// through POST /api/exercises like web. Kept as the starting point if the direct
+// path is revisited; safe to delete otherwise.
 export async function createExerciseVideoUploadUrl(): Promise<{
   uploadUrl: string;
   objectPath: string;

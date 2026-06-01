@@ -1,11 +1,14 @@
 import { requireAdmin } from "@/lib/adminAuth";
 import { createExerciseVideoUploadUrl } from "@/lib/objectStorageServer";
 
-// Hands a coach a short-lived signed PUT URL so the client can upload a video
-// straight to object storage (one network hop instead of relaying every byte
-// through this server). No data moves here — only a slot is reserved. The
-// matching DB row is written later by /api/exercise-confirm. An abandoned slot
-// leaves at most an orphaned object that the scheduled cleanup job reclaims.
+// DEPRECATED — NOT CALLED BY THE CLIENT. This was the first step of the native
+// direct-to-storage upload flow: it handed a coach a short-lived signed PUT URL
+// so the client could upload a video straight to object storage. That path was
+// reverted because the Replit Object Storage sidecar's signed-URL endpoint is
+// not reliably available in this environment, so it threw a 500 before any
+// bytes transferred. Native now relays bytes through POST /api/exercises like
+// web (see lib/exercises.ts). Kept only so the route isn't mistaken for active;
+// it can be deleted once the direct-to-storage path is revisited.
 export async function POST(request: Request): Promise<Response> {
   try {
     const email = await requireAdmin(request);

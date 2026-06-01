@@ -26,12 +26,14 @@ const MAX_BYTES = 80 * 1024 * 1024; // 80MB
 const CATEGORIES = ["Pilates", "Yoga", "Strength", "HIIT", "Mobility", "Cardio"];
 const LEVELS = ["Beginner", "Intermediate", "Advanced"];
 
-// Records the exercise row for a video that the client has already uploaded
-// straight to object storage via the signed URL from /api/exercise-upload-url.
-// This is the DB-write half of the native direct-upload flow; the web proxy
-// flow (POST /api/exercises) still writes its own row. Coach-only. The metadata
-// arrives as a small JSON body. If the row can't be written the just-uploaded
-// object is deleted so an abandoned upload never lingers.
+// DEPRECATED — NOT CALLED BY THE CLIENT. This was the DB-write half of the
+// native direct-to-storage upload flow: it recorded the exercise row for a
+// video the client had already PUT straight to storage via the signed URL from
+// /api/exercise-upload-url. That flow was reverted (the sidecar's signed-URL
+// endpoint isn't reliably available here), so native now relays bytes through
+// POST /api/exercises like web, which writes its own row. Kept only so the
+// route isn't mistaken for active; it can be deleted once the
+// direct-to-storage path is revisited.
 export async function POST(request: Request): Promise<Response> {
   try {
     const email = await requireAdmin(request);
