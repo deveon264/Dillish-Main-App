@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, StyleSheet, ImageBackground, Pressable } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { View, Text, StyleSheet, ImageBackground, Pressable, Animated } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -14,6 +14,41 @@ const TRUST = [
   { icon: "barbell-outline" as const, label: "Guided Workouts" },
   { icon: "heart-outline" as const, label: "Made for you" },
 ];
+
+function TrustItem({
+  icon,
+  label,
+  delay,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  delay: number;
+}) {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const anim = Animated.sequence([
+      Animated.delay(delay),
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(scale, { toValue: 1.18, duration: 850, useNativeDriver: true }),
+          Animated.timing(scale, { toValue: 1, duration: 850, useNativeDriver: true }),
+        ]),
+      ),
+    ]);
+    anim.start();
+    return () => anim.stop();
+  }, [scale, delay]);
+
+  return (
+    <View style={styles.trustItem}>
+      <Animated.View style={[styles.trustIcon, { transform: [{ scale }] }]}>
+        <Ionicons name={icon} size={18} color={colors.accent} />
+      </Animated.View>
+      <Text style={styles.trustLabel}>{label}</Text>
+    </View>
+  );
+}
 
 export default function Welcome() {
   const router = useRouter();
@@ -44,13 +79,8 @@ export default function Welcome() {
           </Text>
 
           <View style={styles.trustRow}>
-            {TRUST.map((t) => (
-              <View key={t.label} style={styles.trustItem}>
-                <View style={styles.trustIcon}>
-                  <Ionicons name={t.icon} size={18} color={colors.accent} />
-                </View>
-                <Text style={styles.trustLabel}>{t.label}</Text>
-              </View>
+            {TRUST.map((t, i) => (
+              <TrustItem key={t.label} icon={t.icon} label={t.label} delay={i * 350} />
             ))}
           </View>
         </View>
