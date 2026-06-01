@@ -161,6 +161,61 @@ export async function verifySessionToken(
   }
 }
 
+const RESET_TTL_SEC = 60 * 30; // 30 minutes
+const RESET_KIND = "pwreset";
+
+// Mints a short-lived, single-use password-reset token. It reuses the same
+// HMAC signing key as the session token, so no extra secret is needed. The
+// token is bound to the account's *current* password hash via `fp`: once the
+// password is changed the fingerprint no longer matches, so a used (or stale)
+// token can't reset the password a second time.
+export async function mintResetToken(opts: {
+  sub: string;
+  passwordHash: string;
+}): Promise<{ token: string; expiresAt: number }> {
+  const expiresAt = Date.now() + RESET_TTL_SEC * 1000;
+  const fp = await hmac(opts.passwordHash);
+  const payload = b64url(
+    enc.encode(JSON.stringify({ sub: opts.sub, kind: RESET_KIND, fp, exp: expiresAt }))
+  );
+  const sig = await hmac(payload);
+  return { token: `${payload}.${sig}`, expiresAt };
+}
+
+// Verifies a reset token's signature, kind and expiry and returns the embedded
+// account id plus the password-hash fingerprint, or null if it's missing,
+// malformed, tampered with, expired, or not a reset token. The caller must
+// still confirm `fp` matches the account's current password hash (see
+// resetTokenMatchesPassword) so a token can only be used once.
+export async function verifyResetToken(
+  token: string | null | undefined
+): Promise<{ sub: string; fp: string } | null> {
+  if (!token) return null;
+  const parts = token.split(".");
+  if (parts.length !== 2) return null;
+  const [payload, sig] = parts;
+  if (!timingSafeEqual(sig, await hmac(payload))) return null;
+  try {
+    const data = JSON.parse(new TextDecoder().decode(b64urlDecode(payload)));
+    if (data.kind !== RESET_KIND) return null;
+    if (typeof data.exp !== "number" || data.exp < Date.now()) return null;
+    if (typeof data.sub !== "string" || typeof data.fp !== "string") return null;
+    return { sub: data.sub, fp: data.fp };
+  } catch {
+    return null;
+  }
+}
+
+// Confirms a reset token's fingerprint still matches the account's current
+// password hash. Returns false once the password has changed, making each
+// reset token single-use.
+export async function resetTokenMatchesPassword(
+  fp: string,
+  currentPasswordHash: string
+): Promise<boolean> {
+  return timingSafeEqual(fp, await hmac(currentPasswordHash));
+}
+
 // Returns the verified admin email, or null if the token is missing, malformed,
 // tampered with, expired, or does not belong to the admin account.
 export async function verifyAdminToken(token: string | null | undefined): Promise<string | null> {

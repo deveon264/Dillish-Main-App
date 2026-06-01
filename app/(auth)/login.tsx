@@ -67,6 +67,14 @@ export default function Login() {
               onChangeText={setPassword}
             />
 
+            <Pressable
+              style={styles.forgot}
+              onPress={() => router.push("/(auth)/forgot-password")}
+              hitSlop={8}
+            >
+              <Text style={styles.forgotText}>Forgot password?</Text>
+            </Pressable>
+
             {error ? (
               <View style={styles.errorBox}>
                 <Ionicons name="alert-circle" size={16} color={colors.primary} />
@@ -95,6 +103,8 @@ const styles = StyleSheet.create({
   title: { fontFamily: fonts.serif, fontSize: 40, color: colors.foreground, marginTop: 20 },
   subtitle: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted, marginTop: 6 },
   form: { marginTop: 4 },
+  forgot: { alignSelf: "flex-end", marginTop: -4, marginBottom: 8, paddingVertical: 4 },
+  forgotText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.accent },
   errorBox: {
     flexDirection: "row",
     alignItems: "center",

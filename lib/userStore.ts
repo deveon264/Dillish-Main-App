@@ -134,6 +134,20 @@ export async function updateUserRow(
   return rows[0] ? mapRow(rows[0]) : null;
 }
 
+// Replaces an account's password hash. Used by the password-reset flow; the
+// existing session/reset binding logic handles invalidation of old tokens.
+export async function updateUserPassword(
+  id: string,
+  passwordHash: string
+): Promise<DbUser | null> {
+  await ensureSchema();
+  const { rows } = await getPool().query(
+    `UPDATE users SET password_hash = $1 WHERE id = $2 RETURNING ${COLS}`,
+    [passwordHash, id]
+  );
+  return rows[0] ? mapRow(rows[0]) : null;
+}
+
 export async function emailTaken(email: string, exceptId?: string): Promise<boolean> {
   await ensureSchema();
   const { rows } = await getPool().query(

@@ -38,6 +38,8 @@ type AuthContextType = {
   loading: boolean;
   signup: (name: string, email: string, password: string, passcode?: string) => Promise<AuthResult>;
   login: (email: string, password: string) => Promise<AuthResult>;
+  requestPasswordReset: (email: string) => Promise<{ ok: boolean; token?: string; error?: string }>;
+  resetPassword: (token: string, password: string) => Promise<AuthResult>;
   logout: () => Promise<void>;
   completeOnboarding: () => Promise<void>;
   updateUser: (patch: UserUpdate) => Promise<AuthResult>;
@@ -207,6 +209,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [applySession, migrateLegacy]
   );
 
+  // Starts a reset for the given email. On success the server returns a reset
+  // token (no email channel yet) which the caller passes to resetPassword. The
+  // response is generic, so an unknown email also resolves ok but without a
+  // token — the UI shows the same message either way.
+  const requestPasswordReset = useCallback(
+    async (email: string): Promise<{ ok: boolean; token?: string; error?: string }> => {
+      const trimmed = email.trim().toLowerCase();
+      if (!EMAIL_RE.test(trimmed)) return { ok: false, error: "Enter a valid email" };
+      const res = await postJSON("/api/password-reset-request", { email: trimmed });
+      if (res.status === 0) return { ok: false, error: "Network error. Please try again." };
+      if (res.ok) return { ok: true, token: res.data?.token as string | undefined };
+      return { ok: false, error: res.data?.error ?? "Could not start password reset" };
+    },
+    []
+  );
+
+  // Completes a reset with the token from requestPasswordReset and signs the
+  // member straight in on success.
+  const resetPassword = useCallback(
+    async (resetToken: string, password: string): Promise<AuthResult> => {
+      const res = await postJSON("/api/password-reset-complete", { token: resetToken, password });
+      if (res.ok && res.data?.user && res.data?.token) {
+        await applySession(res.data.user as User, res.data.token as string);
+        return { ok: true };
+      }
+      if (res.status === 0) return { ok: false, error: "Network error. Please try again." };
+      return { ok: false, error: res.data?.error ?? "Could not reset password" };
+    },
+    [applySession]
+  );
+
   const logout = useCallback(async () => {
     await deleteToken();
     setToken(null);
@@ -276,6 +309,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         signup,
         login,
+        requestPasswordReset,
+        resetPassword,
         logout,
         completeOnboarding,
         updateUser,

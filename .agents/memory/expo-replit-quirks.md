@@ -60,5 +60,10 @@ Replit's dev domain proxies the workflow's `localPort` only via its `externalPor
 ## This Expo project requires legacy-peer-deps
 `npm install` fails with ERESOLVE (expo-router's nested `react-server-dom-webpack` wants a higher `react-dom` than the SDK pins). Keep a repo-root `.npmrc` with `legacy-peer-deps=true` so installs (and Replit's reconcile) succeed.
 
+## Metro crashes watching the churning `.local/` dir — exclude it in metro.config.js
+With no watchman in this env, Metro uses metro-file-map's `FallbackWatcher`, which crawls the whole project root and `fs.watch`es every dir. The platform-managed `.local/state/workflow-logs/` rotates files constantly, so a just-deleted entry makes `fs.watch` throw `ENOENT` synchronously inside `_watchdir` → uncaught → the **whole Metro bundler exits** and port 5000 never binds (curl exit 7 / HTTP 000). It recurs on most restarts.
+**Why:** the FallbackWatcher's directory recursion is only skipped via `recReaddir`'s `filterDir`, which tests `resolver.blockList` against the **absolute** path of each dir — but `fs.watch`'s ENOENT isn't an "ignorable" error, so any dir that slips through crashes the process.
+**How to apply:** Add a `metro.config.js` that extends `expo/metro-config` `getDefaultConfig` and appends `/(^|[/\\])\.local([/\\]|$)/` to `config.resolver.blockList` (an array; preserve existing entries). The regex MUST match `.local` as a leaf (`([/\\]|$)`) so the walker is filtered at the top dir and never descends. A trailing-separator-only pattern (`[/\\]\.local[/\\]`) fails because the `.local` dir path has no trailing slash. After adding it, `rm -rf /tmp/metro-cache /tmp/metro-file-map-*` once — the persisted file map re-watches stale paths otherwise.
+
 ## Don't try to delete `.cache/dotslash`
 The React Native DevTools binary is extracted there and the files are read-only (Replit-managed) — `rm -rf` fails with permission-denied. A Metro `ENOENT watch ...DevTools...resources` crash on startup is a stale half-extracted temp dir; just restart the workflow once the real extraction has completed (don't try to delete the cache).
