@@ -116,6 +116,18 @@ export default function WorkoutPlayer() {
     if (!paused) scheduleHide();
   };
 
+  const hideOverlay = () => {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    Animated.timing(overlayOpacity, { toValue: 0, duration: 200, useNativeDriver: true }).start(({ finished }) => {
+      if (finished) setControlsShown(false);
+    });
+  };
+
+  const toggleOverlay = () => {
+    if (controlsShown) hideOverlay();
+    else revealOverlay();
+  };
+
   useEffect(() => {
     if (paused) {
       if (hideTimer.current) clearTimeout(hideTimer.current);
@@ -233,18 +245,20 @@ export default function WorkoutPlayer() {
               colors={["rgba(44,36,34,0.5)", "rgba(44,36,34,0.2)", "rgba(44,36,34,0.85)"]}
               style={StyleSheet.absoluteFill}
             />
-            <Pressable style={StyleSheet.absoluteFill} onPress={revealOverlay} />
+            <Pressable style={StyleSheet.absoluteFill} onPress={toggleOverlay} />
 
             <Animated.View
               style={[styles.playerOverlay, { opacity: overlayOpacity, pointerEvents: controlsShown ? "auto" : "none" }]}
             >
-              <View style={[styles.playerTop, { marginTop: insets.top + 8 }]}>
+              <Pressable style={StyleSheet.absoluteFill} onPress={toggleOverlay} />
+
+              <View style={[styles.playerTop, { marginTop: insets.top + 8, pointerEvents: "box-none" }]}>
                 <Pressable style={styles.roundBtn} onPress={() => router.back()} hitSlop={8}>
                   <Ionicons name="chevron-back" size={22} color={colors.foreground} />
                 </Pressable>
               </View>
 
-              <View style={styles.playerControls}>
+              <View style={[styles.playerControls, { pointerEvents: "box-none" }]}>
                 <Pressable style={styles.playerCtrl} onPress={goPrev} disabled={index === 0}>
                   <Ionicons name="play-skip-back" size={26} color={index === 0 ? colors.mutedForeground : colors.foreground} />
                 </Pressable>
@@ -256,7 +270,7 @@ export default function WorkoutPlayer() {
                 </Pressable>
               </View>
 
-              <View style={styles.playerBar}>
+              <View style={[styles.playerBar, { pointerEvents: "none" }]}>
                 <Text style={styles.playerTime}>{fmt(elapsed)}</Text>
                 <View style={styles.playerTrack}>
                   <View style={[styles.playerFill, { width: overallPct }]} />
@@ -373,7 +387,7 @@ export default function WorkoutPlayer() {
                         </View>
                       )}
                       <Image source={workout.image} style={styles.exThumb} />
-                      <View style={{ flex: 1 }}>
+                      <View style={{ flex: 1, minWidth: 0 }}>
                         {isCurrent && <Text style={styles.exEyebrow}>EXERCISE {i + 1}</Text>}
                         <Text style={[styles.exCardTitle, done && styles.exCardTitleDone]}>{e.name}</Text>
                         <View style={styles.exCardMeta}>
@@ -814,7 +828,7 @@ const styles = StyleSheet.create({
   exEyebrow: { fontFamily: fonts.sansMedium, fontSize: 10, color: colors.accent, letterSpacing: 1, marginBottom: 2 },
   exCardTitle: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
   exCardTitleDone: { color: colors.muted, textDecorationLine: "line-through" },
-  exCardMeta: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 3 },
+  exCardMeta: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 3 },
   exCardMetaText: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.muted },
   exChip: { backgroundColor: "rgba(247,235,232,0.10)", paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999 },
   exChipText: { fontFamily: fonts.sansMedium, fontSize: 11, color: colors.accent },
