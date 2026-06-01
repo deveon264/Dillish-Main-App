@@ -29,7 +29,7 @@ export default function WaterStep() {
     setSaving(true);
     await updateProfile({ waterGoalMl: goal });
     await completeOnboarding();
-    router.replace("/(tabs)");
+    router.push("/onboarding/paywall");
   };
 
   return (
