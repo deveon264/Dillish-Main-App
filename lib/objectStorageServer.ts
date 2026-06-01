@@ -106,6 +106,23 @@ export function isExerciseVideoPath(objectPath: string): boolean {
   return objectPath.startsWith(`${getPrivateDir()}/exercise-videos/`);
 }
 
+// Streams a profile photo (avatar) to the private profile-avatars folder.
+// Each upload gets a fresh uuid object so the old one can be deleted and so the
+// public-facing URL changes (cache-busts) when a member replaces their photo.
+export async function uploadAvatarStream(
+  body: ReadableStream<Uint8Array>,
+  contentType: string,
+  contentLength: number
+): Promise<string> {
+  return putObjectStream(
+    `${getPrivateDir()}/profile-avatars/${uuid()}`,
+    body,
+    contentType,
+    contentLength,
+    "image/jpeg"
+  );
+}
+
 // Streams an exercise video to the private exercise-videos folder.
 export async function uploadExerciseVideoStream(
   body: ReadableStream<Uint8Array>,

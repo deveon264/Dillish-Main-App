@@ -41,7 +41,10 @@ export async function PATCH(request: Request): Promise<Response> {
       return Response.json({ error: "Invalid request body" }, { status: 400 });
     }
 
-    const fields: { name?: string; email?: string; avatar?: string | null; onboardingComplete?: boolean } = {};
+    // Profile photos are handled by the dedicated /api/avatar endpoint (bytes go
+    // to object storage), so they are intentionally not accepted here — this
+    // keeps name/email/onboarding updates free of any image payload.
+    const fields: { name?: string; email?: string; onboardingComplete?: boolean } = {};
 
     if (body?.name !== undefined) {
       const n = String(body.name).trim();
@@ -62,10 +65,6 @@ export async function PATCH(request: Request): Promise<Response> {
         return Response.json({ error: "An account with this email already exists" }, { status: 409 });
       }
       fields.email = em;
-    }
-
-    if (body && "avatar" in body) {
-      fields.avatar = body.avatar == null ? null : String(body.avatar);
     }
 
     if (body?.onboardingComplete !== undefined) {

@@ -89,6 +89,18 @@ export function ensureSchema(): Promise<void> {
           )`
         )
       )
+      // Profile photos moved to object storage after the initial release: the
+      // bytes live in storage and only a key/mime is kept here. Backfill the
+      // columns so existing environments pick them up without a manual
+      // migration. The legacy `avatar` column may still hold old data-URI
+      // photos and is rendered as-is for backward compatibility.
+      .then(() =>
+        pool.query(
+          `ALTER TABLE users
+             ADD COLUMN IF NOT EXISTS avatar_object_path TEXT,
+             ADD COLUMN IF NOT EXISTS avatar_mime TEXT`
+        )
+      )
       .then(() => undefined)
       .catch((e) => {
         schemaReady = null;

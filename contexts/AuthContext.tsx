@@ -5,17 +5,22 @@ import * as SecureStore from "expo-secure-store";
 import { getJSON } from "@/lib/storage";
 import { getApiUrl } from "@/lib/api";
 import { isAdminEmail } from "@/constants/admin";
+import { uploadAvatar as uploadAvatarApi, removeAvatar as removeAvatarApi } from "@/lib/avatar";
 
 export type User = {
   id: string;
   name: string;
   email: string;
+  // Legacy inline data-URI photo (older accounts). Newer photos live in object
+  // storage and are referenced by `avatarVersion` instead; resolve a renderable
+  // URL with `avatarUri()` from `@/lib/avatar`.
   avatar?: string | null;
+  avatarVersion?: string | null;
   isAdmin: boolean;
   onboardingComplete: boolean;
 };
 
-export type UserUpdate = { name?: string; email?: string; avatar?: string | null };
+export type UserUpdate = { name?: string; email?: string };
 
 // Pre-server (on-device mock) account shape, kept only so existing users can be
 // migrated to the server on their next login.
@@ -43,6 +48,8 @@ type AuthContextType = {
   logout: () => Promise<void>;
   completeOnboarding: () => Promise<void>;
   updateUser: (patch: UserUpdate) => Promise<AuthResult>;
+  uploadAvatar: (uri: string, mimeType?: string | null) => Promise<AuthResult>;
+  removeAvatar: () => Promise<AuthResult>;
 };
 
 const LEGACY_USERS_KEY = "florish:users";
@@ -286,7 +293,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!EMAIL_RE.test(trimmed)) return { ok: false, error: "Enter a valid email" };
         payload.email = trimmed;
       }
-      if ("avatar" in patch) payload.avatar = patch.avatar ?? null;
       const res = await patchMe(payload);
       if (res.ok) return { ok: true };
       if (res.status === 0) return { ok: false, error: "Network error. Please try again." };
@@ -294,6 +300,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     },
     [patchMe]
   );
+
+  // Uploads a new profile photo to object storage and reflects the returned
+  // (image-free) public user locally. The bytes never pass through the account
+  // record — only a storage key/version is kept.
+  const uploadAvatar = useCallback(
+    async (uri: string, mimeType?: string | null): Promise<AuthResult> => {
+      if (!token) return { ok: false, error: "Please sign in again." };
+      try {
+        const updated = await uploadAvatarApi(uri, mimeType, token);
+        setUser(updated as User);
+        return { ok: true };
+      } catch (e: any) {
+        return { ok: false, error: e?.message ?? "Couldn't add the photo." };
+      }
+    },
+    [token]
+  );
+
+  const removeAvatar = useCallback(async (): Promise<AuthResult> => {
+    if (!token) return { ok: false, error: "Please sign in again." };
+    try {
+      const updated = await removeAvatarApi(token);
+      setUser(updated as User);
+      return { ok: true };
+    } catch (e: any) {
+      return { ok: false, error: e?.message ?? "Couldn't remove the photo." };
+    }
+  }, [token]);
 
   const isAdmin = !!user?.isAdmin;
 
@@ -314,6 +348,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         completeOnboarding,
         updateUser,
+        uploadAvatar,
+        removeAvatar,
       }}
     >
       {children}

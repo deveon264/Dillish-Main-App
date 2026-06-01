@@ -10,6 +10,7 @@ import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { ProgressBar } from "@/components/ProgressBar";
 import { useAuth } from "@/contexts/AuthContext";
+import { avatarUri } from "@/lib/avatar";
 import { useData } from "@/contexts/DataContext";
 import { useInsets } from "@/hooks/useInsets";
 import { todayKey } from "@/lib/storage";
@@ -34,7 +35,7 @@ const LEGACY_GOAL_MAP: Record<string, string> = {
 export default function Profile() {
   const router = useRouter();
   const insets = useInsets();
-  const { user, logout, updateUser } = useAuth();
+  const { user, logout, updateUser, uploadAvatar, removeAvatar: removeAvatarFn } = useAuth();
   const { profile, completions, calorieLogs, weightLogs, waterLogs, updateProfile } = useData();
 
   const [editing, setEditing] = useState(false);
@@ -186,12 +187,13 @@ export default function Profile() {
         setAvatarError("Permission is required to add a photo.");
         return;
       }
+      // No base64: the bytes upload straight to object storage from the file
+      // (native) or blob (web), so they never travel inside the account record.
       const opts: ImagePicker.ImagePickerOptions = {
         mediaTypes: ["images"],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.6,
-        base64: true,
       };
       const res =
         mode === "camera"
@@ -199,8 +201,8 @@ export default function Profile() {
           : await ImagePicker.launchImageLibraryAsync(opts);
       if (res.canceled || !res.assets?.length) return;
       const asset = res.assets[0];
-      const uri = asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
-      await updateUser({ avatar: uri });
+      const result = await uploadAvatar(asset.uri, asset.mimeType ?? "image/jpeg");
+      if (!result.ok) setAvatarError(result.error ?? "Couldn't add the photo. Please try again.");
     } catch {
       setAvatarError("Couldn't add the photo. Please try again.");
     }
@@ -209,7 +211,8 @@ export default function Profile() {
   const removeAvatar = async () => {
     setAvatarModal(false);
     setAvatarError("");
-    await updateUser({ avatar: null });
+    const result = await removeAvatarFn();
+    if (!result.ok) setAvatarError(result.error ?? "Couldn't remove the photo. Please try again.");
   };
 
   const openEmailModal = () => {
@@ -231,6 +234,7 @@ export default function Profile() {
   };
 
   const firstName = (user?.name ?? "F").charAt(0).toUpperCase();
+  const avatarSource = avatarUri(user);
 
   const PROFILE_TABS = ["Profile", "Plan", "History", "Settings"];
 
@@ -385,8 +389,8 @@ export default function Profile() {
             ) : (
               <View style={styles.profileRow}>
                 <View style={styles.avatarWrap}>
-                  {user?.avatar ? (
-                    <Image source={{ uri: user.avatar }} style={styles.avatar} contentFit="cover" />
+                  {avatarSource ? (
+                    <Image source={{ uri: avatarSource }} style={styles.avatar} contentFit="cover" />
                   ) : (
                     <View style={styles.avatar}>
                       <Text style={styles.avatarText}>{firstName}</Text>
@@ -631,7 +635,7 @@ export default function Profile() {
               <Ionicons name="images-outline" size={20} color={colors.accent} />
               <Text style={styles.sheetOptionText}>Choose from Library</Text>
             </Pressable>
-            {user?.avatar ? (
+            {avatarSource ? (
               <Pressable style={styles.sheetOption} onPress={removeAvatar}>
                 <Ionicons name="trash-outline" size={20} color={colors.danger} />
                 <Text style={[styles.sheetOptionText, { color: colors.danger }]}>Remove Photo</Text>
