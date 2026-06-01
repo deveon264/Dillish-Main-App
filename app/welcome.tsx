@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
     color: colors.muted,
-    marginTop: 18,
+    marginTop: 8,
     maxWidth: 320,
   },
   trustRow: { flexDirection: "row", marginTop: 28, gap: 22 },
