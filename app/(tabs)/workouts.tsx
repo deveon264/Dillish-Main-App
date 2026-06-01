@@ -33,10 +33,13 @@ export default function Workouts() {
   const [level, setLevel] = useState<Workout["level"] | null>(null);
   const [savedOnly, setSavedOnly] = useState(false);
   const [picker, setPicker] = useState<"duration" | "level" | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
-  const activeCount = (duration ? 1 : 0) + (level ? 1 : 0) + (savedOnly ? 1 : 0);
+  const activeCount =
+    (category !== "All" ? 1 : 0) + (duration ? 1 : 0) + (level ? 1 : 0) + (savedOnly ? 1 : 0);
 
   const clearFilters = () => {
+    setCategory("All");
     setDuration(null);
     setLevel(null);
     setSavedOnly(false);
@@ -78,8 +81,13 @@ export default function Workouts() {
               "Tap any workout to start a guided, step-by-step session.",
             ]}
           />
-          <Pressable style={styles.headerBtn} hitSlop={6}>
+          <Pressable style={styles.headerBtn} hitSlop={6} onPress={() => setShowFilters(true)}>
             <Ionicons name="options-outline" size={20} color={colors.foreground} />
+            {activeCount > 0 && (
+              <View style={styles.headerBtnBadge}>
+                <Text style={styles.headerBtnBadgeText}>{activeCount}</Text>
+              </View>
+            )}
           </Pressable>
         </View>
 
@@ -264,6 +272,78 @@ export default function Workouts() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      <Modal visible={showFilters} transparent animationType="fade" onRequestClose={() => setShowFilters(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setShowFilters(false)}>
+          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.sheetHeaderRow}>
+              <Text style={styles.sheetTitle}>Filters</Text>
+              {activeCount > 0 && (
+                <Pressable onPress={clearFilters} hitSlop={8}>
+                  <Text style={styles.sheetClear}>Clear all</Text>
+                </Pressable>
+              )}
+            </View>
+
+            <Text style={styles.sheetLabel}>Type</Text>
+            <View style={styles.chipWrap}>
+              {CATEGORIES.map((c) => {
+                const on = category === c;
+                return (
+                  <Pressable
+                    key={c}
+                    style={[styles.sheetChip, on && styles.sheetChipOn]}
+                    onPress={() => setCategory(c)}
+                  >
+                    <Text style={[styles.sheetChipText, on && styles.sheetChipTextOn]}>{c}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Text style={styles.sheetLabel}>Level</Text>
+            <View style={styles.chipWrap}>
+              {LEVEL_OPTIONS.map((lvl) => {
+                const on = level === lvl;
+                return (
+                  <Pressable
+                    key={lvl}
+                    style={[styles.sheetChip, on && styles.sheetChipOn]}
+                    onPress={() => setLevel(on ? null : lvl)}
+                  >
+                    <Text style={[styles.sheetChipText, on && styles.sheetChipTextOn]}>{lvl}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Text style={styles.sheetLabel}>Duration</Text>
+            <View style={styles.chipWrap}>
+              {DURATION_OPTIONS.map((o) => {
+                const on = duration === o.key;
+                return (
+                  <Pressable
+                    key={o.key}
+                    style={[styles.sheetChip, on && styles.sheetChipOn]}
+                    onPress={() => setDuration(on ? null : o.key)}
+                  >
+                    <Text style={[styles.sheetChipText, on && styles.sheetChipTextOn]}>{o.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Pressable style={styles.sheetApply} onPress={() => setShowFilters(false)}>
+              <Text style={styles.sheetApplyText}>
+                {filtered.length === WORKOUTS.length
+                  ? "Show all workouts"
+                  : `Show ${filtered.length} ${filtered.length === 1 ? "workout" : "workouts"}`}
+              </Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </GradientBackground>
   );
 }
@@ -284,6 +364,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  headerBtnBadge: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    backgroundColor: colors.accent,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerBtnBadgeText: { fontFamily: fonts.sansSemibold, fontSize: 11, color: colors.onPrimary },
   search: {
     flexDirection: "row",
     alignItems: "center",
@@ -386,6 +479,38 @@ const styles = StyleSheet.create({
   },
   sheetHandle: { alignSelf: "center", width: 40, height: 4, borderRadius: 2, backgroundColor: colors.cardBorder, marginBottom: 12 },
   sheetTitle: { fontFamily: fonts.serifSemibold, fontSize: 20, color: colors.foreground, marginBottom: 8 },
+  sheetHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  sheetClear: { fontFamily: fonts.sansSemibold, fontSize: 14, color: colors.accent },
+  sheetLabel: {
+    fontFamily: fonts.sansSemibold,
+    fontSize: 12,
+    color: colors.muted,
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginTop: 16,
+    marginBottom: 10,
+  },
+  chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  sheetChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: "transparent",
+  },
+  sheetChipOn: { borderColor: colors.accent, backgroundColor: "rgba(201,137,122,0.14)" },
+  sheetChipText: { fontFamily: fonts.sansMedium, fontSize: 14, color: colors.muted },
+  sheetChipTextOn: { color: colors.accent },
+  sheetApply: {
+    marginTop: 24,
+    borderRadius: colors.radius,
+    backgroundColor: colors.accent,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+  },
+  sheetApplyText: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.onPrimary },
   sheetRow: {
     flexDirection: "row",
     alignItems: "center",
