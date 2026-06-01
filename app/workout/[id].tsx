@@ -13,14 +13,20 @@ import { getWorkout } from "@/constants/workouts";
 import { listWorkoutExercises, videoUrl } from "@/lib/exercises";
 import { useData } from "@/contexts/DataContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { todayKey } from "@/lib/storage";
+import { todayKey, getJSON, setJSON } from "@/lib/storage";
 import { useInsets } from "@/hooks/useInsets";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
-type Phase = "active" | "done";
+type Phase = "active" | "rest" | "done";
 
 const WEEK_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+// Rest gap (seconds) shown as a countdown between exercises before auto-advancing.
+// 0 = "Off" (advance immediately). Persisted as a device preference.
+const REST_OPTIONS = [0, 10, 15, 30, 60] as const;
+const REST_GAP_KEY = "florish.restGapSeconds";
+const DEFAULT_REST_GAP = 15;
 
 export default function WorkoutPlayer() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -35,6 +41,20 @@ export default function WorkoutPlayer() {
   const [index, setIndex] = useState(0);
   const [remaining, setRemaining] = useState(() => workout?.exercises[0]?.seconds ?? 0);
   const [paused, setPaused] = useState(true);
+  // Rest gap between exercises (device preference) and the live rest countdown.
+  const [restGap, setRestGap] = useState<number>(DEFAULT_REST_GAP);
+  const [restRemaining, setRestRemaining] = useState(0);
+  // Guards an exercise from being "completed" twice (e.g. video end + countdown).
+  // Reset whenever the exercise index changes.
+  const completedIndexRef = useRef<number>(-1);
+  // Holds the latest completion handler so the video "playToEnd" listener (set up
+  // once, before the early returns) always calls the current-closure version.
+  const onVideoEndRef = useRef<() => void>(() => {});
+  // The exercise-video id currently confirmed-loaded into the player. A "playToEnd"
+  // only completes the exercise when it matches the current exercise's video, so a
+  // stale end event from an outgoing clip (mid-transition) can't advance the next
+  // exercise. Reset to null while a new clip is loading.
+  const loadedVideoIdRef = useRef<string | null>(null);
   const [tab, setTab] = useState<"exercises" | "guidance" | "progress">("exercises");
   const [toast, setToast] = useState<string | null>(null);
   const [toastIcon, setToastIcon] = useState<keyof typeof Ionicons.glyphMap>("lock-closed");
@@ -73,6 +93,11 @@ export default function WorkoutPlayer() {
       if (typeof d === "number" && isFinite(d) && d > 0) setVideoDuration(d);
     }
   });
+  // When the real clip reaches its end, the exercise is done — drive the rest
+  // gap / auto-advance instead of leaving the player idle on the last frame.
+  useEventListener(player, "playToEnd", () => {
+    onVideoEndRef.current();
+  });
 
   const overlayOpacity = useRef(new Animated.Value(1)).current;
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -100,11 +125,20 @@ export default function WorkoutPlayer() {
 
   const jumpTo = (i: number) => {
     if (i >= index) return;
+    setPhase("active");
+    setRestRemaining(0);
     setIndex(i);
     setRemaining(workout!.exercises[i].seconds);
     setPaused(false);
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     showToast(`Replaying ${workout!.exercises[i].name}`, "reload");
+  };
+
+  const changeRestGap = (v: number) => {
+    setRestGap(v);
+    setJSON(REST_GAP_KEY, v);
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    showToast(v === 0 ? "Rest off" : `Rest set to ${v}s`, "hourglass");
   };
 
   const togglePause = () => {
@@ -150,6 +184,24 @@ export default function WorkoutPlayer() {
     });
   };
 
+  // Restore the saved rest-gap preference once on mount.
+  useEffect(() => {
+    let on = true;
+    getJSON<number>(REST_GAP_KEY, DEFAULT_REST_GAP).then((v) => {
+      if (on && typeof v === "number" && REST_OPTIONS.includes(v as (typeof REST_OPTIONS)[number])) {
+        setRestGap(v);
+      }
+    });
+    return () => {
+      on = false;
+    };
+  }, []);
+
+  // A new exercise can be completed again (clears the double-fire guard).
+  useEffect(() => {
+    completedIndexRef.current = -1;
+  }, [index]);
+
   // Fetch the videos uploaded for this workout and map each to its exercise.
   // Newest first from the server, so the first row per exercise wins.
   useEffect(() => {
@@ -185,6 +237,8 @@ export default function WorkoutPlayer() {
     const isStale = () => seq !== loadSeq.current;
     setVideoTime(0);
     setVideoDuration(0);
+    // No clip confirmed-loaded until the swap below succeeds.
+    loadedVideoIdRef.current = null;
     (async () => {
       if (!currentVideo) {
         try {
@@ -206,7 +260,9 @@ export default function WorkoutPlayer() {
         }
         if (isStale()) return;
         await player.replaceAsync(finalUrl);
-        if (!isStale() && !pausedRef.current) player.play();
+        if (isStale()) return;
+        loadedVideoIdRef.current = currentVideo.id;
+        if (!pausedRef.current) player.play();
       } catch {
         // Leave the header image fallback in place if the video can't load.
       }
@@ -294,12 +350,35 @@ export default function WorkoutPlayer() {
     };
   }, [phase, paused, index, current]);
 
+  // For exercises with no playable video, the countdown reaching zero is the
+  // completion signal. When a video IS loaded, the "playToEnd" event drives it
+  // instead (so a clip shorter/longer than the set time advances at the clip's
+  // real end rather than leaving the player idle).
   useEffect(() => {
-    if (phase === "active" && remaining === 0 && current) {
-      goNext();
-    }
+    if (phase !== "active" || remaining !== 0 || !current) return;
+    const hasLoadedVideo = !!currentVideo && videoDuration > 0.1;
+    if (hasLoadedVideo) return;
+    completeExercise("timer");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [remaining, phase, index, current]);
+  }, [remaining, phase, index, current, currentVideo, videoDuration]);
+
+  // Rest countdown between exercises. Ticks down once per second (pausable), then
+  // advances to the next exercise and auto-plays its video.
+  useEffect(() => {
+    if (phase !== "rest" || paused) return;
+    if (restRemaining <= 0) {
+      goNext();
+      return;
+    }
+    const t = setTimeout(() => {
+      if (Platform.OS !== "web" && restRemaining <= 4) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+      setRestRemaining((r) => Math.max(0, r - 1));
+    }, 1000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, paused, restRemaining]);
 
   if (!workout) {
     return (
@@ -315,12 +394,38 @@ export default function WorkoutPlayer() {
   const goNext = () => {
     if (index + 1 < total) {
       const ni = index + 1;
+      setRestRemaining(0);
+      setPhase("active");
       setIndex(ni);
       setRemaining(workout.exercises[ni].seconds);
     } else {
       finish();
     }
   };
+
+  // Marks the current exercise complete (from a video end or a countdown). Guards
+  // against firing twice for the same exercise, then either finishes the workout,
+  // advances immediately (rest "Off"), or opens the rest countdown. A "video"
+  // completion is ignored unless the clip that ended is the one loaded for the
+  // current exercise (defends against stale end events during a transition).
+  const completeExercise = (source: "video" | "timer") => {
+    if (phase !== "active" || !current) return;
+    if (source === "video" && (!currentVideo || loadedVideoIdRef.current !== currentVideo.id)) return;
+    if (completedIndexRef.current === index) return;
+    completedIndexRef.current = index;
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (index + 1 >= total) {
+      finish();
+      return;
+    }
+    if (restGap <= 0) {
+      goNext();
+      return;
+    }
+    setRestRemaining(restGap);
+    setPhase("rest");
+  };
+  onVideoEndRef.current = () => completeExercise("video");
 
   const finish = () => {
     if (timer.current) clearInterval(timer.current);
@@ -331,6 +436,54 @@ export default function WorkoutPlayer() {
     if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setPhase("done");
   };
+
+  if (phase === "rest" && current && index + 1 < total) {
+    const next = workout.exercises[index + 1];
+    const restPct = `${restGap > 0 ? Math.max(0, Math.min(100, Math.round(((restGap - restRemaining) / restGap) * 100))) : 0}%` as const;
+    return (
+      <GradientBackground>
+        <ImageBackground source={next.image ?? workout.image} style={styles.restScreen}>
+          <LinearGradient
+            colors={["rgba(44,36,34,0.55)", "rgba(44,36,34,0.78)", "rgba(44,36,34,0.95)"]}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={[styles.restTop, { marginTop: insets.top + 8 }]}>
+            <Pressable style={styles.roundBtn} onPress={() => router.back()} hitSlop={8}>
+              <Ionicons name="chevron-back" size={22} color={colors.foreground} />
+            </Pressable>
+            <Pressable style={styles.roundBtn} onPress={togglePause} hitSlop={8}>
+              <Ionicons name={paused ? "play" : "pause"} size={20} color={colors.foreground} />
+            </Pressable>
+          </View>
+
+          <View style={styles.restBody}>
+            <Text style={styles.restEyebrow}>REST</Text>
+            <Text style={styles.restCount}>{restRemaining}</Text>
+            <Text style={styles.restCountUnit}>seconds</Text>
+            <View style={styles.restTrack}>
+              <View style={[styles.restFill, { width: restPct }]} />
+            </View>
+            <Text style={styles.restUpNext}>UP NEXT · {index + 2}/{total}</Text>
+            <Text style={styles.restNextName}>{next.name}</Text>
+            <Text style={styles.restNextMeta}>
+              {next.detail} · {next.sets} sets · {next.seconds} sec
+            </Text>
+          </View>
+
+          <View style={[styles.restActions, { paddingBottom: insets.bottom + 24 }]}>
+            <Pressable style={styles.restAddBtn} onPress={() => setRestRemaining((r) => r + 15)} hitSlop={8}>
+              <Ionicons name="add" size={18} color={colors.foreground} />
+              <Text style={styles.restAddText}>15s</Text>
+            </Pressable>
+            <Pressable style={styles.restStartBtn} onPress={goNext}>
+              <Ionicons name="play" size={18} color={colors.onPrimary} />
+              <Text style={styles.restStartText}>Start now</Text>
+            </Pressable>
+          </View>
+        </ImageBackground>
+      </GradientBackground>
+    );
+  }
 
   if (phase === "active" && current) {
     const totalSeconds = workout.exercises.reduce((s, e) => s + e.seconds, 0);
@@ -490,6 +643,27 @@ export default function WorkoutPlayer() {
                 <Ionicons name="list" size={18} color={colors.accent} />
                 <Text style={styles.statNum}>{index + 1}/{total}</Text>
                 <Text style={styles.statLbl}>exercises</Text>
+              </View>
+            </View>
+
+            <View style={styles.restPickRow}>
+              <View style={styles.restPickLabel}>
+                <Ionicons name="hourglass-outline" size={14} color={colors.muted} />
+                <Text style={styles.restPickLabelText}>Rest between exercises</Text>
+              </View>
+              <View style={styles.restPickChips}>
+                {REST_OPTIONS.map((opt) => (
+                  <Pressable
+                    key={opt}
+                    style={[styles.restChip, restGap === opt && styles.restChipOn]}
+                    onPress={() => changeRestGap(opt)}
+                    hitSlop={4}
+                  >
+                    <Text style={[styles.restChipText, restGap === opt && styles.restChipTextOn]}>
+                      {opt === 0 ? "Off" : `${opt}s`}
+                    </Text>
+                  </Pressable>
+                ))}
               </View>
             </View>
 
@@ -1031,4 +1205,63 @@ const styles = StyleSheet.create({
   doneStatNum: { fontFamily: fonts.serifSemibold, fontSize: 26, color: colors.accent },
   doneStatLbl: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, marginTop: 2 },
   doneStatDivider: { width: 1, height: 40, backgroundColor: colors.cardBorder },
+  restPickRow: { marginTop: 16, gap: 10 },
+  restPickLabel: { flexDirection: "row", alignItems: "center", gap: 6 },
+  restPickLabelText: { fontFamily: fonts.sansMedium, fontSize: 12.5, color: colors.muted, letterSpacing: 0.3 },
+  restPickChips: { flexDirection: "row", gap: 8 },
+  restChip: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 9,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.card,
+  },
+  restChipOn: { backgroundColor: colors.accent, borderColor: "transparent" },
+  restChipText: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.muted },
+  restChipTextOn: { color: colors.onPrimary },
+  restScreen: { flex: 1, justifyContent: "space-between" },
+  restTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20 },
+  restBody: { alignItems: "center", paddingHorizontal: 24 },
+  restEyebrow: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.accent, letterSpacing: 3 },
+  restCount: { fontFamily: fonts.serifSemibold, fontSize: 96, lineHeight: 104, color: colors.foreground },
+  restCountUnit: { fontFamily: fonts.sansMedium, fontSize: 14, color: colors.muted, marginTop: -4 },
+  restTrack: {
+    width: "70%",
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(247,235,232,0.2)",
+    overflow: "hidden",
+    marginTop: 22,
+  },
+  restFill: { height: 4, borderRadius: 2, backgroundColor: colors.accent },
+  restUpNext: { fontFamily: fonts.sansSemibold, fontSize: 11.5, color: colors.muted, letterSpacing: 1.4, marginTop: 30 },
+  restNextName: { fontFamily: fonts.serifSemibold, fontSize: 30, color: colors.foreground, marginTop: 8, textAlign: "center" },
+  restNextMeta: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.muted, marginTop: 6, textAlign: "center" },
+  restActions: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 24 },
+  restAddBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    height: 54,
+    paddingHorizontal: 20,
+    borderRadius: colors.radius,
+    borderWidth: 1,
+    borderColor: "rgba(247,235,232,0.25)",
+    backgroundColor: "rgba(44,36,34,0.4)",
+  },
+  restAddText: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
+  restStartBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    height: 54,
+    borderRadius: colors.radius,
+    backgroundColor: colors.primary,
+  },
+  restStartText: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.onPrimary },
 });
