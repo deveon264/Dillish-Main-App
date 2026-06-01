@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     maxWidth: 320,
   },
-  trustRow: { flexDirection: "row", marginTop: 28, gap: 22 },
+  trustRow: { flexDirection: "row", marginTop: 16, gap: 22 },
   trustItem: { alignItems: "center", flexDirection: "row", gap: 8 },
   trustIcon: {
     width: 34,
