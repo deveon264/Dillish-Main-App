@@ -13,7 +13,11 @@ export type Row = Record<string, any>;
 export type FakeDb = {
   users: Map<string, Row>;
   settings: Map<string, string>;
+  exercises: Row[];
   seedUser: (u: Partial<Row> & { id: string; email: string }) => Row;
+  seedExercise: (
+    e: Partial<Row> & { video_object_path: string }
+  ) => Row;
 };
 
 function dupKeyError(): Error & { code: string } {
@@ -48,9 +52,20 @@ function setAssignments(text: string): SetAssignment[] {
 export function installFakeDb(): FakeDb {
   const users = new Map<string, Row>();
   const settings = new Map<string, string>();
+  const exercises: Row[] = [];
 
   async function query(text: string, params: any[] = []): Promise<{ rows: Row[] }> {
     const sql = text.trim();
+
+    // --- exercises (media paths the cleanup sweep reconciles against) -------
+    if (/FROM\s+exercises/i.test(sql)) {
+      return {
+        rows: exercises.map((e) => ({
+          video_object_path: e.video_object_path,
+          poster_object_path: e.poster_object_path ?? null,
+        })),
+      };
+    }
 
     // --- app_settings ------------------------------------------------------
     if (/FROM\s+app_settings/i.test(sql)) {
@@ -124,9 +139,11 @@ export function installFakeDb(): FakeDb {
   const fakePool = { query } as unknown as Pool;
   __setPoolForTests(fakePool);
 
+  let exerciseSeq = 0;
   return {
     users,
     settings,
+    exercises,
     seedUser(u) {
       const row: Row = {
         id: u.id,
@@ -141,6 +158,15 @@ export function installFakeDb(): FakeDb {
         created_at: u.created_at ?? Date.now(),
       };
       users.set(row.id, row);
+      return row;
+    },
+    seedExercise(e) {
+      const row: Row = {
+        id: e.id ?? `ex-${++exerciseSeq}`,
+        video_object_path: e.video_object_path,
+        poster_object_path: e.poster_object_path ?? null,
+      };
+      exercises.push(row);
       return row;
     },
   };

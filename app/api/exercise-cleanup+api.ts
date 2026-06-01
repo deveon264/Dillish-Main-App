@@ -97,7 +97,15 @@ export async function sweepFolder(
   };
 }
 
-export async function POST(request: Request): Promise<Response> {
+// Testable core. The sweep only ever reconciles the exercise-videos and
+// exercise-posters folders against the `exercises` table; the onboarding
+// thank-you video lives under its own `thank-you-videos/` prefix and is
+// deliberately never listed or deleted here. `io` defaults to the real storage
+// helpers; tests inject a fake to assert exactly which folders are swept.
+export async function runCleanup(
+  request: Request,
+  io: SweepIO = { listObjects, deleteObject }
+): Promise<Response> {
   try {
     const email = await requireAdmin(request);
     if (!email) {
@@ -121,13 +129,15 @@ export async function POST(request: Request): Promise<Response> {
       `${getPrivateDir()}/exercise-videos/`,
       referencedVideos,
       cutoff,
-      dryRun
+      dryRun,
+      io
     );
     const posters = await sweepFolder(
       `${getPrivateDir()}/exercise-posters/`,
       referencedPosters,
       cutoff,
-      dryRun
+      dryRun,
+      io
     );
 
     // Log a one-line summary so a coach can confirm a run happened (and what it
@@ -158,3 +168,7 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "Cleanup failed" }, { status: 500 });
   }
 }
+
+// Expo Router route handler. Delegates to the testable core with the real
+// storage IO; tests call `runCleanup` directly with an injected fake.
+export const POST = (request: Request): Promise<Response> => runCleanup(request);

@@ -15,13 +15,37 @@ const MIME_KEY = "thank_you_video_mime";
 
 const MAX_BYTES = 80 * 1024 * 1024; // 80MB
 
+// The object-storage operations the handlers depend on, grouped behind a small
+// seam so tests can inject fakes (the real ones talk to the storage sidecar over
+// the network). Production always uses `defaultStorage`. Crucially the upload
+// helper writes to the dedicated `thank-you-videos/` prefix, which the scheduled
+// exercise-cleanup sweep never touches.
+export type ThankYouVideoStorage = {
+  uploadThankYouVideoStream: (
+    body: ReadableStream<Uint8Array>,
+    contentType: string,
+    contentLength: number
+  ) => Promise<string>;
+  getVideoSignedUrl: (objectPath: string, ttlSec?: number) => Promise<string>;
+  deleteObject: (objectPath: string) => Promise<void>;
+};
+
+const defaultStorage: ThankYouVideoStorage = {
+  uploadThankYouVideoStream,
+  getVideoSignedUrl,
+  deleteObject,
+};
+
 // GET serves the video. With `?check=1` it returns small JSON describing
 // whether a video has been set (used by the upload screen and the playback
 // screen to decide whether to play or skip straight to the dashboard).
 // Otherwise it resolves the stored object to a short-lived signed GCS URL and
 // 302-redirects there, mirroring the exercise-video endpoint so the player gets
 // native HTTP Range support.
-export async function GET(request: Request): Promise<Response> {
+export async function thankYouVideoGet(
+  request: Request,
+  storage: ThankYouVideoStorage = defaultStorage
+): Promise<Response> {
   try {
     const check = new URL(request.url).searchParams.get("check");
     const path = await getSetting(PATH_KEY);
@@ -32,7 +56,7 @@ export async function GET(request: Request): Promise<Response> {
 
     if (!path) return new Response("Not found", { status: 404 });
 
-    const url = await getVideoSignedUrl(path, 3600);
+    const url = await storage.getVideoSignedUrl(path, 3600);
     return new Response(null, {
       status: 302,
       headers: {
@@ -50,7 +74,10 @@ export async function GET(request: Request): Promise<Response> {
 // the raw request body so the server can stream them straight to storage and
 // enforce the size limit from Content-Length before reading the body. Any
 // previously stored object is deleted after the new one is saved.
-export async function POST(request: Request): Promise<Response> {
+export async function thankYouVideoPost(
+  request: Request,
+  storage: ThankYouVideoStorage = defaultStorage
+): Promise<Response> {
   try {
     const email = await requireAdmin(request);
     if (!email) {
@@ -91,7 +118,7 @@ export async function POST(request: Request): Promise<Response> {
 
     let objectPath: string;
     try {
-      objectPath = await uploadThankYouVideoStream(limited, mime, contentLength);
+      objectPath = await storage.uploadThankYouVideoStream(limited, mime, contentLength);
     } catch (e: any) {
       if (String(e?.message).includes("VIDEO_TOO_LARGE")) {
         return Response.json({ error: "Video is too large (max 80MB)" }, { status: 413 });
@@ -106,7 +133,7 @@ export async function POST(request: Request): Promise<Response> {
     // Clean up the replaced object so old uploads don't linger in storage. A
     // failure here must not fail the (already saved) replacement.
     if (previous && previous !== objectPath) {
-      await deleteObject(previous).catch((err) =>
+      await storage.deleteObject(previous).catch((err) =>
         console.error("thank-you-video old object delete failed:", err?.message ?? err)
       );
     }
@@ -119,7 +146,10 @@ export async function POST(request: Request): Promise<Response> {
 }
 
 // Removes the thank-you video so onboarding skips straight to the dashboard.
-export async function DELETE(request: Request): Promise<Response> {
+export async function thankYouVideoDelete(
+  request: Request,
+  storage: ThankYouVideoStorage = defaultStorage
+): Promise<Response> {
   try {
     const email = await requireAdmin(request);
     if (!email) {
@@ -127,7 +157,7 @@ export async function DELETE(request: Request): Promise<Response> {
     }
     const path = await getSetting(PATH_KEY);
     if (path) {
-      await deleteObject(path).catch((err) =>
+      await storage.deleteObject(path).catch((err) =>
         console.error("thank-you-video object delete failed:", err?.message ?? err)
       );
     }
@@ -139,3 +169,10 @@ export async function DELETE(request: Request): Promise<Response> {
     return Response.json({ error: "Failed to delete video" }, { status: 500 });
   }
 }
+
+// Expo Router route handlers. They delegate to the testable core functions above
+// with the real storage implementation; tests call the core functions directly
+// with an injected fake storage seam.
+export const GET = (request: Request): Promise<Response> => thankYouVideoGet(request);
+export const POST = (request: Request): Promise<Response> => thankYouVideoPost(request);
+export const DELETE = (request: Request): Promise<Response> => thankYouVideoDelete(request);
