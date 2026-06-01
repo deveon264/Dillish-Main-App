@@ -17,6 +17,7 @@ import { useInsets } from "@/hooks/useInsets";
 import { useAuth } from "@/contexts/AuthContext";
 import { AdminControls } from "@/components/AdminControls";
 import { listExercises, deleteExercise, posterUrl, UploadedExercise } from "@/lib/exercises";
+import { findExerciseImage } from "@/constants/workouts";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
@@ -146,9 +147,17 @@ export default function ExerciseLibrary() {
                   <View style={styles.thumb}>
                     {(() => {
                       const showPoster = item.hasPoster && !posterErrors[item.id];
+                      const localImage = !showPoster
+                        ? findExerciseImage({
+                            workoutId: item.workoutId,
+                            workoutExerciseId: item.workoutExerciseId,
+                            name: item.title,
+                          })
+                        : undefined;
+                      const hasImage = showPoster || !!localImage;
                       return (
                         <>
-                          {showPoster && (
+                          {showPoster ? (
                             <Image
                               source={{ uri: posterUrl(item.id) }}
                               style={styles.thumbImg}
@@ -156,8 +165,15 @@ export default function ExerciseLibrary() {
                               transition={200}
                               onError={() => setPosterErrors((prev) => ({ ...prev, [item.id]: true }))}
                             />
-                          )}
-                          <View style={[styles.playBadge, showPoster && styles.playBadgeOnImage]}>
+                          ) : localImage ? (
+                            <Image
+                              source={localImage}
+                              style={styles.thumbImg}
+                              contentFit="cover"
+                              transition={200}
+                            />
+                          ) : null}
+                          <View style={[styles.playBadge, hasImage && styles.playBadgeOnImage]}>
                             <Ionicons name="play" size={16} color={colors.onPrimary} />
                           </View>
                         </>
