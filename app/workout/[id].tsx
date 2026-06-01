@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, ImageBackground, Image } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, ImageBackground, Image, Animated } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -36,12 +36,26 @@ export default function WorkoutPlayer() {
   const [toast, setToast] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toastAnim = useRef(new Animated.Value(0)).current;
   const savedRef = useRef(false);
 
   const showToast = (msg: string) => {
     setToast(msg);
     if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(null), 1800);
+    Animated.timing(toastAnim, {
+      toValue: 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+    toastTimer.current = setTimeout(() => {
+      Animated.timing(toastAnim, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished) setToast(null);
+      });
+    }, 1800);
   };
 
   const jumpTo = (i: number) => {
@@ -492,10 +506,27 @@ export default function WorkoutPlayer() {
           </View>
         </ScrollView>
         {toast && (
-          <View style={[styles.toast, { bottom: insets.bottom + 24 }]} pointerEvents="none">
+          <Animated.View
+            style={[
+              styles.toast,
+              {
+                bottom: insets.bottom + 24,
+                opacity: toastAnim,
+                transform: [
+                  {
+                    translateY: toastAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [12, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}
+            pointerEvents="none"
+          >
             <Ionicons name="lock-closed" size={14} color={colors.foreground} />
             <Text style={styles.toastText}>{toast}</Text>
-          </View>
+          </Animated.View>
         )}
       </GradientBackground>
     );
