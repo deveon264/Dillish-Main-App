@@ -27,6 +27,15 @@ payload tiny.
 - `/api/me` PATCH **no longer accepts `avatar`** — photos go only through the
   dedicated endpoint, so name/email/onboarding updates never carry image bytes.
 
+## Testing seam
+- `app/api/avatar+api.ts` exposes testable core handlers `avatarGet/avatarPost/
+  avatarDelete(request, storage?)` with an injectable `AvatarStorage` seam (the
+  object-storage ops that hit the sidecar). The Expo Router `GET/POST/DELETE`
+  exports are thin wrappers using the real storage. Tests pass a fake storage +
+  the in-memory `fakeUserDb` (real auth + real userStore), mirroring how
+  `exercise-cleanup` injects its IO. **Why:** the size-limit logic lives in the
+  handler, so faking only storage lets the streaming byte-counter run for real.
+
 ## Client rendering & cache-busting
 - `toPublicUser` exposes `avatarVersion` (the object path's trailing uuid) instead
   of the raw bucket path. A new upload = new uuid = new version → the render URL

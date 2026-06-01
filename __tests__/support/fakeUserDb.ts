@@ -24,9 +24,23 @@ function dupKeyError(): Error & { code: string } {
   return e;
 }
 
-function colNamesFromSet(text: string): string[] {
+// Parses the SET clause of an UPDATE into per-column assignments. Each column is
+// set either from a positional parameter (`col = $n`) or to a literal NULL
+// (`col = NULL`), so the avatar updates (which null out columns) apply correctly.
+type SetAssignment =
+  | { col: string; kind: "param"; idx: number }
+  | { col: string; kind: "null" };
+
+function setAssignments(text: string): SetAssignment[] {
   const setPart = text.split(/\bSET\b/i)[1].split(/\bWHERE\b/i)[0];
-  return [...setPart.matchAll(/(\w+)\s*=\s*\$\d+/g)].map((m) => m[1]);
+  return setPart.split(",").map((part) => {
+    const m = /(\w+)\s*=\s*(\$(\d+)|NULL)/i.exec(part);
+    if (!m) throw new Error(`fakeUserDb: cannot parse assignment: ${part.trim()}`);
+    if (m[2].startsWith("$")) {
+      return { col: m[1], kind: "param", idx: Number(m[3]) - 1 };
+    }
+    return { col: m[1], kind: "null" };
+  });
 }
 
 // Builds a fresh in-memory db, installs it as the active pool, and returns
@@ -71,13 +85,13 @@ export function installFakeDb(): FakeDb {
     }
 
     if (/UPDATE\s+users/i.test(sql)) {
-      const cols = colNamesFromSet(sql);
+      const assignments = setAssignments(sql);
       const id = params[params.length - 1];
       const row = users.get(id);
       if (!row) return { rows: [] };
-      cols.forEach((c, i) => {
-        row[c] = params[i];
-      });
+      for (const a of assignments) {
+        row[a.col] = a.kind === "null" ? null : params[a.idx];
+      }
       return { rows: [{ ...row }] };
     }
 
@@ -120,6 +134,8 @@ export function installFakeDb(): FakeDb {
         email: u.email,
         password_hash: u.password_hash ?? "",
         avatar: u.avatar ?? null,
+        avatar_object_path: u.avatar_object_path ?? null,
+        avatar_mime: u.avatar_mime ?? null,
         is_admin: !!u.is_admin,
         onboarding_complete: !!u.onboarding_complete,
         created_at: u.created_at ?? Date.now(),
