@@ -31,7 +31,7 @@ export default function WorkoutPlayer() {
   const [phase, setPhase] = useState<Phase>("active");
   const [index, setIndex] = useState(0);
   const [remaining, setRemaining] = useState(() => workout?.exercises[0]?.seconds ?? 0);
-  const [paused, setPaused] = useState(false);
+  const [paused, setPaused] = useState(true);
   const [tab, setTab] = useState<"exercises" | "guidance" | "progress">("exercises");
   const [toast, setToast] = useState<string | null>(null);
   const [toastIcon, setToastIcon] = useState<keyof typeof Ionicons.glyphMap>("lock-closed");
