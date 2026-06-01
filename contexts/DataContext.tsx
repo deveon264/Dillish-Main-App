@@ -1,21 +1,13 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import { getJSON, setJSON, genId, todayKey } from "@/lib/storage";
+import { getApiUrl } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { DEFAULT_PROFILE, isDefaultProfile, type Profile } from "@/lib/profile";
 
-export type Profile = {
-  goals: string[];
-  age: number | null;
-  weight: number | null;
-  weightUnit: "kg" | "lbs";
-  height: number | null;
-  heightUnit: "cm" | "ft";
-  activityLevel: string;
-  bodyPreference: string;
-  waterGoalMl: number;
-  calorieGoal: number;
-  startWeight: number | null;
-  goalWeight: number | null;
-};
+// Re-exported so existing importers (`@/contexts/DataContext`) keep working;
+// the canonical definition lives in `@/lib/profile` (server-safe).
+export type { Profile } from "@/lib/profile";
+export { DEFAULT_PROFILE } from "@/lib/profile";
 
 export type WaterLog = { id: string; amountMl: number; ts: number };
 export type WeightLog = { id: string; weight: number; ts: number };
@@ -37,21 +29,6 @@ export type WorkoutCompletion = {
   ts: number;
   kcal: number;
   durationMin: number;
-};
-
-export const DEFAULT_PROFILE: Profile = {
-  goals: [],
-  age: null,
-  weight: null,
-  weightUnit: "kg",
-  height: null,
-  heightUnit: "cm",
-  activityLevel: "moderate",
-  bodyPreference: "toned",
-  waterGoalMl: 2500,
-  calorieGoal: 1800,
-  startWeight: null,
-  goalWeight: null,
 };
 
 type DataContextType = {
@@ -96,7 +73,7 @@ function seedWeightLogsFromProfile(profile: Profile): WeightLog[] | null {
 }
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const uid = user?.id ?? null;
 
   const [ready, setReady] = useState(false);
@@ -133,7 +110,47 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         getJSON<string[]>(keyFor(uid, "favorites"), []),
       ]);
       if (!active) return;
-      const mergedProfile = { ...DEFAULT_PROFILE, ...p };
+      let mergedProfile = { ...DEFAULT_PROFILE, ...p };
+
+      // The server is the source of truth for profile metrics so they survive a
+      // changed account id or a cleared device. Fall back to the local cache on
+      // any network/transient error so the app still works offline.
+      if (token) {
+        try {
+          const resp = await fetch(`${getApiUrl()}/api/profile`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (resp.ok) {
+            const { profile: serverProfile } = (await resp.json()) as { profile: Profile | null };
+            if (!active) return;
+            if (serverProfile) {
+              mergedProfile = { ...DEFAULT_PROFILE, ...serverProfile };
+              setJSON(keyFor(uid, "profile"), mergedProfile);
+            } else if (!isDefaultProfile(mergedProfile)) {
+              // One-time reconciliation: the account has no server profile yet
+              // but the device does — push the local values up so they aren't
+              // lost on the next device/id change.
+              const up = await fetch(`${getApiUrl()}/api/profile`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify(mergedProfile),
+              });
+              if (up.ok) {
+                const { profile: saved } = (await up.json()) as { profile: Profile | null };
+                if (!active) return;
+                if (saved) {
+                  mergedProfile = { ...DEFAULT_PROFILE, ...saved };
+                  setJSON(keyFor(uid, "profile"), mergedProfile);
+                }
+              }
+            }
+          }
+        } catch {
+          // offline / transient: keep the local cache.
+        }
+      }
+
+      if (!active) return;
       setProfile(mergedProfile);
       setWaterLogs(w);
 
@@ -155,7 +172,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     return () => {
       active = false;
     };
-  }, [uid]);
+  }, [uid, token]);
 
   useEffect(() => {
     if (!uid || !ready || weightLogs.length > 0 || profile.weight == null) return;
@@ -168,13 +185,29 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const updateProfile = useCallback(
     async (patch: Partial<Profile>) => {
       if (!uid) return;
+      // Optimistic local update + offline cache so the UI is instant and works
+      // offline; the same patch is written through to the server below.
       setProfile((prev) => {
         const next = { ...prev, ...patch };
         setJSON(keyFor(uid, "profile"), next);
         return next;
       });
+      if (token) {
+        try {
+          await fetch(`${getApiUrl()}/api/profile`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify(patch),
+          });
+          // The server clamps/sanitizes identically to the client screens, so
+          // there's nothing to reconcile here; on failure the local cache holds
+          // the value and the next save (or app launch) retries.
+        } catch {
+          // offline / transient: local cache already holds the change.
+        }
+      }
     },
-    [uid]
+    [uid, token]
   );
 
   const addWater = useCallback(

@@ -5,5 +5,6 @@
 - [Streak/week math duplication](streak-week-math.md) — weekly-streak/week-day computation has copies that must stay in sync.
 - [Weight tracking derivation](weight-tracking-derivation.md) — how current/start weight are computed for Progress + Profile; logs decoupled from profile.
 - [Workout favorites](workout-favorites.md) — DataContext favorites slice powers the library Saved filter; home "saved" still uses w.featured.
+- [Server profile persistence](server-profile-persistence.md) — profile metrics live in users.profile JSONB tied to account; PATCH merges atomically via `jsonb || jsonb` (never read-modify-write); local storage is just a cache.
 - [Profile avatar storage](profile-avatar-storage.md) — avatars are bytes in object storage (mirror posters), users row keeps only key/mime; avatarVersion cache-busts; /api/me no longer carries the image; legacy data: URIs still render.
 - [Visual QA of auth-gated screens](visual-qa-auth-gated.md) — screenshot browser has no session; temp mock-login in AuthContext + seed DataContext, shoot URL paths, then revert; in-component tab views aren't URL-addressable.

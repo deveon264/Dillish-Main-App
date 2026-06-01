@@ -1,4 +1,5 @@
 import { getPool, ensureSchema } from "@/lib/db";
+import { type Profile, sanitizeProfile, sanitizeProfilePatch } from "@/lib/profile";
 
 // Server-side persistence for member/coach accounts. Identity lives here (not on
 // the device) so the server can trust who is signed in. The coach is simply the
@@ -194,6 +195,41 @@ export async function updateUserPassword(
     [passwordHash, id]
   );
   return rows[0] ? mapRow(rows[0]) : null;
+}
+
+// Reads the account's stored profile metrics, or null if the account has never
+// saved a profile (the `profile` column is still NULL). Sanitizes on read so a
+// hand-edited or legacy blob can't surface out-of-range values.
+export async function getUserProfile(id: string): Promise<Profile | null> {
+  await ensureSchema();
+  const { rows } = await getPool().query(`SELECT profile FROM users WHERE id = $1`, [id]);
+  if (!rows[0]) return null;
+  const raw = rows[0].profile;
+  if (raw == null) return null;
+  const obj = typeof raw === "string" ? JSON.parse(raw) : raw;
+  return sanitizeProfile(obj);
+}
+
+// Atomically merges a (possibly partial) profile patch into the account's
+// stored profile and returns the full, sanitized result, or null if the account
+// row no longer exists. The merge is a single `jsonb || jsonb` statement so two
+// concurrent PATCHes on different fields can't clobber each other (no app-level
+// read-modify-write race). Only valid patch keys are written; invalid values are
+// dropped so a good stored value is never overwritten with a default.
+export async function patchUserProfile(id: string, patch: unknown): Promise<Profile | null> {
+  await ensureSchema();
+  const clean = sanitizeProfilePatch(patch);
+  const { rows } = await getPool().query(
+    `UPDATE users
+        SET profile = COALESCE(profile, '{}'::jsonb) || $1::jsonb
+      WHERE id = $2
+      RETURNING profile`,
+    [JSON.stringify(clean), id]
+  );
+  if (!rows[0]) return null;
+  const raw = rows[0].profile;
+  const obj = raw == null ? {} : typeof raw === "string" ? JSON.parse(raw) : raw;
+  return sanitizeProfile(obj);
 }
 
 export async function emailTaken(email: string, exceptId?: string): Promise<boolean> {

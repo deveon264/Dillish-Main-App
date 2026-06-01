@@ -101,6 +101,14 @@ export function ensureSchema(): Promise<void> {
              ADD COLUMN IF NOT EXISTS avatar_mime TEXT`
         )
       )
+      // Profile metrics (age/weight/height/units/goals/water+calorie goals/
+      // start+goal weight) are persisted account-side as a JSON blob so they
+      // follow the user across logins and devices instead of living only in
+      // on-device storage. Added after the initial release; backfill so existing
+      // environments pick it up without a manual migration.
+      .then(() =>
+        pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile JSONB`)
+      )
       .then(() => undefined)
       .catch((e) => {
         schemaReady = null;

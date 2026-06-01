@@ -40,6 +40,9 @@ type AuthContextType = {
   isAdmin: boolean;
   adminUnlocked: boolean;
   adminToken: string | null;
+  // The verified session token, used by account-scoped data calls (e.g. the
+  // server-persisted profile). Null when signed out.
+  token: string | null;
   loading: boolean;
   signup: (name: string, email: string, password: string, passcode?: string) => Promise<AuthResult>;
   login: (email: string, password: string) => Promise<AuthResult>;
@@ -340,6 +343,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         adminUnlocked: isAdmin,
         // The admin's session token doubles as the admin token for upload/delete.
         adminToken: isAdmin ? token : null,
+        token,
         loading,
         signup,
         login,

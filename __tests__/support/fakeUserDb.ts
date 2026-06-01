@@ -99,6 +99,24 @@ export function installFakeDb(): FakeDb {
       return { rows: [{ ...row }] };
     }
 
+    // Atomic JSONB merge used by patchUserProfile:
+    //   UPDATE users SET profile = COALESCE(profile,'{}'::jsonb) || $1::jsonb ...
+    // Mirror Postgres' shallow `||` merge in JS over the stored object.
+    if (/UPDATE\s+users\s+SET\s+profile\s*=\s*COALESCE/i.test(sql)) {
+      const id = params[params.length - 1];
+      const row = users.get(id);
+      if (!row) return { rows: [] };
+      const patch = JSON.parse(params[0]);
+      const base =
+        row.profile == null
+          ? {}
+          : typeof row.profile === "string"
+            ? JSON.parse(row.profile)
+            : row.profile;
+      row.profile = { ...base, ...patch };
+      return { rows: [{ profile: row.profile }] };
+    }
+
     if (/UPDATE\s+users/i.test(sql)) {
       const assignments = setAssignments(sql);
       const id = params[params.length - 1];
