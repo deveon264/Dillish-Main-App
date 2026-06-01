@@ -203,8 +203,8 @@ export default function Profile() {
       const asset = res.assets[0];
       const result = await uploadAvatar(asset.uri, asset.mimeType ?? "image/jpeg");
       if (!result.ok) setAvatarError(result.error ?? "Couldn't add the photo. Please try again.");
-    } catch {
-      setAvatarError("Couldn't add the photo. Please try again.");
+    } catch (e: any) {
+      setAvatarError(e?.message ?? "Couldn't add the photo. Please try again.");
     }
   };
 

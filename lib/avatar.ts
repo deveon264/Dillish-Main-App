@@ -1,5 +1,9 @@
 import { Platform } from "react-native";
-import { createUploadTask, FileSystemUploadType } from "expo-file-system/legacy";
+import {
+  createUploadTask,
+  FileSystemUploadType,
+  getInfoAsync,
+} from "expo-file-system/legacy";
 import { getApiUrl } from "@/lib/api";
 
 // Minimal shape needed to resolve a renderable photo URL. Matches the User type
@@ -71,10 +75,27 @@ export async function uploadAvatar(
     return (JSON.parse(body) as { user: AvatarUser }).user;
   }
 
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": contentType,
+  };
+  // Read the exact byte count off disk and send it explicitly. expo-file-system's
+  // upload task doesn't reliably attach Content-Length on all iOS builds, and the
+  // server needs it to size-check the upload, so we make the request
+  // self-consistent regardless of what the platform adds automatically.
+  try {
+    const info = await getInfoAsync(uri);
+    if (info.exists && typeof info.size === "number" && info.size > 0) {
+      headers["Content-Length"] = String(info.size);
+    }
+  } catch {
+    // ignore — fall back to whatever the upload task sends
+  }
+
   const task = createUploadTask(endpoint, uri, {
     httpMethod: "POST",
     uploadType: FileSystemUploadType.BINARY_CONTENT,
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": contentType },
+    headers,
   });
   const result = await task.uploadAsync();
   if (!result || result.status < 200 || result.status >= 300) {

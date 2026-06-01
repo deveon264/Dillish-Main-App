@@ -66,11 +66,16 @@ export async function POST(request: Request): Promise<Response> {
       return Response.json({ error: "Photo must be an image" }, { status: 400 });
     }
 
-    const contentLength = Number(request.headers.get("content-length") ?? "0");
-    if (!contentLength || !Number.isFinite(contentLength)) {
-      return Response.json({ error: "A photo is required" }, { status: 411 });
-    }
-    if (contentLength > MAX_AVATAR_BYTES) {
+    // Only trust Content-Length when the client actually sends a positive,
+    // finite value. Some native upload clients omit it, so we must not reject
+    // those outright — the streaming byte-counter below still caps the size.
+    const contentLengthHeader = request.headers.get("content-length");
+    const parsedLength = Number(contentLengthHeader ?? "");
+    const knownLength =
+      contentLengthHeader != null && Number.isFinite(parsedLength) && parsedLength > 0
+        ? parsedLength
+        : 0;
+    if (knownLength > MAX_AVATAR_BYTES) {
       return Response.json({ error: "Photo is too large (max 8MB)" }, { status: 413 });
     }
     if (!request.body) {
@@ -98,7 +103,7 @@ export async function POST(request: Request): Promise<Response> {
 
     let objectPath: string;
     try {
-      objectPath = await uploadAvatarStream(limited, mime, contentLength);
+      objectPath = await uploadAvatarStream(limited, mime, knownLength);
     } catch (e: any) {
       if (String(e?.message).includes("AVATAR_TOO_LARGE")) {
         return Response.json({ error: "Photo is too large (max 8MB)" }, { status: 413 });

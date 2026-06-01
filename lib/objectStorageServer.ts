@@ -62,12 +62,19 @@ async function putObjectStream(
 ): Promise<string> {
   const putUrl = await signObjectURL(fullPath, "PUT", 900);
   try {
+    const headers: Record<string, string> = {
+      "Content-Type": contentType || fallbackType,
+    };
+    // Forward the exact byte count when we know it so storage receives a
+    // regular, non-chunked upload. When the length is unknown (e.g. a native
+    // client that omitted Content-Length), omit it and let undici stream the
+    // body with chunked transfer-encoding instead of declaring a bogus 0.
+    if (contentLength > 0) {
+      headers["Content-Length"] = String(contentLength);
+    }
     const res = await fetch(putUrl, {
       method: "PUT",
-      headers: {
-        "Content-Type": contentType || fallbackType,
-        "Content-Length": String(contentLength),
-      },
+      headers,
       body: body as any,
       // Required by undici when streaming a request body.
       duplex: "half",
