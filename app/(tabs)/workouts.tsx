@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
+import { HelpButton } from "@/components/HelpButton";
 import { useInsets } from "@/hooks/useInsets";
 import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
@@ -68,6 +69,15 @@ export default function Workouts() {
               Workout <Text style={styles.titleItalic}>Library</Text>
             </Text>
           </View>
+          <HelpButton
+            title="Workout Library"
+            intro="Find the right session for today and make it your own."
+            points={[
+              "Browse every class, then filter by type and level to fit your mood.",
+              "Save favorites so your go-to workouts are always one tap away.",
+              "Tap any workout to start a guided, step-by-step session.",
+            ]}
+          />
           <Pressable style={styles.headerBtn} hitSlop={6}>
             <Ionicons name="options-outline" size={20} color={colors.foreground} />
           </Pressable>

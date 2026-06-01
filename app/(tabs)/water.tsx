@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Card } from "@/components/Card";
+import { HelpButton } from "@/components/HelpButton";
 import { WaterCircle } from "@/components/WaterCircle";
 import { ProgressBar } from "@/components/ProgressBar";
 import { BarChart, BarDatum } from "@/components/BarChart";
@@ -110,6 +111,15 @@ export default function Water() {
               Stay <Text style={styles.titleItalic}>Hydrated</Text>
             </Text>
           </View>
+          <HelpButton
+            title="Stay Hydrated"
+            intro="Keep your water intake on track every day."
+            points={[
+              "Log each glass with a tap as you drink through the day.",
+              "Watch your progress fill toward your daily hydration goal.",
+              "Switch days to review how well you stayed hydrated before.",
+            ]}
+          />
         </View>
 
         <Card style={styles.hydrationCard}>

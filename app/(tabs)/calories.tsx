@@ -7,6 +7,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
+import { HelpButton } from "@/components/HelpButton";
 import { ProgressRing } from "@/components/ProgressRing";
 import { ProgressBar } from "@/components/ProgressBar";
 import { useData } from "@/contexts/DataContext";
@@ -228,9 +229,15 @@ export default function Calories() {
               Calorie <Text style={styles.titleItalic}>Tracker</Text>
             </Text>
           </View>
-          <Pressable style={styles.headerBtn} hitSlop={6}>
-            <Ionicons name="help" size={18} color={colors.muted} />
-          </Pressable>
+          <HelpButton
+            title="Calorie Tracker"
+            intro="Log what you eat and stay on top of your daily goal."
+            points={[
+              "Snap a photo, scan a barcode, or type a meal — AI does the math.",
+              "See your calories and protein, carbs, and fats against your goal.",
+              "Review everything you've logged today in one place.",
+            ]}
+          />
         </View>
 
         <Card style={styles.goalCard}>
@@ -613,16 +620,6 @@ const styles = StyleSheet.create({
   eyebrow: { fontFamily: fonts.sansMedium, fontSize: 11, letterSpacing: 2, color: colors.muted },
   title: { fontFamily: fonts.serif, fontSize: 32, color: colors.foreground, marginTop: 2 },
   titleItalic: { fontFamily: fonts.serifItalic, color: colors.accent },
-  headerBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   goalCard: { marginTop: 20, padding: 20 },
   goalHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   cardEyebrow: { fontFamily: fonts.sansMedium, fontSize: 11, letterSpacing: 1.5, color: colors.muted },

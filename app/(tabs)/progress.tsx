@@ -6,6 +6,7 @@ import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Card } from "@/components/Card";
+import { HelpButton } from "@/components/HelpButton";
 import { ProgressBar } from "@/components/ProgressBar";
 import { LineChart, LinePoint } from "@/components/LineChart";
 import { useData } from "@/contexts/DataContext";
@@ -164,6 +165,15 @@ export default function Progress() {
               Your <Text style={styles.titleItalic}>Progress</Text>
             </Text>
           </View>
+          <HelpButton
+            title="Your Progress"
+            intro="See how far you've come and keep your goals in view."
+            points={[
+              "Track your weight over time and watch the trend take shape.",
+              "Explore charts that show your activity and results at a glance.",
+              "Log new measurements to keep your progress up to date.",
+            ]}
+          />
         </View>
 
         <View style={styles.tabBar}>
