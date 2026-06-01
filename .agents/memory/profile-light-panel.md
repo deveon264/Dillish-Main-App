@@ -1,28 +1,30 @@
 ---
 name: Light theme & image-scrim inversion rule
-description: The app is a single LIGHT "Vanilla & Botanical" theme; image/video overlays keep dark charcoal scrims + white text while solid surfaces are light cards + dark ink text. Multi-hue accent semantics (green/gold/peach/navy).
+description: The app is a single LIGHT "Studio Rose" theme; image/video overlays keep dark charcoal scrims + white text while solid surfaces are light cards + dark ink text. Multi-hue accent semantics (rose/honey/blush/sage/plum).
 ---
 
-The whole app uses a single LIGHT, warm palette ("Vanilla & Botanical": vanilla-cream
-`#F6F0DC` backgrounds, deep-navy `#17245A` heading ink, taupe-brown `#776B58` detail
-text, botanical-green accents) defined in `constants/colors.ts` (the SINGLE source of
-truth — brand tints derive from private `accentRgb`/`successRgb`/`goldRgb`/`blushRgb`
-constants, so a recolor is mostly a one-file rewrite). There is NO dark-mode toggle —
-light is the only theme. (History: pink "strawberry-cherry" → green "Lime & Ice" →
-this warmer multi-hue "Vanilla & Botanical".)
+The whole app uses a single LIGHT, warm palette ("Studio Rose": warm off-white
+`#F7F0EA` backgrounds, deep-plum `#4A2E33` heading ink, warm-taupe `#8A6F66` detail
+text, dusty-rose accents) defined in `constants/colors.ts` (the SINGLE source of
+truth — brand tints derive from private `accentRgb`/`successRgb`/`honeyRgb`/`blushRgb`/
+`creamRgb` constants, so a recolor is mostly a one-file rewrite). There is NO dark-mode
+toggle — light is the only theme. (History: pink "strawberry-cherry" → green "Lime &
+Ice" → "Vanilla & Botanical" → this warm feminine "Studio Rose" inspired by a sunlit
+yoga studio: dusty-rose activewear, honey-wood floor, cream walls.)
 
 **Multi-hue accent discipline (this theme is NOT monochrome):**
-- Botanical green `colors.primary` #5E8F2E = primary actions, rings/bars, active tabs,
-  selected states, links (NO blue — `colors.link` is green). `accentSoft` #7FAE45 is
-  the lighter green; `accentDark` #2F5F22 is secondary/outline button text.
-- Warm honey gold `colors.highlight` #D99624 = celebratory highlights ONLY: streaks,
+- Dusty rose `colors.primary` #C57B86 = primary actions, rings/bars, active tabs,
+  selected states, links (NO blue — `colors.link` is rose). `accentSoft` #DCA3AB is
+  the lighter rose; `accentDark` #8E4A55 is secondary/outline button text.
+- Warm honey wood `colors.highlight` #C2925E = celebratory highlights ONLY: streaks,
   calories burned, achievements/badges, "Over" stop of BMI scale.
-- Soft peach blush `colors.blush` #F3B7A8 = feminine warmth, SPARINGLY: empty-state
+- Soft pink blush `colors.blush` #F3C7C2 = feminine warmth, SPARINGLY: empty-state
   icons, Premium badge, "Under" softness on BMI scale. NOT for functional selected
-  states (those stay green).
-- Deep navy `colors.foreground` = headings/important text; taupe `colors.mutedForeground`
-  /`muted` = detail text. Macros: protein green / carbs gold / fats coral. `danger`
-  is soft coral #D96B5F.
+  states (those stay rose).
+- Soft sage `colors.success` #7FA37C = small success pop (e.g. progress trend pill).
+- Deep plum `colors.foreground` = headings/important text; taupe `colors.mutedForeground`
+  /`muted` = detail text. Macros: protein rose / carbs honey / fats coral. `danger`
+  is warm coral #D9614F.
 
 **Scrim-inversion rule (the important one):** Content layered over photos or videos
 (workout player + rest screens in `app/workout/[id].tsx`, hero images, before/after

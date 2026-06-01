@@ -28,7 +28,7 @@ export function WaterDroplet({
             <Path d={dropPath} />
           </ClipPath>
         </Defs>
-        <Path d={dropPath} fill="rgba(119,107,88,0.07)" stroke={colors.cardBorder} strokeWidth={1.5} />
+        <Path d={dropPath} fill={colors.accentTintFaint} stroke={colors.cardBorder} strokeWidth={1.5} />
         <G clipPath="url(#dropClip)">
           <Rect x={0} y={fillY} width={vb} height={vb} fill="url(#dropFill)" opacity={0.9} />
           <Rect x={0} y={fillY} width={vb} height={3} fill={colors.accentSoft} />
