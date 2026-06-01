@@ -315,29 +315,31 @@ export default function WorkoutPlayer() {
                           )}
                         </View>
                       </View>
-                      {isCurrent ? (
-                        <Pressable style={styles.exPlay} onPress={() => setPaused((p) => !p)} hitSlop={6}>
-                          <Ionicons name={paused ? "play" : "pause"} size={18} color={colors.onPrimary} />
-                        </Pressable>
-                      ) : done ? (
-                        <View style={styles.exReplay}>
-                          <Ionicons name="reload" size={14} color={colors.accent} />
-                          <Text style={styles.exReplayText}>Replay</Text>
-                        </View>
-                      ) : (
-                        <View style={styles.exLock}>
-                          <Ionicons name="lock-closed-outline" size={17} color={colors.muted} />
-                        </View>
-                      )}
-                      {isAdmin && (
-                        <Pressable
-                          style={styles.exUpload}
-                          onPress={() => router.push("/admin/upload-exercise")}
-                          hitSlop={6}
-                        >
-                          <Ionicons name="cloud-upload-outline" size={17} color={colors.accent} />
-                        </Pressable>
-                      )}
+                      <View style={styles.exRight}>
+                        {isCurrent ? (
+                          <Pressable style={styles.exPlay} onPress={() => setPaused((p) => !p)} hitSlop={6}>
+                            <Ionicons name={paused ? "play" : "pause"} size={18} color={colors.onPrimary} />
+                          </Pressable>
+                        ) : done ? (
+                          <View style={styles.exReplay}>
+                            <Ionicons name="reload" size={14} color={colors.accent} />
+                            <Text style={styles.exReplayText}>Replay</Text>
+                          </View>
+                        ) : (
+                          <View style={styles.exLock}>
+                            <Ionicons name="lock-closed-outline" size={17} color={colors.muted} />
+                          </View>
+                        )}
+                        {isAdmin && (
+                          <Pressable
+                            style={styles.exUpload}
+                            onPress={() => router.push("/admin/upload-exercise")}
+                            hitSlop={6}
+                          >
+                            <Ionicons name="cloud-upload-outline" size={17} color={colors.accent} />
+                          </Pressable>
+                        )}
+                      </View>
                     </Pressable>
                   );
                 })}
@@ -736,6 +738,7 @@ const styles = StyleSheet.create({
   exCardMetaText: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.muted },
   exChip: { backgroundColor: "rgba(247,235,232,0.10)", paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999 },
   exChipText: { fontFamily: fonts.sansMedium, fontSize: 11, color: colors.accent },
+  exRight: { flexDirection: "row", alignItems: "center", gap: 8 },
   exPlay: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
   exReplay: { flexDirection: "row", alignItems: "center", gap: 5 },
   exReplayText: { fontFamily: fonts.sansMedium, fontSize: 12.5, color: colors.accent },
@@ -763,7 +766,6 @@ const styles = StyleSheet.create({
     borderColor: "rgba(242,212,204,0.3)",
     alignItems: "center",
     justifyContent: "center",
-    marginLeft: 8,
   },
   doneIcon: { width: 96, height: 96, borderRadius: 48, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
   doneTitle: { fontFamily: fonts.serifSemibold, fontSize: 34, color: colors.foreground, marginTop: 24 },
