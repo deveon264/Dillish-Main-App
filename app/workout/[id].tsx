@@ -33,8 +33,24 @@ export default function WorkoutPlayer() {
   const [remaining, setRemaining] = useState(() => workout?.exercises[0]?.seconds ?? 0);
   const [paused, setPaused] = useState(false);
   const [tab, setTab] = useState<"exercises" | "guidance" | "progress">("exercises");
+  const [toast, setToast] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedRef = useRef(false);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 1800);
+  };
+
+  const jumpTo = (i: number) => {
+    if (i >= index) return;
+    setIndex(i);
+    setRemaining(workout!.exercises[i].seconds);
+    setPaused(false);
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
 
   const current = workout?.exercises[index];
   const total = workout?.exercises.length ?? 0;
@@ -42,6 +58,7 @@ export default function WorkoutPlayer() {
   useEffect(() => {
     return () => {
       if (timer.current) clearInterval(timer.current);
+      if (toastTimer.current) clearTimeout(toastTimer.current);
     };
   }, []);
 
@@ -262,8 +279,19 @@ export default function WorkoutPlayer() {
                 {workout.exercises.map((e, i) => {
                   const done = i < index;
                   const isCurrent = i === index;
+                  const locked = i > index;
                   return (
-                    <View key={e.id} style={[styles.exCard, isCurrent && styles.exCardActive]}>
+                    <Pressable
+                      key={e.id}
+                      disabled={isCurrent}
+                      onPress={() => (locked ? showToast("Complete the current exercise first") : jumpTo(i))}
+                      style={({ pressed }) => [
+                        styles.exCard,
+                        isCurrent && styles.exCardActive,
+                        locked && styles.exCardLocked,
+                        pressed && done && styles.exCardPressed,
+                      ]}
+                    >
                       {isCurrent && (
                         <View style={styles.nowTag}>
                           <Text style={styles.nowTagText}>Now</Text>
@@ -292,8 +320,15 @@ export default function WorkoutPlayer() {
                           <Ionicons name={paused ? "play" : "pause"} size={18} color={colors.onPrimary} />
                         </Pressable>
                       ) : done ? (
-                        <Text style={styles.exDoneLabel}>Done</Text>
-                      ) : null}
+                        <View style={styles.exReplay}>
+                          <Ionicons name="reload" size={14} color={colors.accent} />
+                          <Text style={styles.exReplayText}>Replay</Text>
+                        </View>
+                      ) : (
+                        <View style={styles.exLock}>
+                          <Ionicons name="lock-closed-outline" size={17} color={colors.muted} />
+                        </View>
+                      )}
                       {isAdmin && (
                         <Pressable
                           style={styles.exUpload}
@@ -303,7 +338,7 @@ export default function WorkoutPlayer() {
                           <Ionicons name="cloud-upload-outline" size={17} color={colors.accent} />
                         </Pressable>
                       )}
-                    </View>
+                    </Pressable>
                   );
                 })}
               </View>
@@ -454,6 +489,12 @@ export default function WorkoutPlayer() {
             )}
           </View>
         </ScrollView>
+        {toast && (
+          <View style={[styles.toast, { bottom: insets.bottom + 24 }]} pointerEvents="none">
+            <Ionicons name="lock-closed" size={14} color={colors.foreground} />
+            <Text style={styles.toastText}>{toast}</Text>
+          </View>
+        )}
       </GradientBackground>
     );
   }
@@ -674,6 +715,8 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   exCardActive: { borderColor: colors.accent, backgroundColor: "rgba(201,137,122,0.12)" },
+  exCardLocked: { opacity: 0.5 },
+  exCardPressed: { opacity: 0.7 },
   nowTag: {
     position: "absolute",
     top: -9,
@@ -694,7 +737,23 @@ const styles = StyleSheet.create({
   exChip: { backgroundColor: "rgba(247,235,232,0.10)", paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999 },
   exChipText: { fontFamily: fonts.sansMedium, fontSize: 11, color: colors.accent },
   exPlay: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
-  exDoneLabel: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.muted },
+  exReplay: { flexDirection: "row", alignItems: "center", gap: 5 },
+  exReplayText: { fontFamily: fonts.sansMedium, fontSize: 12.5, color: colors.accent },
+  exLock: { width: 38, height: 38, alignItems: "center", justifyContent: "center" },
+  toast: {
+    position: "absolute",
+    alignSelf: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(28,22,21,0.95)",
+    borderWidth: 1,
+    borderColor: "rgba(247,235,232,0.15)",
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+    borderRadius: 999,
+  },
+  toastText: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.foreground },
   exUpload: {
     width: 38,
     height: 38,
