@@ -14,6 +14,7 @@ import { runCleanup, type SweepIO } from "@/app/api/exercise-cleanup+api";
 import {
   thankYouVideoGet,
   thankYouVideoPost,
+  thankYouVideoDelete,
   type ThankYouVideoStorage,
 } from "@/app/api/thank-you-video+api";
 import type { StoredObject } from "@/lib/objectStorageServer";
@@ -119,6 +120,17 @@ function videoPost(token: string, bytes: Uint8Array): Request {
     },
     body: bytes as unknown as BodyInit,
   });
+}
+
+function videoDelete(token: string): Request {
+  return new Request("http://t/api/thank-you-video", {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+function videoGet(query = ""): Request {
+  return new Request(`http://t/api/thank-you-video${query}`, { method: "GET" });
 }
 
 // =========================================================================
@@ -247,4 +259,74 @@ test("a replaced thank-you video plays after cleanup; old object removed, curren
     playRes.headers.get("Location"),
     `https://signed.example/${encodeURIComponent(currentPath)}`
   );
+});
+
+// =========================================================================
+// DELETE removes the stored object and clears the saved path/mime
+// =========================================================================
+
+test("DELETE reclaims the stored object and clears the saved path/mime", async () => {
+  const token = await adminToken();
+  const fake = makeFake();
+
+  // Upload a video so there is something to remove.
+  const up = await thankYouVideoPost(videoPost(token, new Uint8Array(512).fill(7)), fake);
+  assert.equal(up.status, 200);
+  const path = db.settings.get("thank_you_video_path")!;
+  assert.ok(path.startsWith(THANK_YOU_PREFIX));
+  assert.equal(db.settings.get("thank_you_video_mime"), "video/mp4");
+  assert.equal(fake.objects.has(path), true);
+
+  // Delete it.
+  const res = await thankYouVideoDelete(videoDelete(token), fake);
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { ok: true });
+
+  // The stored object was reclaimed from storage...
+  assert.deepEqual(fake.deleted, [path]);
+  assert.equal(fake.objects.has(path), false);
+
+  // ...and the saved path/mime were cleared so onboarding skips the video.
+  assert.equal(db.settings.get("thank_you_video_path"), "");
+  assert.equal(db.settings.get("thank_you_video_mime"), "");
+});
+
+// =========================================================================
+// GET ?check=1 reflects whether a video is currently set
+// =========================================================================
+
+test("GET ?check=1 reports exists:false after delete and exists:true after an upload", async () => {
+  const token = await adminToken();
+  const fake = makeFake();
+
+  // No video set yet.
+  const before = await thankYouVideoGet(videoGet("?check=1"), fake);
+  assert.equal(before.status, 200);
+  assert.deepEqual(await before.json(), { exists: false });
+
+  // After uploading, the check reports it exists.
+  await thankYouVideoPost(videoPost(token, new Uint8Array(256).fill(3)), fake);
+  const afterUpload = await thankYouVideoGet(videoGet("?check=1"), fake);
+  assert.equal(afterUpload.status, 200);
+  assert.deepEqual(await afterUpload.json(), { exists: true });
+
+  // After deleting, the check reports it no longer exists.
+  await thankYouVideoDelete(videoDelete(token), fake);
+  const afterDelete = await thankYouVideoGet(videoGet("?check=1"), fake);
+  assert.equal(afterDelete.status, 200);
+  assert.deepEqual(await afterDelete.json(), { exists: false });
+});
+
+// =========================================================================
+// GET with no query returns 404 when no video is set
+// =========================================================================
+
+test("GET (no query) returns 404 when no thank-you video is set", async () => {
+  const fake = makeFake();
+
+  const res = await thankYouVideoGet(videoGet(), fake);
+  assert.equal(res.status, 404);
+
+  // Nothing was resolved to a signed URL.
+  assert.equal(res.headers.get("Location"), null);
 });
