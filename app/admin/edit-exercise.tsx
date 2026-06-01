@@ -16,7 +16,6 @@ import { GradientBackground } from "@/components/GradientBackground";
 import { Button } from "@/components/Button";
 import { useInsets } from "@/hooks/useInsets";
 import { useAuth } from "@/contexts/AuthContext";
-import { AdminUnlock } from "@/components/AdminUnlock";
 import { updateExercise } from "@/lib/exercises";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
@@ -32,7 +31,7 @@ function notify(title: string, message: string) {
 export default function EditExercise() {
   const router = useRouter();
   const insets = useInsets();
-  const { isAdmin, adminUnlocked, adminToken } = useAuth();
+  const { isAdmin, adminToken } = useAuth();
   const params = useLocalSearchParams<{
     id: string;
     title?: string;
@@ -64,22 +63,6 @@ export default function EditExercise() {
           <Text style={styles.guardText}>This area is reserved for the Florish coach account.</Text>
           <Button label="Go Back" variant="outline" onPress={() => router.back()} style={{ marginTop: 20, width: 200 }} />
         </View>
-      </GradientBackground>
-    );
-  }
-
-  if (!adminUnlocked) {
-    return (
-      <GradientBackground>
-        <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 }]}
-          keyboardShouldPersistTaps="handled"
-        >
-          <Header onBack={() => router.back()} />
-          <View style={{ marginTop: 24 }}>
-            <AdminUnlock />
-          </View>
-        </ScrollView>
       </GradientBackground>
     );
   }

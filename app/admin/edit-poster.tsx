@@ -16,7 +16,6 @@ import { Image } from "expo-image";
 import { GradientBackground } from "@/components/GradientBackground";
 import { useInsets } from "@/hooks/useInsets";
 import { useAuth } from "@/contexts/AuthContext";
-import { AdminUnlock } from "@/components/AdminUnlock";
 import { Button } from "@/components/Button";
 import { updateExercisePoster, posterUrl, videoUrl, PosterAsset } from "@/lib/exercises";
 import { generatePosterFromVideo } from "@/lib/posterFromVideo";
@@ -31,7 +30,7 @@ function notify(title: string, message: string) {
 export default function EditPoster() {
   const router = useRouter();
   const insets = useInsets();
-  const { isAdmin, adminUnlocked, adminToken } = useAuth();
+  const { isAdmin, adminToken } = useAuth();
   const { id, title, hasPoster } = useLocalSearchParams<{
     id: string;
     title?: string;
@@ -52,22 +51,6 @@ export default function EditPoster() {
           <Text style={styles.guardText}>This area is reserved for the Florish coach account.</Text>
           <Button label="Go Back" variant="outline" onPress={() => router.back()} style={{ marginTop: 20, width: 200 }} />
         </View>
-      </GradientBackground>
-    );
-  }
-
-  if (!adminUnlocked) {
-    return (
-      <GradientBackground>
-        <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 }]}
-          keyboardShouldPersistTaps="handled"
-        >
-          <Header onBack={() => router.back()} />
-          <View style={{ marginTop: 24 }}>
-            <AdminUnlock />
-          </View>
-        </ScrollView>
       </GradientBackground>
     );
   }

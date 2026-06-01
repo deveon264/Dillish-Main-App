@@ -16,7 +16,6 @@ import { GradientBackground } from "@/components/GradientBackground";
 import { Button } from "@/components/Button";
 import { useInsets } from "@/hooks/useInsets";
 import { useAuth } from "@/contexts/AuthContext";
-import { AdminUnlock } from "@/components/AdminUnlock";
 import { uploadExercise, VideoAsset, PosterAsset } from "@/lib/exercises";
 import { generatePosterFromVideo } from "@/lib/posterFromVideo";
 import { colors } from "@/constants/colors";
@@ -32,7 +31,7 @@ function notify(title: string, message: string) {
 export default function UploadExercise() {
   const router = useRouter();
   const insets = useInsets();
-  const { isAdmin, adminUnlocked, adminToken } = useAuth();
+  const { isAdmin, adminToken } = useAuth();
 
   const [asset, setAsset] = useState<(VideoAsset & { size?: number }) | null>(null);
   const [poster, setPoster] = useState<PosterAsset | null>(null);
@@ -48,32 +47,6 @@ export default function UploadExercise() {
           <Text style={styles.guardText}>This area is reserved for the Florish coach account.</Text>
           <Button label="Go Back" variant="outline" onPress={() => router.back()} style={{ marginTop: 20, width: 200 }} />
         </View>
-      </GradientBackground>
-    );
-  }
-
-  if (!adminUnlocked) {
-    return (
-      <GradientBackground>
-        <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 }]}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.header}>
-            <Pressable style={styles.roundBtn} onPress={() => router.back()} hitSlop={8}>
-              <Ionicons name="chevron-back" size={22} color={colors.foreground} />
-            </Pressable>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.eyebrow}>COACH</Text>
-              <Text style={styles.title}>
-                Upload <Text style={styles.titleItalic}>Exercise</Text>
-              </Text>
-            </View>
-          </View>
-          <View style={{ marginTop: 24 }}>
-            <AdminUnlock />
-          </View>
-        </ScrollView>
       </GradientBackground>
     );
   }

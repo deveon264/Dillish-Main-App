@@ -53,6 +53,23 @@ export function ensureSchema(): Promise<void> {
           )`
         )
       )
+      // Real, server-verified accounts. Identity lives here (not on the device)
+      // so uploads/deletes and every member's data can be tied to a verified
+      // login. The coach is simply the row flagged is_admin.
+      .then(() =>
+        pool.query(
+          `CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            avatar TEXT,
+            is_admin BOOLEAN NOT NULL DEFAULT FALSE,
+            onboarding_complete BOOLEAN NOT NULL DEFAULT FALSE,
+            created_at BIGINT NOT NULL
+          )`
+        )
+      )
       .then(() => undefined)
       .catch((e) => {
         schemaReady = null;

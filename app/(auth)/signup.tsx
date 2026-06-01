@@ -8,6 +8,7 @@ import { Button } from "@/components/Button";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInsets } from "@/hooks/useInsets";
+import { isAdminEmail } from "@/constants/admin";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
@@ -28,11 +29,14 @@ export default function Signup() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passcode, setPasscode] = useState("");
   const [agree, setAgree] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const score = useMemo(() => strength(password), [password]);
+  // The coach email needs the server-only passcode to claim admin rights.
+  const needsPasscode = useMemo(() => isAdminEmail(email.trim().toLowerCase()), [email]);
 
   const onSubmit = async () => {
     setError(null);
@@ -41,7 +45,7 @@ export default function Signup() {
       return;
     }
     setLoading(true);
-    const res = await signup(name, email, password);
+    const res = await signup(name, email, password, needsPasscode ? passcode : undefined);
     setLoading(false);
     if (res.ok) {
       router.replace("/onboarding/goal");
@@ -78,6 +82,21 @@ export default function Signup() {
               onChangeText={setEmail}
             />
             <Input icon="lock-closed-outline" placeholder="Password" password value={password} onChangeText={setPassword} />
+
+            {needsPasscode ? (
+              <View style={styles.passcodeBlock}>
+                <Input
+                  icon="key-outline"
+                  placeholder="Coach passcode"
+                  password
+                  value={passcode}
+                  onChangeText={setPasscode}
+                />
+                <Text style={styles.passcodeHint}>
+                  This email is reserved for the coach. Enter the coach passcode to verify.
+                </Text>
+              </View>
+            ) : null}
 
             {password.length > 0 ? (
               <View style={styles.strength}>
@@ -134,6 +153,8 @@ const styles = StyleSheet.create({
   title: { fontFamily: fonts.serif, fontSize: 40, color: colors.foreground, marginTop: 18 },
   subtitle: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted, marginTop: 6 },
   form: { marginTop: 4 },
+  passcodeBlock: { marginBottom: 8, gap: 6 },
+  passcodeHint: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, lineHeight: 16, paddingHorizontal: 2 },
   strength: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 14, marginTop: -4 },
   strengthBars: { flexDirection: "row", gap: 6, flex: 1 },
   strengthBar: { flex: 1, height: 4, borderRadius: 2 },

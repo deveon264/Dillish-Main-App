@@ -15,7 +15,6 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
 import { useInsets } from "@/hooks/useInsets";
 import { useAuth } from "@/contexts/AuthContext";
-import { AdminUnlock } from "@/components/AdminUnlock";
 import { AdminControls } from "@/components/AdminControls";
 import { listExercises, deleteExercise, posterUrl, UploadedExercise } from "@/lib/exercises";
 import { colors } from "@/constants/colors";
@@ -30,7 +29,7 @@ function formatSize(bytes: number): string {
 export default function ExerciseLibrary() {
   const router = useRouter();
   const insets = useInsets();
-  const { isAdmin, adminUnlocked, adminToken } = useAuth();
+  const { isAdmin, adminToken } = useAuth();
   const [items, setItems] = useState<UploadedExercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -98,13 +97,7 @@ export default function ExerciseLibrary() {
           )}
         </View>
 
-        {isAdmin && !adminUnlocked && (
-          <View style={{ marginTop: 18 }}>
-            <AdminUnlock />
-          </View>
-        )}
-
-        {adminUnlocked && <AdminControls />}
+        {isAdmin && <AdminControls />}
 
         {loading ? (
           <View style={styles.center}>
@@ -182,7 +175,7 @@ export default function ExerciseLibrary() {
                     </View>
                   </View>
                 </Pressable>
-                {adminUnlocked && (
+                {isAdmin && (
                   <View style={styles.cardActions}>
                     <Pressable
                       style={styles.iconBtn}

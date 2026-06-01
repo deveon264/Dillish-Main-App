@@ -1,5 +1,5 @@
-import { ADMIN_EMAIL, isAdminEmail } from "@/constants/admin";
-import { getSetting, setSetting } from "@/lib/db";
+import { isAdminEmail } from "@/constants/admin";
+import { getSetting } from "@/lib/db";
 
 // Key under which a coach-rotated passcode is stored. When present it overrides
 // the ADMIN_PASSCODE env var so the coach can change the passcode in-app
@@ -15,7 +15,7 @@ const PASSCODE_SETTING_KEY = "admin_passcode";
 // Upload/delete routes then verify that signature themselves — a forged token
 // or a spoofed header grants nothing.
 
-const TOKEN_TTL_SEC = 60 * 60 * 12; // 12 hours
+const SESSION_TTL_SEC = 60 * 60 * 24 * 30; // 30 days
 const SIGN_INFO = "florish-admin-session-v1";
 
 const enc = new TextEncoder();
@@ -108,38 +108,61 @@ export async function verifyPasscode(input: string | null | undefined): Promise<
   return timingSafeEqual(input, await getEffectivePasscode());
 }
 
-// Rotates the coach passcode after confirming the current one. The new value is
-// persisted to the DB and immediately overrides the ADMIN_PASSCODE env var.
-// Existing signed tokens stay valid because they are independent of the passcode.
-export async function rotatePasscode(
-  current: string | null | undefined,
-  next: string | null | undefined
-): Promise<{ ok: boolean; error?: string }> {
-  if (!(await verifyPasscode(current))) {
-    return { ok: false, error: "Current passcode is incorrect" };
-  }
-  const trimmed = (next ?? "").trim();
-  if (trimmed.length < 6) {
-    return { ok: false, error: "New passcode must be at least 6 characters" };
-  }
-  if (timingSafeEqual(trimmed, (current ?? "").trim())) {
-    return { ok: false, error: "New passcode must be different from the current one" };
-  }
-  await setSetting(PASSCODE_SETTING_KEY, trimmed);
-  return { ok: true };
-}
+export type SessionPayload = {
+  sub: string;
+  email: string;
+  role: "admin" | "member";
+  exp: number;
+};
 
-export async function mintAdminToken(): Promise<{ token: string; expiresAt: number }> {
-  const expiresAt = Date.now() + TOKEN_TTL_SEC * 1000;
+// Mints the signed session token issued on login/signup. It is the single proof
+// of identity the client sends back on authenticated requests. The admin's token
+// carries role "admin" and the admin email, so it doubles as the admin token —
+// verifyAdminToken below (and the cleanup cron) accept it directly, which is why
+// uploads/deletes no longer need a separately-entered passcode.
+export async function mintSessionToken(opts: {
+  sub: string;
+  email: string;
+  isAdmin: boolean;
+}): Promise<{ token: string; expiresAt: number }> {
+  const expiresAt = Date.now() + SESSION_TTL_SEC * 1000;
   const payload = b64url(
-    enc.encode(JSON.stringify({ role: "admin", email: ADMIN_EMAIL, exp: expiresAt }))
+    enc.encode(
+      JSON.stringify({
+        sub: opts.sub,
+        email: opts.email,
+        role: opts.isAdmin ? "admin" : "member",
+        exp: expiresAt,
+      })
+    )
   );
   const sig = await hmac(payload);
   return { token: `${payload}.${sig}`, expiresAt };
 }
 
+// Verifies any session token (member or admin) and returns its payload, or null
+// if missing, malformed, tampered with, or expired.
+export async function verifySessionToken(
+  token: string | null | undefined
+): Promise<SessionPayload | null> {
+  if (!token) return null;
+  const parts = token.split(".");
+  if (parts.length !== 2) return null;
+  const [payload, sig] = parts;
+  if (!timingSafeEqual(sig, await hmac(payload))) return null;
+  try {
+    const data = JSON.parse(new TextDecoder().decode(b64urlDecode(payload)));
+    if (typeof data.exp !== "number" || data.exp < Date.now()) return null;
+    if (data.role !== "admin" && data.role !== "member") return null;
+    if (typeof data.sub !== "string" || typeof data.email !== "string") return null;
+    return data as SessionPayload;
+  } catch {
+    return null;
+  }
+}
+
 // Returns the verified admin email, or null if the token is missing, malformed,
-// tampered with, or expired.
+// tampered with, expired, or does not belong to the admin account.
 export async function verifyAdminToken(token: string | null | undefined): Promise<string | null> {
   if (!token) return null;
   const parts = token.split(".");
