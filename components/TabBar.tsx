@@ -56,7 +56,7 @@ export function TabBar({ state, navigation }: TabBarProps) {
                 ) : (
                   <MaterialCommunityIcons name={iconName as keyof typeof MaterialCommunityIcons.glyphMap} size={22} color={color} />
                 )}
-                <Text style={[styles.label, { color }, focused && styles.labelActive]}>{conf.label}</Text>
+                <Text numberOfLines={1} style={[styles.label, { color }, focused && styles.labelActive]}>{conf.label}</Text>
               </View>
             </Pressable>
           );
@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingTop: 8,
     backgroundColor: "transparent",
   },
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 4,
     paddingVertical: 8,
-    paddingHorizontal: 6,
+    paddingHorizontal: 3,
     borderRadius: 16,
     width: "100%",
     borderWidth: 1,
@@ -103,6 +103,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(201,137,122,0.16)",
     borderColor: "rgba(242,212,204,0.22)",
   },
-  label: { fontFamily: fonts.sansMedium, fontSize: 10.5 },
+  label: { fontFamily: fonts.sansMedium, fontSize: 10 },
   labelActive: { fontFamily: fonts.sansSemibold },
 });
