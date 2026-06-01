@@ -88,8 +88,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
     maxWidth: 320,
   },
-  trustRow: { flexDirection: "row", marginTop: 16, gap: 22 },
-  trustItem: { alignItems: "center", flexDirection: "row", gap: 8 },
+  trustRow: { flexDirection: "row", marginTop: 18, justifyContent: "space-between" },
+  trustItem: { flex: 1, alignItems: "center", flexDirection: "column", gap: 8 },
   trustIcon: {
     width: 34,
     height: 34,
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  trustLabel: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.muted },
+  trustLabel: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.muted, textAlign: "center" },
   actions: { gap: 8 },
   signin: {
     alignSelf: "center",
