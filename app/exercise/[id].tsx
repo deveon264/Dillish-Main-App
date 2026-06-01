@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -26,11 +26,48 @@ export default function ExercisePlayer() {
   const insets = useInsets();
   const [showPoster, setShowPoster] = useState(!!hasPoster);
   const [posterError, setPosterError] = useState(false);
+  const [videoState, setVideoState] = useState<"loading" | "ready" | "error">("loading");
+  const [retry, setRetry] = useState(0);
 
-  const player = useVideoPlayer(id ? videoUrl(id) : null, (p) => {
+  const player = useVideoPlayer(null, (p) => {
     p.loop = false;
-    p.play();
   });
+
+  // The video endpoint responds with a 302 redirect to a short-lived signed
+  // GCS URL. iOS's native player (Expo Go) does not reliably follow that
+  // cross-origin redirect, so we resolve it in JS first and hand the player the
+  // final URL. On web the browser's media element follows the redirect fine and
+  // fetching the GCS URL directly would fail CORS, so we pass it through as-is.
+  useEffect(() => {
+    if (!id) {
+      setVideoState("error");
+      return;
+    }
+    let cancelled = false;
+    setVideoState("loading");
+    (async () => {
+      try {
+        let finalUrl = videoUrl(id);
+        if (Platform.OS !== "web") {
+          const resp = await fetch(finalUrl, {
+            redirect: "follow",
+            headers: { Range: "bytes=0-0" },
+          });
+          if (!resp.ok) throw new Error(`status ${resp.status}`);
+          finalUrl = resp.url || finalUrl;
+        }
+        if (cancelled) return;
+        await player.replaceAsync(finalUrl);
+        player.play();
+        if (!cancelled) setVideoState("ready");
+      } catch {
+        if (!cancelled) setVideoState("error");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, player, retry]);
 
   // Keep the poster visible until the first frame is ready, then reveal the video.
   useEventListener(player, "statusChange", ({ status }) => {
@@ -60,7 +97,7 @@ export default function ExercisePlayer() {
             contentFit="contain"
             nativeControls
           />
-          {showPoster && !!hasPoster && !posterError && (
+          {showPoster && videoState !== "error" && !!hasPoster && !posterError && (
             <Image
               source={{ uri: posterUrl(id) }}
               style={styles.poster}
@@ -69,6 +106,21 @@ export default function ExercisePlayer() {
               pointerEvents="none"
               onError={() => setPosterError(true)}
             />
+          )}
+          {videoState === "loading" && (
+            <View style={styles.videoOverlay} pointerEvents="none">
+              <ActivityIndicator color={colors.foreground} />
+              <Text style={styles.overlayText}>Loading video…</Text>
+            </View>
+          )}
+          {videoState === "error" && (
+            <View style={styles.videoOverlay}>
+              <Ionicons name="alert-circle-outline" size={30} color={colors.foreground} />
+              <Text style={styles.overlayText}>This video couldn’t be loaded.</Text>
+              <Pressable style={styles.retryBtn} onPress={() => setRetry((n) => n + 1)}>
+                <Text style={styles.retryText}>Try again</Text>
+              </Pressable>
+            </View>
           )}
         </View>
 
@@ -128,6 +180,30 @@ const styles = StyleSheet.create({
   },
   video: { width: "100%", aspectRatio: 16 / 9 },
   poster: { ...StyleSheet.absoluteFillObject },
+  videoOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    paddingHorizontal: 24,
+    backgroundColor: "rgba(0,0,0,0.55)",
+  },
+  overlayText: {
+    fontFamily: fonts.sansMedium,
+    fontSize: 14,
+    color: colors.foreground,
+    textAlign: "center",
+  },
+  retryBtn: {
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.card,
+    paddingHorizontal: 18,
+    paddingVertical: 9,
+    borderRadius: 999,
+  },
+  retryText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.foreground },
   info: { paddingHorizontal: 20, marginTop: 24, gap: 8 },
   cat: { fontFamily: fonts.sansSemibold, fontSize: 12, color: colors.accent, letterSpacing: 0.6 },
   title: { fontFamily: fonts.serifSemibold, fontSize: 28, color: colors.foreground },

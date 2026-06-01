@@ -105,7 +105,7 @@ export default function UploadExercise() {
         onProgress: (sent, total) => setProgress({ sent, total }),
       });
       if (Platform.OS !== "web") Alert.alert("Uploaded", "Your exercise video is now live for all members.");
-      router.back();
+      router.replace("/exercises");
     } catch (e: any) {
       notify("Upload failed", e?.message ?? "Please try again.");
     } finally {
