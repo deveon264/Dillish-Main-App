@@ -34,6 +34,13 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 120
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Florish needs access to your photos to set a profile picture.",
+          "cameraPermission": "Florish needs access to your camera to take a profile photo."
+        }
       ]
     ],
     "experiments": {
