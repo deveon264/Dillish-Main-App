@@ -75,8 +75,8 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: "flex-end", paddingBottom: 28 },
   title: {
     fontFamily: fonts.serif,
-    fontSize: 52,
-    lineHeight: 54,
+    fontSize: 44,
+    lineHeight: 48,
     color: colors.foreground,
   },
   titleItalic: { fontFamily: fonts.serifItalic, color: colors.accent },
