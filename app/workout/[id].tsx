@@ -10,7 +10,7 @@ import { useEventListener } from "expo";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Button } from "@/components/Button";
 import { getWorkout } from "@/constants/workouts";
-import { listWorkoutExercises, videoUrl } from "@/lib/exercises";
+import { listWorkoutExercises, videoUrl, posterUrl } from "@/lib/exercises";
 import { useData } from "@/contexts/DataContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { todayKey, getJSON, setJSON } from "@/lib/storage";
@@ -491,12 +491,20 @@ export default function WorkoutPlayer() {
     const elapsed = priorSeconds + (current.seconds - remaining);
     const overall = totalSeconds > 0 ? elapsed / totalSeconds : 0;
     const overallPct = `${Math.round(overall * 100)}%` as const;
-    // The progress bar tracks the real video clip when one is loaded; otherwise
-    // it falls back to the whole-workout simulated timeline.
-    const hasVideo = !!currentVideo && videoDuration > 0.1;
-    const barElapsed = hasVideo ? Math.min(videoTime, videoDuration) : elapsed;
-    const barTotal = hasVideo ? videoDuration : totalSeconds;
+    // When this exercise has an uploaded video, the bar always tracks the clip:
+    // 0:00 / empty while it loads, then the real clip time. Exercises with no
+    // video keep the whole-workout simulated timeline.
+    const hasMappedVideo = !!currentVideo;
+    const barElapsed = hasMappedVideo ? Math.min(videoTime, videoDuration) : elapsed;
+    const barTotal = hasMappedVideo ? videoDuration : totalSeconds;
     const barPct = `${Math.round((barTotal > 0 ? barElapsed / barTotal : 0) * 100)}%` as const;
+    // While a mapped clip loads, show its poster (the video's own frame) instead
+    // of the generic stock thumbnail. No poster → neutral dark background.
+    const playerImage = hasMappedVideo
+      ? currentVideo!.hasPoster
+        ? { uri: posterUrl(currentVideo!.id) }
+        : undefined
+      : current.image ?? workout.image;
     const kcalBurned = Math.round(workout.kcal * overall);
     const kcalPct = `${Math.round(overall * 100)}%` as const;
     const bpm = 96 + Math.round(overall * 44);
@@ -527,7 +535,7 @@ export default function WorkoutPlayer() {
     return (
       <GradientBackground>
         <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 24 }} showsVerticalScrollIndicator={false}>
-          <ImageBackground source={current.image ?? workout.image} style={styles.player}>
+          <ImageBackground source={playerImage} style={styles.player}>
             {currentVideo && (
               <VideoView
                 player={player}
@@ -967,7 +975,7 @@ const styles = StyleSheet.create({
   notFound: { fontFamily: fonts.serif, fontSize: 22, color: colors.foreground },
   metaItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   rowCenter: { flexDirection: "row", alignItems: "center", gap: 10 },
-  player: { height: 360, justifyContent: "space-between" },
+  player: { height: 360, justifyContent: "space-between", backgroundColor: colors.background },
   playerOverlay: { flex: 1, justifyContent: "space-between" },
   playerTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20 },
   roundBtn: {
