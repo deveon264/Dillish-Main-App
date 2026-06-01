@@ -150,6 +150,22 @@ function errorFrom(body: string, fallback: string): string {
   return fallback;
 }
 
+// Which step of the native direct-to-storage upload failed, so the UI can tell
+// the coach whether the bytes ever left the device and whether a retry is safe:
+//   "start"   — couldn't even request a storage slot (nothing uploaded yet)
+//   "upload"  — the bytes were interrupted mid-transfer
+//   "confirm" — bytes reached storage but the server never saved the row
+export type UploadStage = "start" | "upload" | "confirm";
+
+export class UploadError extends Error {
+  stage: UploadStage;
+  constructor(stage: UploadStage, message: string) {
+    super(message);
+    this.name = "UploadError";
+    this.stage = stage;
+  }
+}
+
 export async function uploadExercise(params: {
   title: string;
   description: string;
@@ -213,49 +229,86 @@ export async function uploadExercise(params: {
     item = (JSON.parse(body) as { item: UploadedExercise }).item;
   } else {
     // Native uploads the video bytes straight to object storage (one hop instead
-    // of relaying through the app server). 1) ask for a signed PUT slot, 2) PUT
-    // the file directly with progress, 3) confirm so the server writes the row.
-    const slotResp = await fetch(`${getApiUrl()}/api/exercise-upload-url`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    // of relaying through the app server) in three steps, each with its own
+    // failure mode so the UI can guide the coach.
+    // 1) Request a signed storage slot. A failure here means nothing has left
+    //    the device yet, so a retry is completely clean.
+    let slotResp: Response;
+    try {
+      slotResp = await fetch(`${getApiUrl()}/api/exercise-upload-url`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch {
+      throw new UploadError(
+        "start",
+        "We couldn't reach storage to start the upload. Check your connection and try again."
+      );
+    }
     if (!slotResp.ok) {
-      throw new Error(errorFrom(await slotResp.text(), "Could not start upload"));
+      throw new UploadError("start", errorFrom(await slotResp.text(), "We couldn't start the upload."));
     }
     const { uploadUrl, objectPath } = (await slotResp.json()) as {
       uploadUrl: string;
       objectPath: string;
     };
 
-    const putStatus = await putBinaryDirect(uploadUrl, asset.uri, type, onProgress);
+    // 2) Stream the bytes straight to storage. If the network drops here the
+    //    transfer is incomplete, so the coach just needs to send it again.
+    let putStatus: number;
+    try {
+      putStatus = await putBinaryDirect(uploadUrl, asset.uri, type, onProgress);
+    } catch (e: any) {
+      // Cancellation is a deliberate user action, not a failure — let it pass
+      // through untouched.
+      if (e?.message === "Upload was cancelled") throw e;
+      throw new UploadError(
+        "upload",
+        "The video upload was interrupted before it finished. Check your connection and try again."
+      );
+    }
     if (putStatus < 200 || putStatus >= 300) {
-      throw new Error("Upload failed");
+      throw new UploadError("upload", "The video upload didn't complete. Please try again.");
     }
 
     // The byte count drives the stored video_size and the server's size check.
     const info = await getInfoAsync(asset.uri);
     const videoSize = info.exists && typeof info.size === "number" ? info.size : 0;
 
-    const confirmResp = await fetch(`${getApiUrl()}/api/exercise-confirm`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        objectPath,
-        title,
-        description,
-        cues,
-        category,
-        level,
-        duration,
-        filename: asset.fileName ?? "",
-        workoutId: workoutId ?? "",
-        exerciseId: workoutExerciseId ?? "",
-        videoMime: type,
-        videoSize,
-      }),
-    });
+    // 3) Confirm so the server writes the row. The bytes are already in storage
+    //    by now; if this step fails the upload "almost" succeeded and a retry
+    //    safely re-runs the whole flow (the orphaned object is reclaimed later).
+    let confirmResp: Response;
+    try {
+      confirmResp = await fetch(`${getApiUrl()}/api/exercise-confirm`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          objectPath,
+          title,
+          description,
+          cues,
+          category,
+          level,
+          duration,
+          filename: asset.fileName ?? "",
+          workoutId: workoutId ?? "",
+          exerciseId: workoutExerciseId ?? "",
+          videoMime: type,
+          videoSize,
+        }),
+      });
+    } catch {
+      throw new UploadError(
+        "confirm",
+        "Your video uploaded, but saving its details was interrupted. Tap Retry to finish."
+      );
+    }
     if (!confirmResp.ok) {
-      throw new Error(errorFrom(await confirmResp.text(), "Upload failed"));
+      throw new UploadError(
+        "confirm",
+        errorFrom(await confirmResp.text(), "Your video uploaded, but we couldn't save its details.")
+      );
     }
     item = (JSON.parse(await confirmResp.text()) as { item: UploadedExercise }).item;
   }

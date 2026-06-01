@@ -16,7 +16,7 @@ import { GradientBackground } from "@/components/GradientBackground";
 import { Button } from "@/components/Button";
 import { useInsets } from "@/hooks/useInsets";
 import { useAuth } from "@/contexts/AuthContext";
-import { uploadExercise, VideoAsset, PosterAsset } from "@/lib/exercises";
+import { uploadExercise, UploadError, UploadStage, VideoAsset, PosterAsset } from "@/lib/exercises";
 import { generatePosterFromVideo } from "@/lib/posterFromVideo";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
@@ -26,6 +26,21 @@ const MAX_MB = 80;
 function notify(title: string, message: string) {
   if (Platform.OS === "web") window.alert(`${title}\n\n${message}`);
   else Alert.alert(title, message);
+}
+
+// Native direct uploads fail at a specific step; give each a clear title so the
+// coach knows whether the bytes ever left the device and that a retry is safe.
+function failureTitle(stage: UploadStage | undefined): string {
+  switch (stage) {
+    case "start":
+      return "Couldn't start upload";
+    case "upload":
+      return "Upload interrupted";
+    case "confirm":
+      return "Couldn't save details";
+    default:
+      return "Upload failed";
+  }
 }
 
 export default function UploadExercise() {
@@ -131,7 +146,21 @@ export default function UploadExercise() {
       if (forWorkout) router.back();
       else router.replace("/exercises");
     } catch (e: any) {
-      notify("Upload failed", e?.message ?? "Please try again.");
+      const stage: UploadStage | undefined = e instanceof UploadError ? e.stage : undefined;
+      const title = failureTitle(stage);
+      const message = e?.message ?? "Please try again.";
+      // Native offers a one-tap Retry that reuses this same flow; the picked
+      // video stays selected so the coach doesn't have to choose it again. Web
+      // keeps its plain alert (the proxy upload has no per-step stages) and the
+      // coach simply taps Publish again.
+      if (Platform.OS === "web") {
+        notify(title, message);
+      } else {
+        Alert.alert(title, message, [
+          { text: "Cancel", style: "cancel" },
+          { text: "Retry", onPress: () => { void submit(); } },
+        ]);
+      }
     } finally {
       setBusy(false);
       setProgress(null);
