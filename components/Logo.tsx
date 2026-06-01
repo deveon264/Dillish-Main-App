@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   pill: {
-    marginTop: 8,
+    marginTop: 2,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 999,
