@@ -1,5 +1,5 @@
 import { Platform } from "react-native";
-import { createUploadTask, FileSystemUploadType } from "expo-file-system/legacy";
+import { createUploadTask, FileSystemUploadType, getInfoAsync } from "expo-file-system/legacy";
 import { getApiUrl } from "@/lib/api";
 
 // Reports upload progress as (bytesSent, bytesTotal). `total` may be 0 when the
@@ -114,6 +114,32 @@ async function postBinary(
   return { status: result.status, body: result.body };
 }
 
+// Native-only: PUTs the file at `uri` straight to a signed object-storage URL,
+// bypassing the app server so the bytes make a single hop. createUploadTask
+// streams from disk and surfaces byte-level progress just like the proxy path.
+async function putBinaryDirect(
+  uploadUrl: string,
+  uri: string,
+  contentType: string,
+  onProgress?: UploadProgress
+): Promise<number> {
+  const task = createUploadTask(
+    uploadUrl,
+    uri,
+    {
+      httpMethod: "PUT",
+      uploadType: FileSystemUploadType.BINARY_CONTENT,
+      headers: { "Content-Type": contentType },
+    },
+    onProgress
+      ? (data) => onProgress(data.totalBytesSent, data.totalBytesExpectedToSend)
+      : undefined
+  );
+  const result = await task.uploadAsync();
+  if (!result) throw new Error("Upload was cancelled");
+  return result.status;
+}
+
 function errorFrom(body: string, fallback: string): string {
   try {
     const j = JSON.parse(body);
@@ -154,33 +180,85 @@ export async function uploadExercise(params: {
   } = params;
   const type = asset.mimeType || "video/mp4";
 
-  // Metadata travels in query params so the video can be sent as the raw request
-  // body. This lets the server stream the bytes straight to storage and reject
-  // oversized uploads from the Content-Length header before reading the body.
-  // `filename` lets the server derive a clean title when none is provided.
-  const qs = new URLSearchParams({
-    title,
-    description,
-    cues,
-    category,
-    level,
-    duration,
-    filename: asset.fileName ?? "",
-    workoutId: workoutId ?? "",
-    exerciseId: workoutExerciseId ?? "",
-  }).toString();
+  let item: UploadedExercise;
+  if (Platform.OS === "web") {
+    // Web stays on the proxy path: the GCS bucket's CORS policy is Replit-managed
+    // and can't be changed, so the browser can't PUT to storage directly.
+    // Metadata travels in query params so the video can be sent as the raw
+    // request body, letting the server stream bytes straight to storage and
+    // reject oversized uploads from Content-Length before reading the body.
+    // `filename` lets the server derive a clean title when none is provided.
+    const qs = new URLSearchParams({
+      title,
+      description,
+      cues,
+      category,
+      level,
+      duration,
+      filename: asset.fileName ?? "",
+      workoutId: workoutId ?? "",
+      exerciseId: workoutExerciseId ?? "",
+    }).toString();
 
-  const { status, body } = await postBinary(
-    `${getApiUrl()}/api/exercises?${qs}`,
-    asset.uri,
-    type,
-    token,
-    onProgress
-  );
-  if (status < 200 || status >= 300) {
-    throw new Error(errorFrom(body, "Upload failed"));
+    const { status, body } = await postBinary(
+      `${getApiUrl()}/api/exercises?${qs}`,
+      asset.uri,
+      type,
+      token,
+      onProgress
+    );
+    if (status < 200 || status >= 300) {
+      throw new Error(errorFrom(body, "Upload failed"));
+    }
+    item = (JSON.parse(body) as { item: UploadedExercise }).item;
+  } else {
+    // Native uploads the video bytes straight to object storage (one hop instead
+    // of relaying through the app server). 1) ask for a signed PUT slot, 2) PUT
+    // the file directly with progress, 3) confirm so the server writes the row.
+    const slotResp = await fetch(`${getApiUrl()}/api/exercise-upload-url`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!slotResp.ok) {
+      throw new Error(errorFrom(await slotResp.text(), "Could not start upload"));
+    }
+    const { uploadUrl, objectPath } = (await slotResp.json()) as {
+      uploadUrl: string;
+      objectPath: string;
+    };
+
+    const putStatus = await putBinaryDirect(uploadUrl, asset.uri, type, onProgress);
+    if (putStatus < 200 || putStatus >= 300) {
+      throw new Error("Upload failed");
+    }
+
+    // The byte count drives the stored video_size and the server's size check.
+    const info = await getInfoAsync(asset.uri);
+    const videoSize = info.exists && typeof info.size === "number" ? info.size : 0;
+
+    const confirmResp = await fetch(`${getApiUrl()}/api/exercise-confirm`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        objectPath,
+        title,
+        description,
+        cues,
+        category,
+        level,
+        duration,
+        filename: asset.fileName ?? "",
+        workoutId: workoutId ?? "",
+        exerciseId: workoutExerciseId ?? "",
+        videoMime: type,
+        videoSize,
+      }),
+    });
+    if (!confirmResp.ok) {
+      throw new Error(errorFrom(await confirmResp.text(), "Upload failed"));
+    }
+    item = (JSON.parse(await confirmResp.text()) as { item: UploadedExercise }).item;
   }
-  let item = (JSON.parse(body) as { item: UploadedExercise }).item;
 
   // The poster is optional and uploaded as a second request keyed by the new
   // exercise id. A poster failure must never fail the (already saved) video.

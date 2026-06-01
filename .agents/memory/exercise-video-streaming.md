@@ -32,6 +32,14 @@ Video **bytes live in Replit Object Storage**; Postgres `exercises` stores only 
 - **Why multipart was dropped:** `request.formData()` buffers the entire payload into memory before any size check could run. Multipart also has no per-part length, so you can't give the GCS PUT a Content-Length.
 - Client native path uses `expo-file-system` **legacy** `uploadAsync(url, uri, { uploadType: FileSystemUploadType.BINARY_CONTENT })` — streams the file from disk, never through JS memory. Import from `expo-file-system/legacy` (the new File API in v19 doesn't expose uploadAsync at the top level). **Pin expo-file-system to the SDK-54 version (`19.0.x`)** — `installLanguagePackages` grabbed a wrong `56.x` that Expo flagged as incompatible.
 
+## Native direct-to-storage upload (web stays proxied)
+- **Native (iOS/Android) videos upload straight to GCS via a signed PUT URL**, NOT through the app server — one hop instead of two. Web stays on the proxy path (`POST /api/exercises`) because the GCS bucket's CORS is Replit-managed and the browser can't PUT cross-origin.
+- Two-step native flow in `uploadExercise()` (`lib/exercises.ts`, gated on `Platform.OS !== "web"`): 1) `POST /api/exercise-upload-url` (admin-gated) reserves a UUID `exercise-videos/<uuid>` path + returns a 15-min signed PUT URL (`createExerciseVideoUploadUrl()` in `objectStorageServer.ts`); 2) PUT the file directly with `createUploadTask(..., {httpMethod:"PUT", BINARY_CONTENT})` so progress still works; 3) `POST /api/exercise-confirm` (JSON body) writes the `exercises` row.
+- **`video_size` on confirm comes from `getInfoAsync(uri).size`** (client-measured), not Content-Length — the bytes never pass through the server. Confirm re-checks the 80MB cap and deletes the object if over-limit or if the DB write fails.
+- `exercise-confirm` validates the client-supplied `objectPath` with `isExerciseVideoPath()` (must be under `${PRIVATE_OBJECT_DIR}/exercise-videos/`) so a confirm can't record an arbitrary storage path.
+- An abandoned slot (PUT done, confirm never called) leaves only an orphaned object the scheduled cleanup job reclaims — no DB row, no leak. Title-derivation/category/level validation logic in `exercise-confirm` is duplicated from the `POST /api/exercises` handler; keep them in sync.
+- Posters still upload via the proxied `postBinary`→`/api/exercise-poster` path on both platforms (small files, not worth a direct path).
+
 ## HTTP Range streaming (iOS/Safari requirement)
 - iOS/Safari will NOT play a `<video>` source unless the server honors `Range` and replies `206`. With object storage this is **free**: the video endpoint just 302-redirects to the signed GCS GET URL, and GCS handles `Range`/`206` natively. Verified curl `Range: bytes=0-99` → `206` + `Content-Range`.
 - **How to apply:** don't re-implement Range when redirecting to GCS — let storage serve the bytes.

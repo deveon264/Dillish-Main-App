@@ -83,6 +83,28 @@ async function putObjectStream(
   }
 }
 
+// Reserves a fresh exercise-video object path and returns a short-lived signed
+// PUT URL the client can upload to directly (no server relay). The bytes never
+// touch this server — native clients PUT straight to GCS. 15-minute TTL gives a
+// large upload plenty of time; an abandoned slot leaves only an orphaned object
+// that the scheduled cleanup job reclaims. Returns both the URL and the full
+// object path so the caller can persist the path on confirm.
+export async function createExerciseVideoUploadUrl(): Promise<{
+  uploadUrl: string;
+  objectPath: string;
+}> {
+  const objectPath = `${getPrivateDir()}/exercise-videos/${uuid()}`;
+  const uploadUrl = await signObjectURL(objectPath, "PUT", 900);
+  return { uploadUrl, objectPath };
+}
+
+// Confirms a client-supplied object path points inside the exercise-videos
+// folder of the configured private dir, so a confirm request can't be tricked
+// into recording an arbitrary storage path.
+export function isExerciseVideoPath(objectPath: string): boolean {
+  return objectPath.startsWith(`${getPrivateDir()}/exercise-videos/`);
+}
+
 // Streams an exercise video to the private exercise-videos folder.
 export async function uploadExerciseVideoStream(
   body: ReadableStream<Uint8Array>,
