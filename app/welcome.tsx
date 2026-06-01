@@ -63,7 +63,7 @@ export default function Welcome() {
       resizeMode="cover"
     >
       <LinearGradient
-        colors={["rgba(251,246,238,0.5)", "rgba(251,246,238,0.82)", "#FBF6EE"]}
+        colors={["rgba(242,243,239,0.5)", "rgba(242,243,239,0.82)", "#F2F3EF"]}
         locations={[0, 0.5, 0.92]}
         style={StyleSheet.absoluteFill}
       />
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 12,
-    backgroundColor: "rgba(233,75,114,0.10)",
+    backgroundColor: "rgba(82,91,74,0.10)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -141,9 +141,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 12,
     borderRadius: 999,
-    backgroundColor: "rgba(233,75,114,0.08)",
+    backgroundColor: "rgba(82,91,74,0.08)",
     borderWidth: 1,
-    borderColor: "rgba(233,75,114,0.20)",
+    borderColor: "rgba(82,91,74,0.20)",
   },
   signinText: { fontFamily: fonts.sans, fontSize: 14, color: colors.muted },
   signinLink: { fontFamily: fonts.sansSemibold, color: colors.accent },

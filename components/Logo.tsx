@@ -63,9 +63,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 999,
-    backgroundColor: "rgba(233,75,114,0.10)",
+    backgroundColor: "rgba(82,91,74,0.10)",
     borderWidth: 1,
-    borderColor: "rgba(233,75,114,0.28)",
+    borderColor: "rgba(82,91,74,0.28)",
   },
   tagline: {
     fontFamily: fonts.sansSemibold,

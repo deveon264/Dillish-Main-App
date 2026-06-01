@@ -418,7 +418,7 @@ export default function Progress() {
                         <Text style={styles.baLabelText}>Before</Text>
                       </View>
                       <LinearGradient
-                        colors={["transparent", "rgba(58,22,32,0.85)"]}
+                        colors={["transparent", "rgba(16,17,17,0.85)"]}
                         style={styles.baOverlay}
                       >
                         <Text style={styles.baDate}>{fmtDay(new Date(beforePhoto.ts))}</Text>
@@ -433,7 +433,7 @@ export default function Progress() {
                         <Text style={styles.baLabelText}>After</Text>
                       </View>
                       <LinearGradient
-                        colors={["transparent", "rgba(58,22,32,0.85)"]}
+                        colors={["transparent", "rgba(16,17,17,0.85)"]}
                         style={styles.baOverlay}
                       >
                         <Text style={styles.baDate}>{fmtDay(new Date(afterPhoto.ts))}</Text>
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "rgba(107,175,69,0.14)",
+    backgroundColor: "rgba(94,140,36,0.16)",
     borderRadius: 14,
     paddingHorizontal: 10,
     paddingVertical: 5,
@@ -577,7 +577,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "rgba(233,75,114,0.10)",
+    backgroundColor: "rgba(82,91,74,0.10)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -595,7 +595,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: "rgba(233,75,114,0.10)",
+    backgroundColor: "rgba(82,91,74,0.10)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -618,7 +618,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: "rgba(233,75,114,0.10)",
+    backgroundColor: "rgba(82,91,74,0.10)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -641,12 +641,12 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 10,
     left: 10,
-    backgroundColor: "rgba(58,22,32,0.7)",
+    backgroundColor: "rgba(16,17,17,0.7)",
     borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 5,
   },
-  baLabelAfter: { backgroundColor: "rgba(233,75,114,0.85)" },
+  baLabelAfter: { backgroundColor: "rgba(82,91,74,0.85)" },
   baLabelText: { fontFamily: fonts.sansSemibold, fontSize: 12, color: colors.onPrimary },
   baOverlay: {
     position: "absolute",
@@ -674,7 +674,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: "rgba(58,22,32,0.7)",
+    backgroundColor: "rgba(16,17,17,0.7)",
     alignItems: "center",
     justifyContent: "center",
   },

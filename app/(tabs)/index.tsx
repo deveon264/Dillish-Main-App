@@ -156,7 +156,7 @@ export default function Dashboard() {
         {/* Today's Workout hero */}
         <Pressable onPress={() => router.push(`/workout/${featured.id}`)} style={{ marginTop: 24 }}>
           <ImageBackground source={featured.image} style={styles.hero} imageStyle={styles.heroImg}>
-            <LinearGradient colors={["rgba(58,22,32,0.1)", "rgba(58,22,32,0.88)"]} style={StyleSheet.absoluteFill} />
+            <LinearGradient colors={["rgba(16,17,17,0.1)", "rgba(16,17,17,0.88)"]} style={StyleSheet.absoluteFill} />
             <View style={styles.heroBadge}>
               <Text style={styles.heroBadgeText}>TODAY'S WORKOUT</Text>
             </View>
@@ -303,7 +303,7 @@ export default function Dashboard() {
             {saved.map((w) => (
               <Pressable key={w.id} style={styles.savedCard} onPress={() => router.push(`/workout/${w.id}`)}>
                 <ImageBackground source={w.image} style={styles.savedImg} imageStyle={{ borderRadius: colors.radiusLg }}>
-                  <LinearGradient colors={["transparent", "rgba(58,22,32,0.92)"]} style={styles.savedOverlay} />
+                  <LinearGradient colors={["transparent", "rgba(16,17,17,0.92)"]} style={styles.savedOverlay} />
                   <Pressable
                     style={styles.savedHeart}
                     hitSlop={8}
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 16,
     left: 16,
-    backgroundColor: "rgba(58,22,32,0.55)",
+    backgroundColor: "rgba(16,17,17,0.55)",
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 999,
@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 14,
-    backgroundColor: "rgba(233,75,114,0.10)",
+    backgroundColor: "rgba(82,91,74,0.10)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 14,
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "rgba(58,22,32,0.5)",
+    backgroundColor: "rgba(16,17,17,0.5)",
     alignItems: "center",
     justifyContent: "center",
   },

@@ -39,7 +39,7 @@ export function WaterCircle({ size, progress }: { size: number; progress: number
         height: size,
         borderRadius: size / 2,
         overflow: "hidden",
-        backgroundColor: "rgba(122,25,49,0.05)",
+        backgroundColor: "rgba(45,49,46,0.05)",
         borderWidth: 1,
         borderColor: colors.cardBorder,
       }}
@@ -47,7 +47,7 @@ export function WaterCircle({ size, progress }: { size: number; progress: number
       <Ionicons
         name="water"
         size={size * 0.15}
-        color="rgba(58,22,32,0.6)"
+        color="rgba(16,17,17,0.6)"
         style={{ position: "absolute", top: size * 0.16, left: 0, right: 0, textAlign: "center", zIndex: 4 }}
       />
 

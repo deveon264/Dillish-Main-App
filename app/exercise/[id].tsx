@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 10,
     paddingHorizontal: 24,
-    backgroundColor: "rgba(58,22,32,0.55)",
+    backgroundColor: "rgba(16,17,17,0.55)",
   },
   overlayText: {
     fontFamily: fonts.sansMedium,
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
   title: { fontFamily: fonts.serifSemibold, fontSize: 28, color: colors.foreground },
   pill: {
     alignSelf: "flex-start",
-    backgroundColor: "rgba(58,22,32,0.1)",
+    backgroundColor: "rgba(16,17,17,0.1)",
     borderWidth: 1,
     borderColor: colors.cardBorder,
     paddingHorizontal: 12,
@@ -238,9 +238,9 @@ const styles = StyleSheet.create({
   desc: { fontFamily: fonts.sans, fontSize: 15, color: colors.mutedForeground, lineHeight: 23, marginTop: 8 },
   cuesBox: {
     marginTop: 14,
-    backgroundColor: "rgba(233,75,114,0.1)",
+    backgroundColor: "rgba(82,91,74,0.1)",
     borderWidth: 1,
-    borderColor: "rgba(233,75,114,0.28)",
+    borderColor: "rgba(82,91,74,0.28)",
     borderRadius: colors.radius,
     padding: 16,
     gap: 8,

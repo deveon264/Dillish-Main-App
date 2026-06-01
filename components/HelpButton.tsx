@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(58,22,32,0.45)",
+    backgroundColor: "rgba(16,17,17,0.45)",
     alignItems: "center",
     justifyContent: "center",
     padding: 28,

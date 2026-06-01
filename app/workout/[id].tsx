@@ -444,7 +444,7 @@ export default function WorkoutPlayer() {
       <GradientBackground>
         <ImageBackground source={next.image ?? workout.image} style={styles.restScreen}>
           <LinearGradient
-            colors={["rgba(58,22,32,0.55)", "rgba(58,22,32,0.78)", "rgba(58,22,32,0.95)"]}
+            colors={["rgba(16,17,17,0.55)", "rgba(16,17,17,0.78)", "rgba(16,17,17,0.95)"]}
             style={StyleSheet.absoluteFill}
           />
           <View style={[styles.restTop, { marginTop: insets.top + 8 }]}>
@@ -546,7 +546,7 @@ export default function WorkoutPlayer() {
               />
             )}
             <LinearGradient
-              colors={["rgba(58,22,32,0.5)", "rgba(58,22,32,0.2)", "rgba(58,22,32,0.85)"]}
+              colors={["rgba(16,17,17,0.5)", "rgba(16,17,17,0.2)", "rgba(16,17,17,0.85)"]}
               style={StyleSheet.absoluteFill}
             />
             <Pressable style={StyleSheet.absoluteFill} onPress={toggleOverlay} />
@@ -982,7 +982,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: "rgba(58,22,32,0.45)",
+    backgroundColor: "rgba(16,17,17,0.45)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.25)",
     alignItems: "center",
@@ -993,7 +993,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: "rgba(58,22,32,0.4)",
+    backgroundColor: "rgba(16,17,17,0.4)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1115,7 +1115,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  weekDotDone: { backgroundColor: "rgba(233,75,114,0.25)", borderColor: "transparent" },
+  weekDotDone: { backgroundColor: "rgba(82,91,74,0.25)", borderColor: "transparent" },
   weekDotToday: { backgroundColor: colors.accent, borderColor: "transparent" },
   weekDash: { fontFamily: fonts.sansMedium, fontSize: 16, color: colors.muted },
   weekLabel: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.muted },
@@ -1154,7 +1154,7 @@ const styles = StyleSheet.create({
     padding: 12,
     position: "relative",
   },
-  exCardActive: { borderColor: colors.accent, backgroundColor: "rgba(233,75,114,0.10)" },
+  exCardActive: { borderColor: colors.accent, backgroundColor: "rgba(82,91,74,0.10)" },
   exCardLocked: { opacity: 0.5 },
   exCardPressed: { opacity: 0.7 },
   nowTag: {
@@ -1174,7 +1174,7 @@ const styles = StyleSheet.create({
   exCardTitleDone: { color: colors.muted, textDecorationLine: "line-through" },
   exCardMeta: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 3 },
   exCardMetaText: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.muted },
-  exChip: { backgroundColor: "rgba(58,22,32,0.06)", paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999 },
+  exChip: { backgroundColor: "rgba(16,17,17,0.06)", paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999 },
   exChipText: { fontFamily: fonts.sansMedium, fontSize: 11, color: colors.accent },
   exRight: { flexDirection: "row", alignItems: "center", gap: 8 },
   exPlay: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
@@ -1199,9 +1199,9 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "rgba(233,75,114,0.10)",
+    backgroundColor: "rgba(82,91,74,0.10)",
     borderWidth: 1,
-    borderColor: "rgba(233,75,114,0.3)",
+    borderColor: "rgba(82,91,74,0.3)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1258,7 +1258,7 @@ const styles = StyleSheet.create({
     borderRadius: colors.radius,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.35)",
-    backgroundColor: "rgba(58,22,32,0.4)",
+    backgroundColor: "rgba(16,17,17,0.4)",
   },
   restAddText: { fontFamily: fonts.sansSemibold, fontSize: 15, color: "#FFFFFF" },
   restStartBtn: {

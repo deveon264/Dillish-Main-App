@@ -164,7 +164,7 @@ export default function Workouts() {
               return (
               <Pressable key={w.id} style={styles.card} onPress={() => router.push(`/workout/${w.id}`)}>
                 <ImageBackground source={w.image} style={styles.cardImg} imageStyle={styles.cardImgRadius}>
-                  <LinearGradient colors={["rgba(58,22,32,0.05)", "rgba(58,22,32,0.85)"]} style={StyleSheet.absoluteFill} />
+                  <LinearGradient colors={["rgba(16,17,17,0.05)", "rgba(16,17,17,0.85)"]} style={StyleSheet.absoluteFill} />
                   <Pressable
                     style={styles.cardHeart}
                     hitSlop={8}
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
     borderColor: colors.cardBorder,
     backgroundColor: colors.card,
   },
-  filterChipActive: { borderColor: colors.accent, backgroundColor: "rgba(233,75,114,0.14)" },
+  filterChipActive: { borderColor: colors.accent, backgroundColor: "rgba(82,91,74,0.14)" },
   filterText: { fontFamily: fonts.sansMedium, fontSize: 13.5, color: colors.muted },
   filterTextActive: { color: colors.accent },
   list: { gap: 16 },
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "rgba(58,22,32,0.45)",
+    backgroundColor: "rgba(16,17,17,0.45)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
   metaText: { fontFamily: fonts.sansMedium, fontSize: 13, color: "#FFFFFF" },
   empty: { alignItems: "center", paddingVertical: 60, gap: 12 },
   emptyText: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted, textAlign: "center", paddingHorizontal: 32 },
-  modalBackdrop: { flex: 1, backgroundColor: "rgba(58,22,32,0.45)", justifyContent: "flex-end" },
+  modalBackdrop: { flex: 1, backgroundColor: "rgba(16,17,17,0.45)", justifyContent: "flex-end" },
   sheet: {
     backgroundColor: colors.card,
     borderTopLeftRadius: 28,
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "transparent",
   },
-  sheetRowActive: { borderColor: colors.accent, backgroundColor: "rgba(233,75,114,0.14)" },
+  sheetRowActive: { borderColor: colors.accent, backgroundColor: "rgba(82,91,74,0.14)" },
   sheetRowText: { fontFamily: fonts.sansMedium, fontSize: 15, color: colors.foreground },
   sheetRowTextActive: { color: colors.accent },
 });
