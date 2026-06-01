@@ -38,7 +38,7 @@ export function Logo({
         ) : null}
       </View>
       {showText && tagline ? (
-        <View style={[styles.pill, { marginLeft: mark + gap }]}>
+        <View style={[styles.pill, { marginLeft: mark + gap + 6 }]}>
           <Text style={[styles.tagline, { fontSize: taglineSize }]}>
             {tagline.toUpperCase()}
           </Text>
@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   pill: {
-    marginTop: 2,
+    marginTop: -2,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 999,
