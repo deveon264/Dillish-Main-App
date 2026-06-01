@@ -36,7 +36,6 @@ export default function Welcome() {
         </View>
 
         <View style={styles.center}>
-          <Text style={styles.kicker}>WELLNESS, REIMAGINED</Text>
           <Text style={styles.title}>
             Bloom into{"\n"}your <Text style={styles.titleItalic}>best self</Text>
           </Text>
@@ -74,13 +73,6 @@ const styles = StyleSheet.create({
   content: { flex: 1, paddingHorizontal: 24, justifyContent: "space-between" },
   top: { alignItems: "flex-start" },
   center: { flex: 1, justifyContent: "flex-end", paddingBottom: 28 },
-  kicker: {
-    fontFamily: fonts.sansSemibold,
-    fontSize: 12,
-    letterSpacing: 3,
-    color: colors.accent,
-    marginBottom: 14,
-  },
   title: {
     fontFamily: fonts.serif,
     fontSize: 52,
