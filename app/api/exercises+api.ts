@@ -6,6 +6,22 @@ function genId(): string {
   return Date.now().toString() + Math.random().toString(36).slice(2, 11);
 }
 
+// Derives a clean, human-friendly title from an uploaded video's filename:
+// strips the directory and extension, turns underscores/hyphens into spaces,
+// collapses whitespace, and title-cases each word. Returns "" when there's
+// nothing usable so callers can fall back to a timestamped name.
+function titleFromFilename(filename: string | null): string {
+  if (!filename) return "";
+  const base = filename.split(/[\\/]/).pop() ?? filename;
+  const withoutExt = base.replace(/\.[^.]+$/, "");
+  const cleaned = withoutExt.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+  if (!cleaned) return "";
+  return cleaned
+    .split(" ")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
 const MAX_BYTES = 80 * 1024 * 1024; // 80MB
 const CATEGORIES = ["Pilates", "Yoga", "Strength", "HIIT", "Mobility", "Cardio"];
 const LEVELS = ["Beginner", "Intermediate", "Advanced"];
@@ -55,14 +71,20 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const params = new URL(request.url).searchParams;
-    const title = (params.get("title") ?? "").trim();
     const description = (params.get("description") ?? "").trim();
     const cues = (params.get("cues") ?? "").trim();
     const duration = (params.get("duration") ?? "").trim();
     let category = (params.get("category") ?? "Strength").trim();
     let level = (params.get("level") ?? "Beginner").trim();
 
-    if (!title) return Response.json({ error: "Title is required" }, { status: 400 });
+    // Title is optional: when the coach doesn't provide one, derive a clean
+    // title from the uploaded video's filename (strip extension, turn
+    // separators into spaces, title-case), falling back to a timestamped name.
+    const title =
+      (params.get("title") ?? "").trim() ||
+      titleFromFilename(params.get("filename")) ||
+      `Exercise ${Date.now()}`;
+
     if (!CATEGORIES.includes(category)) category = "Strength";
     if (!LEVELS.includes(level)) level = "Beginner";
 

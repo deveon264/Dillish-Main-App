@@ -130,6 +130,7 @@ export async function uploadExercise(params: {
   // Metadata travels in query params so the video can be sent as the raw request
   // body. This lets the server stream the bytes straight to storage and reject
   // oversized uploads from the Content-Length header before reading the body.
+  // `filename` lets the server derive a clean title when none is provided.
   const qs = new URLSearchParams({
     title,
     description,
@@ -137,6 +138,7 @@ export async function uploadExercise(params: {
     category,
     level,
     duration,
+    filename: asset.fileName ?? "",
   }).toString();
 
   const { status, body } = await postBinary(
