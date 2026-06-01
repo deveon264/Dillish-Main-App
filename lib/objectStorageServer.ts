@@ -83,29 +83,6 @@ async function putObjectStream(
   }
 }
 
-// DEPRECATED — only referenced by the deprecated /api/exercise-upload-url route,
-// which the client no longer calls. This reserved a fresh exercise-video object
-// path and returned a short-lived signed PUT URL for the native direct-to-storage
-// upload flow. That flow was reverted because the object-storage sidecar's
-// signed-URL endpoint isn't reliably available here; native now relays bytes
-// through POST /api/exercises like web. Kept as the starting point if the direct
-// path is revisited; safe to delete otherwise.
-export async function createExerciseVideoUploadUrl(): Promise<{
-  uploadUrl: string;
-  objectPath: string;
-}> {
-  const objectPath = `${getPrivateDir()}/exercise-videos/${uuid()}`;
-  const uploadUrl = await signObjectURL(objectPath, "PUT", 900);
-  return { uploadUrl, objectPath };
-}
-
-// Confirms a client-supplied object path points inside the exercise-videos
-// folder of the configured private dir, so a confirm request can't be tricked
-// into recording an arbitrary storage path.
-export function isExerciseVideoPath(objectPath: string): boolean {
-  return objectPath.startsWith(`${getPrivateDir()}/exercise-videos/`);
-}
-
 // Streams a profile photo (avatar) to the private profile-avatars folder.
 // Each upload gets a fresh uuid object so the old one can be deleted and so the
 // public-facing URL changes (cache-busts) when a member replaces their photo.
