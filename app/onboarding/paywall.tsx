@@ -81,7 +81,10 @@ export default function Paywall() {
     ? `Start your 7-day free trial, then ${activePlan.summary}`
     : `You'll be charged ${activePlan.summary}`;
 
-  const proceed = () => router.replace("/(tabs)");
+  // Every exit from the paywall — the primary CTA AND the top Skip link — routes
+  // through the thank-you video, which auto-plays once and then continues to the
+  // dashboard (or skips straight there when no video is set).
+  const proceed = () => router.replace("/onboarding/thank-you");
 
   return (
     <GradientBackground>

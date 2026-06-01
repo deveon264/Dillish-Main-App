@@ -122,6 +122,24 @@ export async function uploadExerciseVideoStream(
   );
 }
 
+// Streams the single global onboarding "thank you" video to its OWN private
+// folder, deliberately kept separate from exercise-videos so the scheduled
+// exercise-cleanup sweep (which reconciles exercise-videos against the
+// `exercises` table) never treats it as an orphan and deletes it.
+export async function uploadThankYouVideoStream(
+  body: ReadableStream<Uint8Array>,
+  contentType: string,
+  contentLength: number
+): Promise<string> {
+  return putObjectStream(
+    `${getPrivateDir()}/thank-you-videos/${uuid()}`,
+    body,
+    contentType,
+    contentLength,
+    "video/mp4"
+  );
+}
+
 // Streams a poster image to the private exercise-posters folder.
 export async function uploadExercisePosterStream(
   body: ReadableStream<Uint8Array>,
