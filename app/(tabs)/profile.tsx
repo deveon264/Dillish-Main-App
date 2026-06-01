@@ -35,7 +35,7 @@ const LEGACY_GOAL_MAP: Record<string, string> = {
 export default function Profile() {
   const router = useRouter();
   const insets = useInsets();
-  const { user, logout, updateUser, uploadAvatar, removeAvatar: removeAvatarFn } = useAuth();
+  const { user, isAdmin, logout, updateUser, uploadAvatar, removeAvatar: removeAvatarFn } = useAuth();
   const { profile, completions, calorieLogs, weightLogs, waterLogs, updateProfile } = useData();
 
   const [editing, setEditing] = useState(false);
@@ -352,6 +352,24 @@ export default function Profile() {
                 </View>
               ))}
             </Card>
+
+            {isAdmin ? (
+              <>
+                <Text style={styles.label}>COACH TOOLS</Text>
+                <Card style={styles.settingsCard}>
+                  <Pressable
+                    style={styles.acctRow}
+                    onPress={() => router.push("/admin/upload-thank-you")}
+                  >
+                    <View style={styles.acctLeft}>
+                      <Ionicons name="heart-outline" size={20} color={colors.accent} />
+                      <Text style={styles.acctLabel}>Onboarding Thank-you Video</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
+                  </Pressable>
+                </Card>
+              </>
+            ) : null}
           </>
         ) : (
         <>
