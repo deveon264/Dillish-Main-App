@@ -42,9 +42,11 @@ function TrustItem({
 
   return (
     <View style={styles.trustItem}>
-      <Animated.View style={[styles.trustIcon, { transform: [{ scale }] }]}>
-        <Ionicons name={icon} size={18} color={colors.accent} />
-      </Animated.View>
+      <View style={styles.trustIcon}>
+        <Animated.View style={{ transform: [{ scale }] }}>
+          <Ionicons name={icon} size={18} color={colors.accent} />
+        </Animated.View>
+      </View>
       <Text style={styles.trustLabel}>{label}</Text>
     </View>
   );
