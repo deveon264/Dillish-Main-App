@@ -5,9 +5,9 @@ export const modules: ModuleMap = {
   "./components/mockups/welcome-screen/EditorialImmersive.tsx": () => import("../components/mockups/welcome-screen/EditorialImmersive.tsx"),
   "./components/mockups/welcome-screen/GuidedOnboarding.tsx": () => import("../components/mockups/welcome-screen/GuidedOnboarding.tsx"),
   "./components/mockups/welcome-screen/TrustLed.tsx": () => import("../components/mockups/welcome-screen/TrustLed.tsx"),
+  "./components/mockups/welcome-refined/ElevatedEditorial.tsx": () => import("../components/mockups/welcome-refined/ElevatedEditorial.tsx"),
+  "./components/mockups/welcome-refined/PolishedEditorial.tsx": () => import("../components/mockups/welcome-refined/PolishedEditorial.tsx"),
   "./components/mockups/welcome-vibes/Bloom.tsx": () => import("../components/mockups/welcome-vibes/Bloom.tsx"),
   "./components/mockups/welcome-vibes/GoldenHour.tsx": () => import("../components/mockups/welcome-vibes/GoldenHour.tsx"),
-  "./components/mockups/welcome-vibes/Whisper.tsx": () => import("../components/mockups/welcome-vibes/Whisper.tsx"),
-  "./components/mockups/welcome-refined/ElevatedEditorial.tsx": () => import("../components/mockups/welcome-refined/ElevatedEditorial.tsx"),
-  "./components/mockups/welcome-refined/PolishedEditorial.tsx": () => import("../components/mockups/welcome-refined/PolishedEditorial.tsx")
+  "./components/mockups/welcome-vibes/Whisper.tsx": () => import("../components/mockups/welcome-vibes/Whisper.tsx")
 };
