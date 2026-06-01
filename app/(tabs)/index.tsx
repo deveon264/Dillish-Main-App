@@ -143,7 +143,7 @@ export default function Dashboard() {
             {weekMarks.map((d, i) => (
               <View key={i} style={styles.streakDayCol}>
                 {d.active ? (
-                  <LinearGradient colors={colors.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.streakPill} />
+                  <LinearGradient colors={colors.gradientGold} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.streakPill} />
                 ) : (
                   <View style={[styles.streakPill, styles.streakPillOff]} />
                 )}
@@ -207,7 +207,7 @@ export default function Dashboard() {
               </View>
               <View style={styles.calStatRow}>
                 <Text style={styles.calStatLabel}>Burned</Text>
-                <Text style={styles.calStatValue}>{burned.toLocaleString()} kcal</Text>
+                <Text style={[styles.calStatValue, { color: colors.highlight }]}>{burned.toLocaleString()} kcal</Text>
               </View>
               <View style={styles.calStatRow}>
                 <Text style={styles.calStatLabel}>Remaining</Text>
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
   streakHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   streakFlame: { fontSize: 18, marginRight: 8 },
   streakTitle: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.foreground },
-  streakDays: { fontFamily: fonts.serifSemibold, fontSize: 26, color: colors.foreground },
+  streakDays: { fontFamily: fonts.serifSemibold, fontSize: 26, color: colors.highlight },
   streakDaysUnit: { fontFamily: fonts.sans, fontSize: 13, color: colors.muted },
   streakRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 14 },
   streakDayCol: { alignItems: "center", flex: 1, gap: 8 },

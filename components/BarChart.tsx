@@ -7,8 +7,6 @@ import { fonts } from "@/constants/fonts";
 export type BarDatum = { label: string; value: number };
 
 const Y_AXIS_W = 40;
-const MAUVE: [string, string] = ["#AFBCA1", "#7F8C6E"];
-const GREEN: [string, string] = ["#A9C06B", "#6F9E2E"];
 
 const fmt = (n: number, unit: string) => `${Math.round(n * 100) / 100}${unit}`;
 
@@ -49,7 +47,7 @@ export function BarChart({
                 <View key={d.label + i} style={styles.barCol}>
                   {h > 0 ? (
                     <LinearGradient
-                      colors={reached ? GREEN : MAUVE}
+                      colors={reached ? colors.gradient : colors.barTrackGradient}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 0, y: 1 }}
                       style={{ width: barW, height: h, borderTopLeftRadius: 6, borderTopRightRadius: 6 }}

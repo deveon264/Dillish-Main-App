@@ -446,7 +446,7 @@ export default function Calories() {
         </View>
         {todayLogs.length === 0 ? (
           <Card style={{ alignItems: "center", paddingVertical: 28 }}>
-            <Ionicons name="restaurant-outline" size={32} color={colors.mutedForeground} />
+            <Ionicons name="restaurant-outline" size={32} color={colors.blush} />
             <Text style={styles.emptyText}>No meals logged yet today</Text>
           </Card>
         ) : (

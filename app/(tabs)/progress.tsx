@@ -332,7 +332,7 @@ export default function Progress() {
             <Text style={styles.section}>RECENT LOGS</Text>
             {sortedDesc.length === 0 ? (
               <Card style={{ alignItems: "center", paddingVertical: 28 }}>
-                <Ionicons name="scale-outline" size={32} color={colors.mutedForeground} />
+                <Ionicons name="scale-outline" size={32} color={colors.blush} />
                 <Text style={styles.chartEmptyText}>No weigh-ins logged yet</Text>
               </Card>
             ) : (
@@ -398,7 +398,7 @@ export default function Progress() {
 
             {sortedPhotos.length === 0 ? (
               <Card style={{ alignItems: "center", paddingVertical: 32, marginTop: 18 }}>
-                <Ionicons name="images-outline" size={32} color={colors.mutedForeground} />
+                <Ionicons name="images-outline" size={32} color={colors.blush} />
                 <Text style={styles.chartEmptyText}>No progress photos yet</Text>
               </Card>
             ) : (

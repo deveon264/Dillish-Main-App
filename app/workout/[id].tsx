@@ -638,8 +638,8 @@ export default function WorkoutPlayer() {
 
             <View style={styles.statCards}>
               <View style={styles.statCard}>
-                <Ionicons name="flame" size={18} color={colors.accent} />
-                <Text style={styles.statNum}>{kcalBurned}</Text>
+                <Ionicons name="flame" size={18} color={colors.highlight} />
+                <Text style={[styles.statNum, { color: colors.highlight }]}>{kcalBurned}</Text>
                 <Text style={styles.statLbl}>kcal burned</Text>
               </View>
               <View style={styles.statCard}>

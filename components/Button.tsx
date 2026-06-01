@@ -49,7 +49,7 @@ export function Button({
   };
 
   const textColor =
-    variant === "primary" ? colors.onPrimary : variant === "outline" ? colors.foreground : colors.accent;
+    variant === "primary" ? colors.onPrimary : variant === "outline" ? colors.accentDark : colors.accent;
 
   const Inner = (
     <View style={styles.row}>
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 20,
   },
-  outline: { borderWidth: 1, borderColor: colors.cardBorder, backgroundColor: "transparent" },
+  outline: { borderWidth: 1, borderColor: colors.accentBorderMd, backgroundColor: "transparent" },
   ghost: { backgroundColor: "transparent", minHeight: 44 },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "center" },
   label: { fontFamily: fonts.sansSemibold, fontSize: 16, letterSpacing: 0.2 },

@@ -39,7 +39,7 @@ export function WaterCircle({ size, progress }: { size: number; progress: number
         height: size,
         borderRadius: size / 2,
         overflow: "hidden",
-        backgroundColor: "rgba(45,49,46,0.05)",
+        backgroundColor: "rgba(119,107,88,0.07)",
         borderWidth: 1,
         borderColor: colors.cardBorder,
       }}

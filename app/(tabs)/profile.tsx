@@ -418,11 +418,11 @@ export default function Profile() {
                   {avatarError ? <Text style={styles.avatarErrorText}>{avatarError}</Text> : null}
                   <View style={styles.badgeRow}>
                     <View style={[styles.badge, styles.badgePremium]}>
-                      <Ionicons name="sparkles" size={12} color={palette.petal} />
+                      <Ionicons name="sparkles" size={12} color={colors.foreground} />
                       <Text style={[styles.badgeText, styles.badgeTextPremium]}>Premium</Text>
                     </View>
                     <View style={styles.badge}>
-                      <Ionicons name="flame" size={12} color={colors.primary} />
+                      <Ionicons name="flame" size={12} color={colors.highlight} />
                       <Text style={styles.badgeText}>{streak} day streak</Text>
                     </View>
                   </View>
@@ -497,7 +497,7 @@ export default function Profile() {
               </Text>
               <View style={styles.bmiBarWrap}>
                 <LinearGradient
-                  colors={[colors.link, colors.success, colors.primary, palette.cherry]}
+                  colors={[colors.accentSoft, colors.success, colors.highlight, colors.danger]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.bmiBar}
@@ -505,10 +505,10 @@ export default function Profile() {
                 <View style={[styles.bmiThumb, { left: `${bmiToPercent(bmi)}%` }]} />
               </View>
               <View style={styles.bmiScaleLabels}>
-                <Text style={[styles.bmiScaleLabel, { color: colors.link }]}>Under</Text>
+                <Text style={[styles.bmiScaleLabel, { color: colors.accentSoft }]}>Under</Text>
                 <Text style={[styles.bmiScaleLabel, { color: colors.success }]}>Normal</Text>
-                <Text style={[styles.bmiScaleLabel, { color: colors.primary }]}>Over</Text>
-                <Text style={[styles.bmiScaleLabel, { color: palette.cherry }]}>Obese</Text>
+                <Text style={[styles.bmiScaleLabel, { color: colors.highlight }]}>Over</Text>
+                <Text style={[styles.bmiScaleLabel, { color: colors.danger }]}>Obese</Text>
               </View>
             </Card>
 
@@ -930,11 +930,11 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   badgePremium: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: colors.blushTintMd,
+    borderColor: colors.blushBorder,
   },
   badgeText: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.foreground },
-  badgeTextPremium: { color: colors.onPrimary },
+  badgeTextPremium: { color: colors.foreground },
   statsRow: { flexDirection: "row", gap: 10, marginTop: 12 },
   statCard: {
     flex: 1,

@@ -152,7 +152,7 @@ export default function Workouts() {
 
         {filtered.length === 0 ? (
           <View style={styles.empty}>
-            <Ionicons name="leaf-outline" size={40} color={colors.mutedForeground} />
+            <Ionicons name="leaf-outline" size={40} color={colors.blush} />
             <Text style={styles.emptyText}>
               {savedOnly ? "No saved workouts yet — tap the heart on a workout" : "No workouts match your search"}
             </Text>

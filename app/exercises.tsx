@@ -114,7 +114,7 @@ export default function ExerciseLibrary() {
           </View>
         ) : items.length === 0 ? (
           <View style={styles.center}>
-            <Ionicons name="film-outline" size={40} color={colors.mutedForeground} />
+            <Ionicons name="film-outline" size={40} color={colors.blush} />
             <Text style={styles.emptyTitle}>No videos yet</Text>
             <Text style={styles.muted}>
               {isAdmin ? "Tap + to upload the first exercise video." : "Check back soon for guided exercise videos."}

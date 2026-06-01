@@ -63,7 +63,7 @@ export default function Welcome() {
       resizeMode="cover"
     >
       <LinearGradient
-        colors={["rgba(242,243,239,0.5)", "rgba(242,243,239,0.82)", "#F2F3EF"]}
+        colors={colors.welcomeScrim}
         locations={[0, 0.5, 0.92]}
         style={StyleSheet.absoluteFill}
       />
