@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Platform } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Platform, ActionSheetIOS, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
@@ -147,6 +147,32 @@ export default function Progress() {
     } catch {
       setPhotoError("Unable to open the camera or library on this device.");
     }
+  };
+
+  const pickProgressPhoto = () => {
+    setPhotoError("");
+    if (Platform.OS === "web") {
+      addProgressPhoto(false);
+      return;
+    }
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ["Take Photo", "Choose from Gallery", "Cancel"],
+          cancelButtonIndex: 2,
+        },
+        (index) => {
+          if (index === 0) addProgressPhoto(true);
+          else if (index === 1) addProgressPhoto(false);
+        },
+      );
+      return;
+    }
+    Alert.alert("Add Progress Photo", undefined, [
+      { text: "Take Photo", onPress: () => addProgressPhoto(true) },
+      { text: "Choose from Gallery", onPress: () => addProgressPhoto(false) },
+      { text: "Cancel", style: "cancel" },
+    ]);
   };
 
   const active = TABS.find((t) => t.key === tab) ?? TABS[0];
@@ -357,7 +383,7 @@ export default function Progress() {
             </Card>
 
             <Pressable
-              onPress={() => addProgressPhoto(Platform.OS !== "web")}
+              onPress={pickProgressPhoto}
               style={({ pressed }) => [styles.addPhotoCard, pressed && { opacity: 0.85 }]}
             >
               <View style={styles.addPhotoIcon}>
