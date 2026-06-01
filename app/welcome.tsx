@@ -40,7 +40,7 @@ export default function Welcome() {
             Bloom into{"\n"}your <Text style={styles.titleItalic}>best self</Text>
           </Text>
           <Text style={styles.subtitle}>
-            Personalized workouts, gentle guidance, nutrition & water tracking. Wellness crafted for women who strive, all in one beautiful space.
+            A beautiful space for women to feel stronger, calmer and more confident.
           </Text>
 
           <View style={styles.trustRow}>
