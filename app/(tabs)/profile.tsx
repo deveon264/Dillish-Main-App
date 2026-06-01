@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Modal } from "react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Modal, InteractionManager, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
@@ -50,6 +50,7 @@ export default function Profile() {
   const [name, setName] = useState(user?.name ?? "");
   const [avatarModal, setAvatarModal] = useState(false);
   const [avatarError, setAvatarError] = useState("");
+  const pickingRef = useRef(false);
   const [emailModal, setEmailModal] = useState(false);
   const [emailInput, setEmailInput] = useState(user?.email ?? "");
   const [emailError, setEmailError] = useState("");
@@ -176,8 +177,23 @@ export default function Profile() {
   };
 
   const pickAvatar = async (mode: "camera" | "library") => {
+    if (pickingRef.current) return;
+    pickingRef.current = true;
     setAvatarModal(false);
     setAvatarError("");
+    // Wait for the Modal's dismiss animation to finish before presenting the
+    // native picker. On iOS a new view controller (camera / library) won't be
+    // presented while the Modal is still on screen, so launching in the same
+    // tick silently does nothing. InteractionManager resolves once the
+    // interaction/animation queue is clear; web falls back to a timeout that
+    // comfortably outlasts the fade animation.
+    await new Promise<void>((resolve) => {
+      if (Platform.OS === "web" || !InteractionManager?.runAfterInteractions) {
+        setTimeout(resolve, 400);
+      } else {
+        InteractionManager.runAfterInteractions(() => resolve());
+      }
+    });
     try {
       const perm =
         mode === "camera"
@@ -205,6 +221,8 @@ export default function Profile() {
       if (!result.ok) setAvatarError(result.error ?? "Couldn't add the photo. Please try again.");
     } catch (e: any) {
       setAvatarError(e?.message ?? "Couldn't add the photo. Please try again.");
+    } finally {
+      pickingRef.current = false;
     }
   };
 
