@@ -24,6 +24,30 @@ uri = "file://artifacts/mockup-sandbox/public/images/avatar3.png"
 type = "image"
 title = "Woman avatar athletic happy"
 
+[[generated]]
+id = "FoTCZDkVl1tMz1d2AT_IP"
+uri = "file://assets/images/photos/pilates.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "q-b6jK7m7u9Kel2-tfdrB"
+uri = "file://assets/images/photos/yoga.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "ZBQG826ad5NlZPPdRysiZ"
+uri = "file://assets/images/photos/strength.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "5nOPyNN8X6ZDjSeIdV88W"
+uri = "file://assets/images/photos/hiit.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "KmpG-YsopX8HoAwCw5oyy"
 uri = "file://attached_assets/stock_images/pilates.jpg"
