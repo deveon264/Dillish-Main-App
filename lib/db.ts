@@ -10,6 +10,15 @@ export function getPool(): Pool {
   return pool;
 }
 
+// Test seam: backs the data layer with an in-memory pool so the auth flows can
+// be exercised without a real Postgres. Passing a pool also marks the schema as
+// ready so `ensureSchema()` skips its CREATE TABLE statements. Never called by
+// application code — only the test suite.
+export function __setPoolForTests(p: Pool | null): void {
+  pool = p;
+  schemaReady = p ? Promise.resolve() : null;
+}
+
 // Creates the exercises table on first use so fresh environments work without
 // a manual migration step. Video bytes live in object storage; only a path is
 // stored here.
