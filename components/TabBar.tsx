@@ -100,8 +100,8 @@ const styles = StyleSheet.create({
     borderColor: "transparent",
   },
   itemInnerActive: {
-    backgroundColor: "rgba(82,91,74,0.12)",
-    borderColor: "rgba(82,91,74,0.22)",
+    backgroundColor: colors.accentTintMd,
+    borderColor: colors.accentBorder,
   },
   label: { fontFamily: fonts.sansMedium, fontSize: 10 },
   labelActive: { fontFamily: fonts.sansSemibold },

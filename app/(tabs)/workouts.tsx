@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
     borderColor: colors.cardBorder,
     backgroundColor: colors.card,
   },
-  filterChipActive: { borderColor: colors.accent, backgroundColor: "rgba(82,91,74,0.14)" },
+  filterChipActive: { borderColor: colors.accent, backgroundColor: colors.accentTintLg },
   filterText: { fontFamily: fonts.sansMedium, fontSize: 13.5, color: colors.muted },
   filterTextActive: { color: colors.accent },
   list: { gap: 16 },
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "transparent",
   },
-  sheetRowActive: { borderColor: colors.accent, backgroundColor: "rgba(82,91,74,0.14)" },
+  sheetRowActive: { borderColor: colors.accent, backgroundColor: colors.accentTintLg },
   sheetRowText: { fontFamily: fonts.sansMedium, fontSize: 15, color: colors.foreground },
   sheetRowTextActive: { color: colors.accent },
 });

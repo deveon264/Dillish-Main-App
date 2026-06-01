@@ -238,9 +238,9 @@ const styles = StyleSheet.create({
   desc: { fontFamily: fonts.sans, fontSize: 15, color: colors.mutedForeground, lineHeight: 23, marginTop: 8 },
   cuesBox: {
     marginTop: 14,
-    backgroundColor: "rgba(82,91,74,0.1)",
+    backgroundColor: colors.accentTint,
     borderWidth: 1,
-    borderColor: "rgba(82,91,74,0.28)",
+    borderColor: colors.accentBorderMd,
     borderRadius: colors.radius,
     padding: 16,
     gap: 8,
