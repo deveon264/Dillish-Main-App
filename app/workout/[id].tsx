@@ -39,6 +39,10 @@ export default function WorkoutPlayer() {
   const toastAnim = useRef(new Animated.Value(0)).current;
   const savedRef = useRef(false);
 
+  const overlayOpacity = useRef(new Animated.Value(1)).current;
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [controlsShown, setControlsShown] = useState(true);
+
   const showToast = (msg: string) => {
     setToast(msg);
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -73,8 +77,39 @@ export default function WorkoutPlayer() {
     return () => {
       if (timer.current) clearInterval(timer.current);
       if (toastTimer.current) clearTimeout(toastTimer.current);
+      if (hideTimer.current) clearTimeout(hideTimer.current);
     };
   }, []);
+
+  const scheduleHide = () => {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    hideTimer.current = setTimeout(() => {
+      Animated.timing(overlayOpacity, { toValue: 0, duration: 350, useNativeDriver: true }).start(({ finished }) => {
+        if (finished) setControlsShown(false);
+      });
+    }, 3000);
+  };
+
+  const revealOverlay = () => {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    setControlsShown(true);
+    Animated.timing(overlayOpacity, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+    if (!paused) scheduleHide();
+  };
+
+  useEffect(() => {
+    if (paused) {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+      setControlsShown(true);
+      Animated.timing(overlayOpacity, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+    } else {
+      scheduleHide();
+    }
+    return () => {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paused]);
 
   useEffect(() => {
     if (phase !== "active" || paused || !current || remaining <= 0) return;
@@ -179,45 +214,38 @@ export default function WorkoutPlayer() {
               colors={["rgba(44,36,34,0.5)", "rgba(44,36,34,0.2)", "rgba(44,36,34,0.85)"]}
               style={StyleSheet.absoluteFill}
             />
-            <View style={[styles.playerTop, { marginTop: insets.top + 8 }]}>
-              <Pressable style={styles.roundBtn} onPress={() => router.back()} hitSlop={8}>
-                <Ionicons name="chevron-back" size={22} color={colors.foreground} />
-              </Pressable>
-              <View style={styles.nowPlaying}>
-                <Text style={styles.nowPlayingText}>NOW PLAYING</Text>
-              </View>
-              <Pressable
-                style={styles.roundBtn}
-                hitSlop={8}
-                onPress={() => {
-                  if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  toggleFavorite(workout.id);
-                }}
-              >
-                <Ionicons name={fav ? "heart" : "heart-outline"} size={20} color={fav ? colors.accent : colors.foreground} />
-              </Pressable>
-            </View>
+            <Pressable style={StyleSheet.absoluteFill} onPress={revealOverlay} />
 
-            <View style={styles.playerControls}>
-              <Pressable style={styles.playerCtrl} onPress={goPrev} disabled={index === 0}>
-                <Ionicons name="play-skip-back" size={26} color={index === 0 ? colors.mutedForeground : colors.foreground} />
-              </Pressable>
-              <Pressable style={styles.playerPlay} onPress={() => setPaused((p) => !p)}>
-                <Ionicons name={paused ? "play" : "pause"} size={34} color={colors.foreground} />
-              </Pressable>
-              <Pressable style={styles.playerCtrl} onPress={goNext}>
-                <Ionicons name="play-skip-forward" size={26} color={colors.foreground} />
-              </Pressable>
-            </View>
-
-            <View style={styles.playerBar}>
-              <Text style={styles.playerTime}>{fmt(elapsed)}</Text>
-              <View style={styles.playerTrack}>
-                <View style={[styles.playerFill, { width: overallPct }]} />
-                <View style={[styles.playerThumb, { left: overallPct }]} />
+            <Animated.View
+              style={[styles.playerOverlay, { opacity: overlayOpacity, pointerEvents: controlsShown ? "auto" : "none" }]}
+            >
+              <View style={[styles.playerTop, { marginTop: insets.top + 8 }]}>
+                <Pressable style={styles.roundBtn} onPress={() => router.back()} hitSlop={8}>
+                  <Ionicons name="chevron-back" size={22} color={colors.foreground} />
+                </Pressable>
               </View>
-              <Text style={styles.playerTime}>{fmt(totalSeconds)}</Text>
-            </View>
+
+              <View style={styles.playerControls}>
+                <Pressable style={styles.playerCtrl} onPress={goPrev} disabled={index === 0}>
+                  <Ionicons name="play-skip-back" size={26} color={index === 0 ? colors.mutedForeground : colors.foreground} />
+                </Pressable>
+                <Pressable style={styles.playerPlay} onPress={() => setPaused((p) => !p)}>
+                  <Ionicons name={paused ? "play" : "pause"} size={34} color={colors.foreground} />
+                </Pressable>
+                <Pressable style={styles.playerCtrl} onPress={goNext}>
+                  <Ionicons name="play-skip-forward" size={26} color={colors.foreground} />
+                </Pressable>
+              </View>
+
+              <View style={styles.playerBar}>
+                <Text style={styles.playerTime}>{fmt(elapsed)}</Text>
+                <View style={styles.playerTrack}>
+                  <View style={[styles.playerFill, { width: overallPct }]} />
+                  <View style={[styles.playerThumb, { left: overallPct }]} />
+                </View>
+                <Text style={styles.playerTime}>{fmt(totalSeconds)}</Text>
+              </View>
+            </Animated.View>
           </ImageBackground>
 
           <View style={styles.info}>
@@ -228,9 +256,21 @@ export default function WorkoutPlayer() {
                 </View>
                 <Text style={styles.levelText}>{workout.level.toUpperCase()}</Text>
               </View>
-              <Pressable style={styles.shareBtn} hitSlop={8}>
-                <Ionicons name="share-social-outline" size={18} color={colors.foreground} />
-              </Pressable>
+              <View style={styles.infoActions}>
+                <Pressable
+                  style={styles.shareBtn}
+                  hitSlop={8}
+                  onPress={() => {
+                    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    toggleFavorite(workout.id);
+                  }}
+                >
+                  <Ionicons name={fav ? "heart" : "heart-outline"} size={18} color={fav ? colors.accent : colors.foreground} />
+                </Pressable>
+                <Pressable style={styles.shareBtn} hitSlop={8}>
+                  <Ionicons name="share-social-outline" size={18} color={colors.foreground} />
+                </Pressable>
+              </View>
             </View>
 
             <View style={styles.titleRow}>
@@ -568,6 +608,7 @@ const styles = StyleSheet.create({
   metaItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   rowCenter: { flexDirection: "row", alignItems: "center", gap: 10 },
   player: { height: 360, justifyContent: "space-between" },
+  playerOverlay: { flex: 1, justifyContent: "space-between" },
   playerTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20 },
   roundBtn: {
     width: 42,
@@ -579,15 +620,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  nowPlaying: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: "rgba(44,36,34,0.5)",
-    borderWidth: 1,
-    borderColor: "rgba(247,235,232,0.15)",
-  },
-  nowPlayingText: { fontFamily: fonts.sansSemibold, fontSize: 11, color: colors.foreground, letterSpacing: 1.5 },
   playerControls: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 28 },
   playerCtrl: {
     width: 52,
@@ -634,6 +666,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  infoActions: { flexDirection: "row", alignItems: "center", gap: 10 },
   titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 12 },
   playerTitle: { flex: 1, fontFamily: fonts.serifSemibold, fontSize: 30, color: colors.foreground },
   playerTitleItalic: { fontFamily: fonts.serifItalic, fontStyle: "italic", color: colors.foreground },
