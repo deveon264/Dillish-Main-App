@@ -34,6 +34,7 @@ export default function WorkoutPlayer() {
   const [paused, setPaused] = useState(false);
   const [tab, setTab] = useState<"exercises" | "guidance" | "progress">("exercises");
   const [toast, setToast] = useState<string | null>(null);
+  const [toastIcon, setToastIcon] = useState<keyof typeof Ionicons.glyphMap>("lock-closed");
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toastAnim = useRef(new Animated.Value(0)).current;
@@ -43,8 +44,9 @@ export default function WorkoutPlayer() {
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [controlsShown, setControlsShown] = useState(true);
 
-  const showToast = (msg: string) => {
+  const showToast = (msg: string, icon: keyof typeof Ionicons.glyphMap = "lock-closed") => {
     setToast(msg);
+    setToastIcon(icon);
     if (toastTimer.current) clearTimeout(toastTimer.current);
     Animated.timing(toastAnim, {
       toValue: 1,
@@ -68,6 +70,23 @@ export default function WorkoutPlayer() {
     setRemaining(workout!.exercises[i].seconds);
     setPaused(false);
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    showToast(`Replaying ${workout!.exercises[i].name}`, "reload");
+  };
+
+  const togglePause = () => {
+    setPaused((p) => {
+      const next = !p;
+      showToast(next ? "Paused" : "Resumed", next ? "pause" : "play");
+      return next;
+    });
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const toggleFav = () => {
+    if (!workout) return;
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    toggleFavorite(workout.id);
+    showToast(fav ? "Removed from saved" : "Saved to favorites", fav ? "heart-dislike" : "heart");
   };
 
   const current = workout?.exercises[index];
@@ -229,7 +248,7 @@ export default function WorkoutPlayer() {
                 <Pressable style={styles.playerCtrl} onPress={goPrev} disabled={index === 0}>
                   <Ionicons name="play-skip-back" size={26} color={index === 0 ? colors.mutedForeground : colors.foreground} />
                 </Pressable>
-                <Pressable style={styles.playerPlay} onPress={() => setPaused((p) => !p)}>
+                <Pressable style={styles.playerPlay} onPress={togglePause}>
                   <Ionicons name={paused ? "play" : "pause"} size={34} color={colors.foreground} />
                 </Pressable>
                 <Pressable style={styles.playerCtrl} onPress={goNext}>
@@ -260,10 +279,7 @@ export default function WorkoutPlayer() {
                 <Pressable
                   style={styles.shareBtn}
                   hitSlop={8}
-                  onPress={() => {
-                    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    toggleFavorite(workout.id);
-                  }}
+                  onPress={toggleFav}
                 >
                   <Ionicons name={fav ? "heart" : "heart-outline"} size={18} color={fav ? colors.accent : colors.foreground} />
                 </Pressable>
@@ -371,7 +387,7 @@ export default function WorkoutPlayer() {
                       </View>
                       <View style={styles.exRight}>
                         {isCurrent ? (
-                          <Pressable style={styles.exPlay} onPress={() => setPaused((p) => !p)} hitSlop={6}>
+                          <Pressable style={styles.exPlay} onPress={togglePause} hitSlop={6}>
                             <Ionicons name={paused ? "play" : "pause"} size={18} color={colors.onPrimary} />
                           </Pressable>
                         ) : done ? (
@@ -564,7 +580,7 @@ export default function WorkoutPlayer() {
             ]}
             pointerEvents="none"
           >
-            <Ionicons name="lock-closed" size={14} color={colors.foreground} />
+            <Ionicons name={toastIcon} size={14} color={colors.foreground} />
             <Text style={styles.toastText}>{toast}</Text>
           </Animated.View>
         )}
