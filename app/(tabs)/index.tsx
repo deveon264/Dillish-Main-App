@@ -126,9 +126,6 @@ export default function Dashboard() {
             <Ionicons name="notifications-outline" size={20} color={colors.foreground} />
             <View style={styles.notifDot} />
           </Pressable>
-          <Pressable style={styles.avatar} onPress={() => router.navigate("/(tabs)/profile")}>
-            <Text style={styles.avatarText}>{firstName.charAt(0).toUpperCase()}</Text>
-          </Pressable>
         </View>
 
         {/* Weekly Streak */}
@@ -368,18 +365,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.background,
   },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.cardElevated,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarText: { fontFamily: fonts.serifSemibold, fontSize: 19, color: colors.accent },
-
   rowCenter: { flexDirection: "row", alignItems: "center", gap: 8 },
 
   streakCard: { paddingVertical: 18 },

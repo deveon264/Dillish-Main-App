@@ -4,12 +4,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import { useRouter } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Card } from "@/components/Card";
 import { ProgressBar } from "@/components/ProgressBar";
 import { LineChart, LinePoint } from "@/components/LineChart";
-import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
 import { useInsets } from "@/hooks/useInsets";
 import { todayKey } from "@/lib/storage";
@@ -54,9 +52,7 @@ const parseDateInput = (s: string): number | null => {
 
 export default function Progress() {
   const insets = useInsets();
-  const router = useRouter();
-  const { user } = useAuth();
-  const { profile, weightLogs, progressPhotos, completions, addWeight, removeWeight, addPhoto, removePhoto } =
+  const { profile, weightLogs, progressPhotos, addWeight, removeWeight, addPhoto, removePhoto } =
     useData();
 
   const [tab, setTab] = useState("progress");
@@ -65,25 +61,7 @@ export default function Progress() {
   const [logError, setLogError] = useState("");
   const [photoError, setPhotoError] = useState("");
 
-  const firstName = (user?.name ?? "there").split(" ")[0];
   const unit = profile.weightUnit ?? "kg";
-
-  const completionDays = useMemo(() => {
-    const set = new Set<string>();
-    completions.forEach((c) => set.add(todayKey(new Date(c.ts))));
-    return set;
-  }, [completions]);
-
-  const streak = useMemo(() => {
-    let count = 0;
-    const d = new Date();
-    if (!completionDays.has(todayKey(d))) d.setDate(d.getDate() - 1);
-    while (completionDays.has(todayKey(d))) {
-      count += 1;
-      d.setDate(d.getDate() - 1);
-    }
-    return count;
-  }, [completionDays]);
 
   const sortedDesc = useMemo(() => [...weightLogs].sort((a, b) => b.ts - a.ts), [weightLogs]);
 
@@ -186,14 +164,6 @@ export default function Progress() {
               Your <Text style={styles.titleItalic}>Progress</Text>
             </Text>
           </View>
-          <View style={styles.streakPill}>
-            <Text style={styles.streakFlame}>🔥</Text>
-            <Text style={styles.streakNum}>{streak}</Text>
-            <Text style={styles.streakLabel}>day streak</Text>
-          </View>
-          <Pressable style={styles.avatar} onPress={() => router.navigate("/(tabs)/profile")}>
-            <Text style={styles.avatarText}>{firstName.charAt(0).toUpperCase()}</Text>
-          </Pressable>
         </View>
 
         <View style={styles.tabBar}>
@@ -484,31 +454,6 @@ const styles = StyleSheet.create({
   eyebrow: { fontFamily: fonts.sansSemibold, fontSize: 12, letterSpacing: 1.6, color: colors.muted },
   title: { fontFamily: fonts.serif, fontSize: 30, color: colors.foreground, marginTop: 2 },
   titleItalic: { fontFamily: fonts.serifItalic, color: colors.foreground },
-  streakPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  streakFlame: { fontSize: 13 },
-  streakNum: { fontFamily: fonts.sansBold, fontSize: 13, color: colors.foreground },
-  streakLabel: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "rgba(242,212,204,0.12)",
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarText: { fontFamily: fonts.serifSemibold, fontSize: 18, color: colors.accent },
   tabBar: {
     flexDirection: "row",
     gap: 4,

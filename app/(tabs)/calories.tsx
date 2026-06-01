@@ -231,9 +231,6 @@ export default function Calories() {
           <Pressable style={styles.headerBtn} hitSlop={6}>
             <Ionicons name="help" size={18} color={colors.muted} />
           </Pressable>
-          <View style={styles.avatar}>
-            <Ionicons name="person" size={20} color={colors.accent} />
-          </View>
         </View>
 
         <Card style={styles.goalCard}>
@@ -621,16 +618,6 @@ const styles = StyleSheet.create({
     height: 38,
     borderRadius: 19,
     backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "rgba(242,212,204,0.12)",
     borderWidth: 1,
     borderColor: colors.cardBorder,
     alignItems: "center",

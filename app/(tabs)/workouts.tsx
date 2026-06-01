@@ -24,9 +24,8 @@ const LEVEL_OPTIONS: Workout["level"][] = ["Beginner", "Intermediate", "Advanced
 export default function Workouts() {
   const router = useRouter();
   const insets = useInsets();
-  const { user, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   const { favorites, toggleFavorite, isFavorite } = useData();
-  const firstName = (user?.name ?? "there").split(" ")[0];
   const [category, setCategory] = useState("All");
   const [query, setQuery] = useState("");
   const [duration, setDuration] = useState<string | null>(null);
@@ -71,9 +70,6 @@ export default function Workouts() {
           </View>
           <Pressable style={styles.headerBtn} hitSlop={6}>
             <Ionicons name="options-outline" size={20} color={colors.foreground} />
-          </Pressable>
-          <Pressable style={styles.avatar} onPress={() => router.navigate("/(tabs)/profile")}>
-            <Text style={styles.avatarText}>{firstName.charAt(0).toUpperCase()}</Text>
           </Pressable>
         </View>
 
@@ -278,17 +274,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1.5,
-    borderColor: colors.accent,
-    backgroundColor: colors.card,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarText: { fontFamily: fonts.serifSemibold, fontSize: 18, color: colors.accent },
   search: {
     flexDirection: "row",
     alignItems: "center",

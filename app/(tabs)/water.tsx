@@ -2,13 +2,11 @@ import React, { useMemo, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable, TextInput } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Card } from "@/components/Card";
 import { WaterCircle } from "@/components/WaterCircle";
 import { ProgressBar } from "@/components/ProgressBar";
 import { BarChart, BarDatum } from "@/components/BarChart";
-import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
 import { useInsets } from "@/hooks/useInsets";
 import { todayKey } from "@/lib/storage";
@@ -44,13 +42,9 @@ const amountLabel = (ml: number) => {
 
 export default function Water() {
   const insets = useInsets();
-  const router = useRouter();
-  const { user } = useAuth();
-  const { profile, waterLogs, completions, addWater, removeWater } = useData();
+  const { profile, waterLogs, addWater, removeWater } = useData();
 
   const [custom, setCustom] = useState("");
-
-  const firstName = (user?.name ?? "there").split(" ")[0];
 
   const tk = todayKey();
   const todayLogs = useMemo(
@@ -66,23 +60,6 @@ export default function Water() {
     const d = new Date();
     return `${d.toLocaleDateString("en-US", { weekday: "short" })}, ${d.getDate()} ${d.toLocaleDateString("en-US", { month: "short" })}`;
   }, []);
-
-  const completionDays = useMemo(() => {
-    const set = new Set<string>();
-    completions.forEach((c) => set.add(todayKey(new Date(c.ts))));
-    return set;
-  }, [completions]);
-
-  const streak = useMemo(() => {
-    let count = 0;
-    const d = new Date();
-    if (!completionDays.has(todayKey(d))) d.setDate(d.getDate() - 1);
-    while (completionDays.has(todayKey(d))) {
-      count += 1;
-      d.setDate(d.getDate() - 1);
-    }
-    return count;
-  }, [completionDays]);
 
   const weekly: BarDatum[] = useMemo(() => {
     const now = new Date();
@@ -133,14 +110,6 @@ export default function Water() {
               Stay <Text style={styles.titleItalic}>Hydrated</Text>
             </Text>
           </View>
-          <View style={styles.streakPill}>
-            <Text style={styles.streakFlame}>🔥</Text>
-            <Text style={styles.streakNum}>{streak}</Text>
-            <Text style={styles.streakLabel}>day streak</Text>
-          </View>
-          <Pressable style={styles.avatar} onPress={() => router.navigate("/(tabs)/profile")}>
-            <Text style={styles.avatarText}>{firstName.charAt(0).toUpperCase()}</Text>
-          </Pressable>
         </View>
 
         <Card style={styles.hydrationCard}>
@@ -268,31 +237,6 @@ const styles = StyleSheet.create({
   eyebrow: { fontFamily: fonts.sansSemibold, fontSize: 12, letterSpacing: 1.6, color: colors.muted },
   title: { fontFamily: fonts.serif, fontSize: 30, color: colors.foreground, marginTop: 2 },
   titleItalic: { fontFamily: fonts.serifItalic, color: colors.foreground },
-  streakPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  streakFlame: { fontSize: 13 },
-  streakNum: { fontFamily: fonts.sansBold, fontSize: 13, color: colors.foreground },
-  streakLabel: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "rgba(242,212,204,0.12)",
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarText: { fontFamily: fonts.serifSemibold, fontSize: 18, color: colors.accent },
   hydrationCard: { marginTop: 18, padding: 18 },
   hydrationHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   hydrationEyebrow: { fontFamily: fonts.sansSemibold, fontSize: 12, letterSpacing: 1.2, color: colors.muted },
