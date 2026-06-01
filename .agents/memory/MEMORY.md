@@ -1,7 +1,7 @@
 - [Exercise video streaming & admin uploads](exercise-video-streaming.md) — bytes in object storage (sidecar signed URLs, NOT @google-cloud SDK — won't bundle in Metro), Postgres key only, 302-to-GCS for Range, mock-auth header gating limit.
 - [Expo + Replit quirks](expo-replit-quirks.md) — SDK54 pinning, fonts, --tunnel, legacy-peer-deps.
 - [Server-verified identity & admin model](server-identity-auth.md) — session token doubles as admin token; passcode only gates admin signup; coach email pinned both ways.
-- [Profile header panel theming](profile-light-panel.md) — Profile header is dark "glass" matching the rest of the app.
+- [Light theme & scrim inversion](profile-light-panel.md) — app is a single LIGHT strawberry-cherry theme; over-image content keeps dark scrims + white text, solid surfaces are light + dark ink; blue/green are small pops only.
 - [Streak/week math duplication](streak-week-math.md) — weekly-streak/week-day computation has copies that must stay in sync.
 - [Weight tracking derivation](weight-tracking-derivation.md) — how current/start weight are computed for Progress + Profile; logs decoupled from profile.
 - [Workout favorites](workout-favorites.md) — DataContext favorites slice powers the library Saved filter; home "saved" still uses w.featured.

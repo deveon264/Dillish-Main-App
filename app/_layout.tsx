@@ -93,7 +93,7 @@ export default function RootLayout() {
           <ErrorBoundary>
             <AuthProvider>
               <DataProvider>
-                <StatusBar style="light" />
+                <StatusBar style="dark" />
                 <Stack
                   screenOptions={{
                     headerShown: false,

@@ -123,13 +123,13 @@ export default function ExercisePlayer() {
           )}
           {videoState === "loading" && (
             <View style={styles.videoOverlay} pointerEvents="none">
-              <ActivityIndicator color={colors.foreground} />
+              <ActivityIndicator color="#FFFFFF" />
               <Text style={styles.overlayText}>Loading video…</Text>
             </View>
           )}
           {videoState === "error" && (
             <View style={styles.videoOverlay}>
-              <Ionicons name="alert-circle-outline" size={30} color={colors.foreground} />
+              <Ionicons name="alert-circle-outline" size={30} color="#FFFFFF" />
               <Text style={styles.overlayText}>This video couldn’t be loaded.</Text>
               <Pressable style={styles.retryBtn} onPress={() => setRetry((n) => n + 1)}>
                 <Text style={styles.retryText}>Try again</Text>
@@ -200,12 +200,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 10,
     paddingHorizontal: 24,
-    backgroundColor: "rgba(0,0,0,0.55)",
+    backgroundColor: "rgba(58,22,32,0.55)",
   },
   overlayText: {
     fontFamily: fonts.sansMedium,
     fontSize: 14,
-    color: colors.foreground,
+    color: "#FFFFFF",
     textAlign: "center",
   },
   retryBtn: {
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
   title: { fontFamily: fonts.serifSemibold, fontSize: 28, color: colors.foreground },
   pill: {
     alignSelf: "flex-start",
-    backgroundColor: "rgba(247,235,232,0.1)",
+    backgroundColor: "rgba(58,22,32,0.1)",
     borderWidth: 1,
     borderColor: colors.cardBorder,
     paddingHorizontal: 12,
@@ -238,9 +238,9 @@ const styles = StyleSheet.create({
   desc: { fontFamily: fonts.sans, fontSize: 15, color: colors.mutedForeground, lineHeight: 23, marginTop: 8 },
   cuesBox: {
     marginTop: 14,
-    backgroundColor: "rgba(201,137,122,0.1)",
+    backgroundColor: "rgba(233,75,114,0.1)",
     borderWidth: 1,
-    borderColor: "rgba(201,137,122,0.28)",
+    borderColor: "rgba(233,75,114,0.28)",
     borderRadius: colors.radius,
     padding: 16,
     gap: 8,

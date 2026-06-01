@@ -1,21 +1,30 @@
 ---
-name: Profile header panel theming
-description: The Profile header (avatar/name/badges + 4-stat row) is dark "glass", matching the rest of the app
+name: Light theme & image-scrim inversion rule
+description: The app is a LIGHT "strawberry-cherry" theme; image/video overlays keep dark scrims + white text while solid surfaces are light cards + dark ink text
 ---
 
-The Profile tab's header block — profile card (avatar, name, email, Premium +
-streak badges) and the 4-stat row (Age/kg/cm/BMI) — is rendered inside a single
-dark translucent "glass pill" (`styles.headerPanel`: `colors.card` bg +
-`colors.cardBorder`), consistent with the dark charcoal theme used across the
-rest of the app. The inner profile `Card` is transparent (no bg/border) so the
-pill is the only surface; the BMI stat keeps a rose accent tint.
+The whole app uses a single LIGHT, airy palette (cream/white backgrounds, dark
+ink text, pink/cherry accents) defined in `constants/colors.ts` (the source of
+truth). There is NO dark-mode toggle — light is the only theme.
 
-**Why:** It was briefly a light blush LinearGradient panel matching a one-off
-reference image, but the user reverted it back to the original dark color and
-asked only for the glass-pill container. Do not reintroduce the light/blush
-panel.
+**Accent discipline:** Royal Blue (`colors.link` #233A8B) and Leaf Green
+(`colors.success` #6BAF45) are reserved for small pops only — links, success
+states, the BMI scale, a "goal reached" chart bar. They must NOT become
+recurring UI/data colors. The macro triad (`colors.protein/carbs/fats`) is kept
+in the warm family (strawberry/cherry/mauve) on purpose, not blue/green.
 
-**How to apply:** Keep this block on dark tokens (`colors.foreground`,
-`colors.mutedForeground`, `colors.track`, `colors.cardElevated`). The inline
-name-edit controls (TextInput + gradient Save / outline Cancel) are also dark —
-keep future edits to this block dark, not light.
+**Scrim-inversion rule (the important one):** Content layered over photos or
+videos (workout player + rest screens in `app/workout/[id].tsx`, hero images,
+before/after photos, video overlays) keeps a DARK scrim — `rgba(58,22,32,α)` —
+with WHITE text/icons (`colors.onPrimary` or `"#FFFFFF"`). Only SOLID surfaces
+flip to light card + dark ink text. So a single screen can mix dark-over-image
+regions and light solid regions.
+
+**Why:** A naive recolor that swapped every `colors.foreground` to dark ink made
+over-image text/icons invisible (dark-on-dark). Over-image text must stay light.
+
+**How to apply:** Before recoloring any element, ask "does this sit on an image
+/ video / dark scrim, or on a solid light surface?" Light surface → dark text;
+over image → white text + keep the dark scrim. The Profile header (`headerPanel`
+in `app/(tabs)/profile.tsx`) is now a plain white card (`colors.card`), NOT the
+old dark glass pill.

@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 14,
-    backgroundColor: "rgba(242,212,204,0.10)",
+    backgroundColor: "rgba(233,75,114,0.10)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -115,6 +115,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     paddingHorizontal: 24,
     paddingTop: 12,
-    backgroundColor: "rgba(30,22,20,0.85)",
+    backgroundColor: colors.card,
   },
 });

@@ -95,8 +95,8 @@ const styles = StyleSheet.create({
   subtitle: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted, marginTop: 10, lineHeight: 22 },
   dropWrap: { alignItems: "center", justifyContent: "center", marginTop: 30, marginBottom: 10 },
   dropCenter: { position: "absolute", alignItems: "center" },
-  dropValue: { fontFamily: fonts.serifSemibold, fontSize: 40, color: colors.onPrimary },
-  dropUnit: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.onPrimary, opacity: 0.8, marginTop: -4 },
+  dropValue: { fontFamily: fonts.serifSemibold, fontSize: 40, color: colors.foreground },
+  dropUnit: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.foreground, opacity: 0.8, marginTop: -4 },
   stepper: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 24, marginTop: 16 },
   stepBtn: {
     width: 48,
@@ -131,6 +131,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     paddingHorizontal: 24,
     paddingTop: 12,
-    backgroundColor: "rgba(30,22,20,0.85)",
+    backgroundColor: colors.card,
   },
 });

@@ -164,7 +164,7 @@ export default function Workouts() {
               return (
               <Pressable key={w.id} style={styles.card} onPress={() => router.push(`/workout/${w.id}`)}>
                 <ImageBackground source={w.image} style={styles.cardImg} imageStyle={styles.cardImgRadius}>
-                  <LinearGradient colors={["rgba(44,36,34,0.05)", "rgba(44,36,34,0.85)"]} style={StyleSheet.absoluteFill} />
+                  <LinearGradient colors={["rgba(58,22,32,0.05)", "rgba(58,22,32,0.85)"]} style={StyleSheet.absoluteFill} />
                   <Pressable
                     style={styles.cardHeart}
                     hitSlop={8}
@@ -173,7 +173,7 @@ export default function Workouts() {
                       toggleFavorite(w.id);
                     }}
                   >
-                    <Ionicons name={fav ? "heart" : "heart-outline"} size={20} color={fav ? colors.accent : colors.foreground} />
+                    <Ionicons name={fav ? "heart" : "heart-outline"} size={20} color={fav ? colors.accent : "#FFFFFF"} />
                   </Pressable>
                   <View style={styles.cardBody}>
                     <View style={styles.cardTags}>
@@ -188,11 +188,11 @@ export default function Workouts() {
                       </Text>
                       <View style={styles.cardMeta}>
                         <View style={styles.metaItem}>
-                          <Ionicons name="time-outline" size={14} color={colors.foreground} />
+                          <Ionicons name="time-outline" size={14} color="#FFFFFF" />
                           <Text style={styles.metaText}>{w.durationMin} min</Text>
                         </View>
                         <View style={styles.metaItem}>
-                          <Ionicons name="flame-outline" size={14} color={colors.foreground} />
+                          <Ionicons name="flame-outline" size={14} color="#FFFFFF" />
                           <Text style={styles.metaText}>{w.kcal} kcal</Text>
                         </View>
                       </View>
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
     borderColor: colors.cardBorder,
     backgroundColor: colors.card,
   },
-  filterChipActive: { borderColor: colors.accent, backgroundColor: "rgba(201,137,122,0.14)" },
+  filterChipActive: { borderColor: colors.accent, backgroundColor: "rgba(233,75,114,0.14)" },
   filterText: { fontFamily: fonts.sansMedium, fontSize: 13.5, color: colors.muted },
   filterTextActive: { color: colors.accent },
   list: { gap: 16 },
@@ -309,23 +309,23 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "rgba(44,36,34,0.45)",
+    backgroundColor: "rgba(58,22,32,0.45)",
     alignItems: "center",
     justifyContent: "center",
   },
   cardBody: { flex: 1, justifyContent: "space-between", padding: 16 },
   cardTags: { flexDirection: "row", alignItems: "center", gap: 8, alignSelf: "flex-start" },
   cardCat: { fontFamily: fonts.sansSemibold, fontSize: 11, color: colors.accent, letterSpacing: 0.6, textTransform: "uppercase" },
-  cardTagDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: "rgba(247,235,232,0.5)" },
-  cardLevel: { fontFamily: fonts.sansSemibold, fontSize: 11, color: colors.foreground, letterSpacing: 0.6, textTransform: "uppercase" },
-  cardTitle: { fontFamily: fonts.serifSemibold, fontSize: 22, color: colors.foreground },
-  cardDesc: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 18, color: "rgba(247,235,232,0.78)", marginTop: 4 },
+  cardTagDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: "rgba(255,255,255,0.5)" },
+  cardLevel: { fontFamily: fonts.sansSemibold, fontSize: 11, color: "#FFFFFF", letterSpacing: 0.6, textTransform: "uppercase" },
+  cardTitle: { fontFamily: fonts.serifSemibold, fontSize: 22, color: "#FFFFFF" },
+  cardDesc: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 18, color: "rgba(255,255,255,0.78)", marginTop: 4 },
   cardMeta: { flexDirection: "row", gap: 16, marginTop: 10 },
   metaItem: { flexDirection: "row", alignItems: "center", gap: 5 },
-  metaText: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.foreground },
+  metaText: { fontFamily: fonts.sansMedium, fontSize: 13, color: "#FFFFFF" },
   empty: { alignItems: "center", paddingVertical: 60, gap: 12 },
   emptyText: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted, textAlign: "center", paddingHorizontal: 32 },
-  modalBackdrop: { flex: 1, backgroundColor: "rgba(20,16,15,0.55)", justifyContent: "flex-end" },
+  modalBackdrop: { flex: 1, backgroundColor: "rgba(58,22,32,0.45)", justifyContent: "flex-end" },
   sheet: {
     backgroundColor: colors.card,
     borderTopLeftRadius: 28,
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "transparent",
   },
-  sheetRowActive: { borderColor: colors.accent, backgroundColor: "rgba(201,137,122,0.14)" },
+  sheetRowActive: { borderColor: colors.accent, backgroundColor: "rgba(233,75,114,0.14)" },
   sheetRowText: { fontFamily: fonts.sansMedium, fontSize: 15, color: colors.foreground },
   sheetRowTextActive: { color: colors.accent },
 });

@@ -444,15 +444,15 @@ export default function WorkoutPlayer() {
       <GradientBackground>
         <ImageBackground source={next.image ?? workout.image} style={styles.restScreen}>
           <LinearGradient
-            colors={["rgba(44,36,34,0.55)", "rgba(44,36,34,0.78)", "rgba(44,36,34,0.95)"]}
+            colors={["rgba(58,22,32,0.55)", "rgba(58,22,32,0.78)", "rgba(58,22,32,0.95)"]}
             style={StyleSheet.absoluteFill}
           />
           <View style={[styles.restTop, { marginTop: insets.top + 8 }]}>
             <Pressable style={styles.roundBtn} onPress={() => router.back()} hitSlop={8}>
-              <Ionicons name="chevron-back" size={22} color={colors.foreground} />
+              <Ionicons name="chevron-back" size={22} color={colors.onPrimary} />
             </Pressable>
             <Pressable style={styles.roundBtn} onPress={togglePause} hitSlop={8}>
-              <Ionicons name={paused ? "play" : "pause"} size={20} color={colors.foreground} />
+              <Ionicons name={paused ? "play" : "pause"} size={20} color={colors.onPrimary} />
             </Pressable>
           </View>
 
@@ -472,7 +472,7 @@ export default function WorkoutPlayer() {
 
           <View style={[styles.restActions, { paddingBottom: insets.bottom + 24 }]}>
             <Pressable style={styles.restAddBtn} onPress={() => setRestRemaining((r) => r + 15)} hitSlop={8}>
-              <Ionicons name="add" size={18} color={colors.foreground} />
+              <Ionicons name="add" size={18} color={colors.onPrimary} />
               <Text style={styles.restAddText}>15s</Text>
             </Pressable>
             <Pressable style={styles.restStartBtn} onPress={goNext}>
@@ -546,7 +546,7 @@ export default function WorkoutPlayer() {
               />
             )}
             <LinearGradient
-              colors={["rgba(44,36,34,0.5)", "rgba(44,36,34,0.2)", "rgba(44,36,34,0.85)"]}
+              colors={["rgba(58,22,32,0.5)", "rgba(58,22,32,0.2)", "rgba(58,22,32,0.85)"]}
               style={StyleSheet.absoluteFill}
             />
             <Pressable style={StyleSheet.absoluteFill} onPress={toggleOverlay} />
@@ -558,20 +558,20 @@ export default function WorkoutPlayer() {
 
               <View style={[styles.playerTop, { marginTop: insets.top + 8, pointerEvents: "box-none" }]}>
                 <Pressable style={styles.roundBtn} onPress={() => router.back()} hitSlop={8}>
-                  <Ionicons name="chevron-back" size={22} color={colors.foreground} />
+                  <Ionicons name="chevron-back" size={22} color={colors.onPrimary} />
                 </Pressable>
               </View>
 
               <View style={[styles.playerControls, { pointerEvents: "box-none" }]}>
                 <Pressable style={styles.playerCtrl} onPress={() => seekRelative(-SEEK_STEP)} hitSlop={8}>
-                  <Ionicons name="play-back" size={24} color={colors.foreground} />
+                  <Ionicons name="play-back" size={24} color={colors.onPrimary} />
                   <Text style={styles.seekLabel}>15</Text>
                 </Pressable>
                 <Pressable style={styles.playerPlay} onPress={togglePause}>
-                  <Ionicons name={paused ? "play" : "pause"} size={34} color={colors.foreground} />
+                  <Ionicons name={paused ? "play" : "pause"} size={34} color={colors.onPrimary} />
                 </Pressable>
                 <Pressable style={styles.playerCtrl} onPress={() => seekRelative(SEEK_STEP)} hitSlop={8}>
-                  <Ionicons name="play-forward" size={24} color={colors.foreground} />
+                  <Ionicons name="play-forward" size={24} color={colors.onPrimary} />
                   <Text style={styles.seekLabel}>15</Text>
                 </Pressable>
               </View>
@@ -982,9 +982,9 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: "rgba(44,36,34,0.45)",
+    backgroundColor: "rgba(58,22,32,0.45)",
     borderWidth: 1,
-    borderColor: "rgba(247,235,232,0.15)",
+    borderColor: "rgba(255,255,255,0.25)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -993,36 +993,36 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: "rgba(44,36,34,0.4)",
+    backgroundColor: "rgba(58,22,32,0.4)",
     alignItems: "center",
     justifyContent: "center",
   },
   seekLabel: {
     fontFamily: fonts.sansSemibold,
     fontSize: 10,
-    color: colors.foreground,
+    color: "#FFFFFF",
     marginTop: 1,
   },
   playerPlay: {
     width: 76,
     height: 76,
     borderRadius: 38,
-    backgroundColor: "rgba(247,235,232,0.22)",
+    backgroundColor: "rgba(255,255,255,0.22)",
     borderWidth: 1,
-    borderColor: "rgba(247,235,232,0.3)",
+    borderColor: "rgba(255,255,255,0.4)",
     alignItems: "center",
     justifyContent: "center",
   },
   playerBar: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingBottom: 18 },
-  playerTime: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.foreground },
-  playerTrack: { flex: 1, height: 4, borderRadius: 2, backgroundColor: "rgba(247,235,232,0.25)", justifyContent: "center" },
+  playerTime: { fontFamily: fonts.sansMedium, fontSize: 12, color: "#FFFFFF" },
+  playerTrack: { flex: 1, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.3)", justifyContent: "center" },
   playerFill: { height: 4, borderRadius: 2, backgroundColor: colors.accent },
   playerThumb: {
     position: "absolute",
     width: 13,
     height: 13,
     borderRadius: 7,
-    backgroundColor: colors.foreground,
+    backgroundColor: "#FFFFFF",
     marginLeft: -6,
   },
   info: { paddingHorizontal: 24, paddingTop: 22 },
@@ -1109,13 +1109,13 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "rgba(247,235,232,0.08)",
+    backgroundColor: colors.track,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     alignItems: "center",
     justifyContent: "center",
   },
-  weekDotDone: { backgroundColor: "rgba(201,137,122,0.30)", borderColor: "transparent" },
+  weekDotDone: { backgroundColor: "rgba(233,75,114,0.25)", borderColor: "transparent" },
   weekDotToday: { backgroundColor: colors.accent, borderColor: "transparent" },
   weekDash: { fontFamily: fonts.sansMedium, fontSize: 16, color: colors.muted },
   weekLabel: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.muted },
@@ -1154,7 +1154,7 @@ const styles = StyleSheet.create({
     padding: 12,
     position: "relative",
   },
-  exCardActive: { borderColor: colors.accent, backgroundColor: "rgba(201,137,122,0.12)" },
+  exCardActive: { borderColor: colors.accent, backgroundColor: "rgba(233,75,114,0.10)" },
   exCardLocked: { opacity: 0.5 },
   exCardPressed: { opacity: 0.7 },
   nowTag: {
@@ -1174,7 +1174,7 @@ const styles = StyleSheet.create({
   exCardTitleDone: { color: colors.muted, textDecorationLine: "line-through" },
   exCardMeta: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 3 },
   exCardMetaText: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.muted },
-  exChip: { backgroundColor: "rgba(247,235,232,0.10)", paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999 },
+  exChip: { backgroundColor: "rgba(58,22,32,0.06)", paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999 },
   exChipText: { fontFamily: fonts.sansMedium, fontSize: 11, color: colors.accent },
   exRight: { flexDirection: "row", alignItems: "center", gap: 8 },
   exPlay: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
@@ -1187,9 +1187,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "rgba(28,22,21,0.95)",
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: "rgba(247,235,232,0.15)",
+    borderColor: colors.cardBorder,
     paddingHorizontal: 16,
     paddingVertical: 11,
     borderRadius: 999,
@@ -1199,9 +1199,9 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "rgba(242,212,204,0.12)",
+    backgroundColor: "rgba(233,75,114,0.10)",
     borderWidth: 1,
-    borderColor: "rgba(242,212,204,0.3)",
+    borderColor: "rgba(233,75,114,0.3)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1233,20 +1233,20 @@ const styles = StyleSheet.create({
   restTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20 },
   restBody: { alignItems: "center", paddingHorizontal: 24 },
   restEyebrow: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.accent, letterSpacing: 3 },
-  restCount: { fontFamily: fonts.serifSemibold, fontSize: 96, lineHeight: 104, color: colors.foreground },
-  restCountUnit: { fontFamily: fonts.sansMedium, fontSize: 14, color: colors.muted, marginTop: -4 },
+  restCount: { fontFamily: fonts.serifSemibold, fontSize: 96, lineHeight: 104, color: "#FFFFFF" },
+  restCountUnit: { fontFamily: fonts.sansMedium, fontSize: 14, color: "rgba(255,255,255,0.7)", marginTop: -4 },
   restTrack: {
     width: "70%",
     height: 4,
     borderRadius: 2,
-    backgroundColor: "rgba(247,235,232,0.2)",
+    backgroundColor: "rgba(255,255,255,0.25)",
     overflow: "hidden",
     marginTop: 22,
   },
   restFill: { height: 4, borderRadius: 2, backgroundColor: colors.accent },
-  restUpNext: { fontFamily: fonts.sansSemibold, fontSize: 11.5, color: colors.muted, letterSpacing: 1.4, marginTop: 30 },
-  restNextName: { fontFamily: fonts.serifSemibold, fontSize: 30, color: colors.foreground, marginTop: 8, textAlign: "center" },
-  restNextMeta: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.muted, marginTop: 6, textAlign: "center" },
+  restUpNext: { fontFamily: fonts.sansSemibold, fontSize: 11.5, color: "rgba(255,255,255,0.7)", letterSpacing: 1.4, marginTop: 30 },
+  restNextName: { fontFamily: fonts.serifSemibold, fontSize: 30, color: "#FFFFFF", marginTop: 8, textAlign: "center" },
+  restNextMeta: { fontFamily: fonts.sans, fontSize: 13.5, color: "rgba(255,255,255,0.7)", marginTop: 6, textAlign: "center" },
   restActions: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 24 },
   restAddBtn: {
     flexDirection: "row",
@@ -1257,10 +1257,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: colors.radius,
     borderWidth: 1,
-    borderColor: "rgba(247,235,232,0.25)",
-    backgroundColor: "rgba(44,36,34,0.4)",
+    borderColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "rgba(58,22,32,0.4)",
   },
-  restAddText: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
+  restAddText: { fontFamily: fonts.sansSemibold, fontSize: 15, color: "#FFFFFF" },
   restStartBtn: {
     flex: 1,
     flexDirection: "row",

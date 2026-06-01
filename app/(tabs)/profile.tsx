@@ -497,7 +497,7 @@ export default function Profile() {
               </Text>
               <View style={styles.bmiBarWrap}>
                 <LinearGradient
-                  colors={["#5BC0BE", "#8FB69B", "#E2B07F", "#D9806B"]}
+                  colors={[colors.link, colors.success, colors.primary, palette.cherry]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.bmiBar}
@@ -505,10 +505,10 @@ export default function Profile() {
                 <View style={[styles.bmiThumb, { left: `${bmiToPercent(bmi)}%` }]} />
               </View>
               <View style={styles.bmiScaleLabels}>
-                <Text style={[styles.bmiScaleLabel, { color: "#5BC0BE" }]}>Under</Text>
+                <Text style={[styles.bmiScaleLabel, { color: colors.link }]}>Under</Text>
                 <Text style={[styles.bmiScaleLabel, { color: colors.success }]}>Normal</Text>
-                <Text style={[styles.bmiScaleLabel, { color: colors.carbs }]}>Over</Text>
-                <Text style={[styles.bmiScaleLabel, { color: "#D9806B" }]}>Obese</Text>
+                <Text style={[styles.bmiScaleLabel, { color: colors.primary }]}>Over</Text>
+                <Text style={[styles.bmiScaleLabel, { color: palette.cherry }]}>Obese</Text>
               </View>
             </Card>
 
@@ -755,9 +755,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: "rgba(201,137,122,0.18)",
+    backgroundColor: "rgba(233,75,114,0.12)",
     borderWidth: 1,
-    borderColor: "rgba(201,137,122,0.4)",
+    borderColor: "rgba(233,75,114,0.3)",
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
@@ -777,7 +777,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "#FFFFFF",
     borderWidth: 2,
-    borderColor: "rgba(44,36,34,0.25)",
+    borderColor: "rgba(58,22,32,0.2)",
     transform: [{ translateX: -8 }],
   },
   bmiScaleLabels: { flexDirection: "row", justifyContent: "space-between", marginTop: 8 },
@@ -793,7 +793,7 @@ const styles = StyleSheet.create({
   acctLabel: { fontFamily: fonts.sansMedium, fontSize: 15, color: colors.foreground },
   toggleTrack: { width: 52, height: 30, borderRadius: 15, padding: 3, justifyContent: "center" },
   toggleTrackOn: { backgroundColor: colors.primary },
-  toggleTrackOff: { backgroundColor: "rgba(255,255,255,0.14)" },
+  toggleTrackOff: { backgroundColor: "rgba(58,22,32,0.25)" },
   toggleThumb: { width: 24, height: 24, borderRadius: 12, backgroundColor: "#FFFFFF" },
   toggleThumbOn: { alignSelf: "flex-end" },
   toggleThumbOff: { alignSelf: "flex-start" },
@@ -845,7 +845,7 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     backgroundColor: colors.primary,
     borderWidth: 1,
-    borderColor: "rgba(201,137,122,0.4)",
+    borderColor: "rgba(233,75,114,0.3)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -879,7 +879,7 @@ const styles = StyleSheet.create({
   emailSuccessText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.accent, marginTop: 6 },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
+    backgroundColor: "rgba(58,22,32,0.45)",
     alignItems: "center",
     justifyContent: "center",
     padding: 24,
@@ -946,8 +946,8 @@ const styles = StyleSheet.create({
     borderRadius: colors.radius,
   },
   statCardAccent: {
-    backgroundColor: "rgba(201,137,122,0.22)",
-    borderColor: "rgba(201,137,122,0.45)",
+    backgroundColor: "rgba(233,75,114,0.12)",
+    borderColor: "rgba(233,75,114,0.3)",
   },
   statNum: { fontFamily: fonts.serifSemibold, fontSize: 24, color: colors.foreground },
   statNumAccent: { color: colors.primary },
@@ -975,7 +975,7 @@ const styles = StyleSheet.create({
   },
   goalCardActive: {
     borderColor: colors.primary,
-    backgroundColor: "rgba(201,137,122,0.16)",
+    backgroundColor: "rgba(233,75,114,0.12)",
   },
   goalCardText: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.muted, textAlign: "center" },
   goalCardTextActive: { fontFamily: fonts.sansSemibold, color: colors.foreground },

@@ -297,7 +297,7 @@ export default function Calories() {
                   <>
                     <Image source={{ uri: image }} style={styles.heroImg} />
                     <LinearGradient
-                      colors={["transparent", "rgba(20,15,14,0.82)"]}
+                      colors={["transparent", "rgba(58,22,32,0.82)"]}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
                       style={StyleSheet.absoluteFill}
@@ -305,7 +305,7 @@ export default function Calories() {
                   </>
                 ) : (
                   <View style={styles.heroFallback}>
-                    <Ionicons name="restaurant" size={42} color="rgba(242,212,204,0.28)" />
+                    <Ionicons name="restaurant" size={42} color="rgba(255,255,255,0.28)" />
                   </View>
                 )}
                 <View style={styles.aiBadge}>
@@ -658,13 +658,13 @@ const styles = StyleSheet.create({
   },
   tabActive: { backgroundColor: colors.accent },
   tabLabel: { fontFamily: fonts.sansSemibold, fontSize: 13.5 },
-  dropCard: { marginTop: 14, paddingVertical: 36, borderStyle: "dashed", borderWidth: 1.5, borderColor: "rgba(242,212,204,0.30)" },
+  dropCard: { marginTop: 14, paddingVertical: 36, borderStyle: "dashed", borderWidth: 1.5, borderColor: "rgba(233,75,114,0.30)" },
   dropInner: { alignItems: "center" },
   dropIcon: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "rgba(242,212,204,0.12)",
+    backgroundColor: "rgba(233,75,114,0.12)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
@@ -723,7 +723,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "#241A18",
+    backgroundColor: colors.foreground,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -803,9 +803,9 @@ const styles = StyleSheet.create({
     height: 52,
   },
   logBtnText: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.onPrimary },
-  modalBackdrop: { flex: 1, backgroundColor: "rgba(20,15,14,0.6)", justifyContent: "center", paddingHorizontal: 40 },
+  modalBackdrop: { flex: 1, backgroundColor: "rgba(58,22,32,0.45)", justifyContent: "center", paddingHorizontal: 40 },
   modalSheet: {
-    backgroundColor: "#2C2422",
+    backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     borderRadius: colors.radiusLg,
@@ -825,10 +825,10 @@ const styles = StyleSheet.create({
   emptyText: { fontFamily: fonts.sans, fontSize: 14, color: colors.muted, marginTop: 10 },
   logCard: { flexDirection: "row", gap: 12, paddingVertical: 14, paddingHorizontal: 14 },
   logThumb: { width: 56, height: 56, borderRadius: 14 },
-  logThumbFallback: { backgroundColor: "rgba(242,212,204,0.10)", alignItems: "center", justifyContent: "center" },
+  logThumbFallback: { backgroundColor: "rgba(233,75,114,0.10)", alignItems: "center", justifyContent: "center" },
   logMid: { flex: 1, justifyContent: "center" },
   logMetaRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 },
-  mealTag: { backgroundColor: "rgba(242,212,204,0.14)", borderRadius: 10, paddingHorizontal: 9, paddingVertical: 3 },
+  mealTag: { backgroundColor: "rgba(233,75,114,0.14)", borderRadius: 10, paddingHorizontal: 9, paddingVertical: 3 },
   mealTagText: { fontFamily: fonts.sansSemibold, fontSize: 11, color: colors.accent },
   logTime: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.mutedForeground },
   logName: { fontFamily: fonts.serifSemibold, fontSize: 16, color: colors.foreground },
@@ -840,7 +840,7 @@ const styles = StyleSheet.create({
 
   insightCard: { marginTop: 14, padding: 18 },
   insightHead: { flexDirection: "row", alignItems: "center", gap: 9, marginBottom: 12 },
-  insightIcon: { width: 30, height: 30, borderRadius: 15, backgroundColor: "rgba(242,212,204,0.12)", alignItems: "center", justifyContent: "center" },
+  insightIcon: { width: 30, height: 30, borderRadius: 15, backgroundColor: "rgba(233,75,114,0.12)", alignItems: "center", justifyContent: "center" },
   insightEyebrow: { fontFamily: fonts.sansSemibold, fontSize: 12, letterSpacing: 1.2, color: colors.foreground },
   insightText: { fontFamily: fonts.sans, fontSize: 14, lineHeight: 22, color: colors.muted },
   insightStrong: { fontFamily: fonts.sansSemibold, color: colors.foreground },
@@ -868,11 +868,11 @@ const styles = StyleSheet.create({
   chartYAxis: { justifyContent: "space-between", paddingBottom: 22, paddingRight: 10, alignItems: "flex-end" },
   chartYLabel: { fontFamily: fonts.sans, fontSize: 11, color: colors.mutedForeground },
   chartArea: { flex: 1, position: "relative" },
-  chartGoalLine: { position: "absolute", top: 7, left: 0, right: 0, height: 1, borderTopWidth: 1, borderColor: "rgba(242,212,204,0.22)", borderStyle: "dashed" },
+  chartGoalLine: { position: "absolute", top: 7, left: 0, right: 0, height: 1, borderTopWidth: 1, borderColor: "rgba(233,75,114,0.22)", borderStyle: "dashed" },
   chartBars: { flex: 1, flexDirection: "row", justifyContent: "space-between" },
   chartCol: { flex: 1, alignItems: "center" },
   chartBarTrack: { flex: 1, width: 22, justifyContent: "flex-end", marginBottom: 8 },
-  chartBar: { width: "100%", borderRadius: 7, backgroundColor: "#8A5E59", minHeight: 3 },
+  chartBar: { width: "100%", borderRadius: 7, backgroundColor: colors.mutedForeground, minHeight: 3 },
   chartBarToday: { backgroundColor: colors.accent },
   chartXLabel: { fontFamily: fonts.sans, fontSize: 11, color: colors.muted },
 });

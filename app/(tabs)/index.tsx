@@ -156,7 +156,7 @@ export default function Dashboard() {
         {/* Today's Workout hero */}
         <Pressable onPress={() => router.push(`/workout/${featured.id}`)} style={{ marginTop: 24 }}>
           <ImageBackground source={featured.image} style={styles.hero} imageStyle={styles.heroImg}>
-            <LinearGradient colors={["rgba(44,36,34,0.1)", "rgba(44,36,34,0.88)"]} style={StyleSheet.absoluteFill} />
+            <LinearGradient colors={["rgba(58,22,32,0.1)", "rgba(58,22,32,0.88)"]} style={StyleSheet.absoluteFill} />
             <View style={styles.heroBadge}>
               <Text style={styles.heroBadgeText}>TODAY'S WORKOUT</Text>
             </View>
@@ -164,15 +164,15 @@ export default function Dashboard() {
               <Text style={styles.heroTitle}>{featured.title}</Text>
               <View style={styles.heroMeta}>
                 <View style={styles.heroMetaItem}>
-                  <Ionicons name="time-outline" size={14} color={colors.foreground} />
+                  <Ionicons name="time-outline" size={14} color={colors.onPrimary} />
                   <Text style={styles.heroMetaText}>{featured.durationMin} min</Text>
                 </View>
                 <View style={styles.heroMetaItem}>
-                  <Ionicons name="flame-outline" size={14} color={colors.foreground} />
+                  <Ionicons name="flame-outline" size={14} color={colors.onPrimary} />
                   <Text style={styles.heroMetaText}>{featured.kcal} kcal</Text>
                 </View>
                 <View style={styles.heroMetaItem}>
-                  <Ionicons name="trending-up-outline" size={14} color={colors.foreground} />
+                  <Ionicons name="trending-up-outline" size={14} color={colors.onPrimary} />
                   <Text style={styles.heroMetaText}>{featured.level}</Text>
                 </View>
               </View>
@@ -303,7 +303,7 @@ export default function Dashboard() {
             {saved.map((w) => (
               <Pressable key={w.id} style={styles.savedCard} onPress={() => router.push(`/workout/${w.id}`)}>
                 <ImageBackground source={w.image} style={styles.savedImg} imageStyle={{ borderRadius: colors.radiusLg }}>
-                  <LinearGradient colors={["transparent", "rgba(44,36,34,0.92)"]} style={styles.savedOverlay} />
+                  <LinearGradient colors={["transparent", "rgba(58,22,32,0.92)"]} style={styles.savedOverlay} />
                   <Pressable
                     style={styles.savedHeart}
                     hitSlop={8}
@@ -391,19 +391,19 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 16,
     left: 16,
-    backgroundColor: "rgba(44,36,34,0.55)",
+    backgroundColor: "rgba(58,22,32,0.55)",
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(247,235,232,0.18)",
+    borderColor: "rgba(255,255,255,0.18)",
   },
-  heroBadgeText: { fontFamily: fonts.sansSemibold, fontSize: 11, color: colors.foreground, letterSpacing: 1.5 },
+  heroBadgeText: { fontFamily: fonts.sansSemibold, fontSize: 11, color: colors.onPrimary, letterSpacing: 1.5 },
   heroContent: { padding: 20 },
-  heroTitle: { fontFamily: fonts.serifSemibold, fontSize: 28, color: colors.foreground },
+  heroTitle: { fontFamily: fonts.serifSemibold, fontSize: 28, color: colors.onPrimary },
   heroMeta: { flexDirection: "row", gap: 16, marginTop: 8, flexWrap: "wrap" },
   heroMetaItem: { flexDirection: "row", alignItems: "center", gap: 5 },
-  heroMetaText: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.foreground },
+  heroMetaText: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.onPrimary },
   heroPlay: {
     position: "absolute",
     bottom: 20,
@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 14,
-    backgroundColor: "rgba(242,212,204,0.10)",
+    backgroundColor: "rgba(233,75,114,0.10)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 14,
@@ -493,13 +493,13 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "rgba(44,36,34,0.5)",
+    backgroundColor: "rgba(58,22,32,0.5)",
     alignItems: "center",
     justifyContent: "center",
   },
   savedInfo: { padding: 14 },
-  savedTitle: { fontFamily: fonts.serifSemibold, fontSize: 17, color: colors.foreground },
-  savedMeta: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, marginTop: 2 },
+  savedTitle: { fontFamily: fonts.serifSemibold, fontSize: 17, color: colors.onPrimary },
+  savedMeta: { fontFamily: fonts.sans, fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 2 },
 
   savedEmpty: { alignItems: "center", paddingVertical: 28, gap: 6 },
   savedEmptyText: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground, marginTop: 4 },

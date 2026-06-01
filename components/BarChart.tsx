@@ -7,8 +7,8 @@ import { fonts } from "@/constants/fonts";
 export type BarDatum = { label: string; value: number };
 
 const Y_AXIS_W = 40;
-const MAUVE: [string, string] = ["#9B6E6A", "#6E4F4A"];
-const GREEN: [string, string] = ["#84B27E", "#5E8C5A"];
+const MAUVE: [string, string] = ["#F6B6C6", "#E94B72"];
+const GREEN: [string, string] = ["#8BD06A", "#6BAF45"];
 
 const fmt = (n: number, unit: string) => `${Math.round(n * 100) / 100}${unit}`;
 

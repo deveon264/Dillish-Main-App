@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(20,14,12,0.6)",
+    backgroundColor: "rgba(58,22,32,0.45)",
     alignItems: "center",
     justifyContent: "center",
     padding: 28,
@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
   sheet: {
     width: "100%",
     maxWidth: 380,
-    backgroundColor: colors.backgroundDeep,
+    backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     borderRadius: colors.radiusLg,

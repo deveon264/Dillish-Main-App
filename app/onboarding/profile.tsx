@@ -145,6 +145,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     paddingHorizontal: 24,
     paddingTop: 12,
-    backgroundColor: "rgba(30,22,20,0.85)",
+    backgroundColor: colors.card,
   },
 });

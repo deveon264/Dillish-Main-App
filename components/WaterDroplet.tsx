@@ -21,17 +21,17 @@ export function WaterDroplet({
       <Svg width={size} height={size} viewBox={`0 0 ${vb} ${vb}`}>
         <Defs>
           <LinearGradient id="dropFill" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={colors.accent} />
+            <Stop offset="0" stopColor={colors.accentSoft} />
             <Stop offset="1" stopColor={colors.primary} />
           </LinearGradient>
           <ClipPath id="dropClip">
             <Path d={dropPath} />
           </ClipPath>
         </Defs>
-        <Path d={dropPath} fill="rgba(247,235,232,0.06)" stroke={colors.cardBorder} strokeWidth={1.5} />
+        <Path d={dropPath} fill="rgba(122,25,49,0.05)" stroke={colors.cardBorder} strokeWidth={1.5} />
         <G clipPath="url(#dropClip)">
           <Rect x={0} y={fillY} width={vb} height={vb} fill="url(#dropFill)" opacity={0.9} />
-          <Rect x={0} y={fillY} width={vb} height={3} fill={colors.accent} />
+          <Rect x={0} y={fillY} width={vb} height={3} fill={colors.accentSoft} />
         </G>
       </Svg>
     </View>

@@ -418,7 +418,7 @@ export default function Progress() {
                         <Text style={styles.baLabelText}>Before</Text>
                       </View>
                       <LinearGradient
-                        colors={["transparent", "rgba(28,22,20,0.85)"]}
+                        colors={["transparent", "rgba(58,22,32,0.85)"]}
                         style={styles.baOverlay}
                       >
                         <Text style={styles.baDate}>{fmtDay(new Date(beforePhoto.ts))}</Text>
@@ -433,7 +433,7 @@ export default function Progress() {
                         <Text style={styles.baLabelText}>After</Text>
                       </View>
                       <LinearGradient
-                        colors={["transparent", "rgba(28,22,20,0.85)"]}
+                        colors={["transparent", "rgba(58,22,32,0.85)"]}
                         style={styles.baOverlay}
                       >
                         <Text style={styles.baDate}>{fmtDay(new Date(afterPhoto.ts))}</Text>
@@ -463,7 +463,7 @@ export default function Progress() {
                         hitSlop={8}
                         style={styles.timelineRemove}
                       >
-                        <Ionicons name="close" size={14} color={colors.foreground} />
+                        <Ionicons name="close" size={14} color={colors.onPrimary} />
                       </Pressable>
                       <Text style={styles.timelineDate}>{fmtDay(new Date(p.ts))}</Text>
                     </View>
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "rgba(143,182,155,0.14)",
+    backgroundColor: "rgba(107,175,69,0.14)",
     borderRadius: 14,
     paddingHorizontal: 10,
     paddingVertical: 5,
@@ -577,7 +577,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "rgba(242,212,204,0.10)",
+    backgroundColor: "rgba(233,75,114,0.10)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -595,7 +595,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: "rgba(242,212,204,0.10)",
+    backgroundColor: "rgba(233,75,114,0.10)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -618,7 +618,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: "rgba(242,212,204,0.10)",
+    backgroundColor: "rgba(233,75,114,0.10)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -641,13 +641,13 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 10,
     left: 10,
-    backgroundColor: "rgba(28,22,20,0.7)",
+    backgroundColor: "rgba(58,22,32,0.7)",
     borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 5,
   },
-  baLabelAfter: { backgroundColor: "rgba(242,212,204,0.85)" },
-  baLabelText: { fontFamily: fonts.sansSemibold, fontSize: 12, color: colors.foreground },
+  baLabelAfter: { backgroundColor: "rgba(233,75,114,0.85)" },
+  baLabelText: { fontFamily: fonts.sansSemibold, fontSize: 12, color: colors.onPrimary },
   baOverlay: {
     position: "absolute",
     left: 0,
@@ -657,7 +657,7 @@ const styles = StyleSheet.create({
     paddingTop: 28,
     paddingBottom: 12,
   },
-  baDate: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
+  baDate: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.onPrimary },
   baMeta: { fontFamily: fonts.sans, fontSize: 12, color: colors.accent, marginTop: 2 },
 
   timelineItem: { width: 92 },
@@ -674,7 +674,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: "rgba(28,22,20,0.7)",
+    backgroundColor: "rgba(58,22,32,0.7)",
     alignItems: "center",
     justifyContent: "center",
   },
