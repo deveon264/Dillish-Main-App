@@ -133,6 +133,44 @@ function videoGet(query = ""): Request {
   return new Request(`http://t/api/thank-you-video${query}`, { method: "GET" });
 }
 
+// POST with no Authorization header (a non-coach caller).
+function videoPostNoAuth(bytes: Uint8Array): Request {
+  return new Request("http://t/api/thank-you-video", {
+    method: "POST",
+    headers: {
+      "Content-Type": "video/mp4",
+      "Content-Length": String(bytes.byteLength),
+    },
+    body: bytes as unknown as BodyInit,
+  });
+}
+
+// DELETE with no Authorization header (a non-coach caller).
+function videoDeleteNoAuth(): Request {
+  return new Request("http://t/api/thank-you-video", { method: "DELETE" });
+}
+
+// POST with an explicit content-type / declared content-length, used to exercise
+// the bad-file guards (a non-video type, or a length over the 80MB cap). The
+// declared length is independent of the tiny body so the size guard can be
+// checked without streaming 80MB.
+function videoPostRaw(
+  token: string,
+  contentType: string,
+  declaredLength: number,
+  bytes: Uint8Array
+): Request {
+  return new Request("http://t/api/thank-you-video", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": contentType,
+      "Content-Length": String(declaredLength),
+    },
+    body: bytes as unknown as BodyInit,
+  });
+}
+
 // =========================================================================
 // The cleanup sweep never lists or deletes the thank-you-videos folder
 // =========================================================================
@@ -329,4 +367,84 @@ test("GET (no query) returns 404 when no thank-you video is set", async () => {
 
   // Nothing was resolved to a signed URL.
   assert.equal(res.headers.get("Location"), null);
+});
+
+// =========================================================================
+// Only a coach (valid admin token) may upload or delete the global video
+// =========================================================================
+
+test("POST without an admin token is rejected (403) and writes nothing", async () => {
+  const fake = makeFake();
+
+  const res = await thankYouVideoPost(videoPostNoAuth(new Uint8Array(64).fill(9)), fake);
+  assert.equal(res.status, 403);
+  assert.deepEqual(await res.json(), { error: "Not authorized" });
+
+  // The upload never reached storage and no setting was written.
+  assert.deepEqual(fake.deleted, []);
+  assert.equal(fake.objects.size, 0);
+  assert.equal(db.settings.has("thank_you_video_path"), false);
+});
+
+test("DELETE without an admin token is rejected (403) and removes nothing", async () => {
+  const token = await adminToken();
+  const fake = makeFake();
+
+  // A coach uploads a video, so there is something a non-coach might try to wipe.
+  const up = await thankYouVideoPost(videoPost(token, new Uint8Array(128).fill(5)), fake);
+  assert.equal(up.status, 200);
+  const path = db.settings.get("thank_you_video_path")!;
+  assert.equal(fake.objects.has(path), true);
+
+  // A caller with no token cannot delete it.
+  const res = await thankYouVideoDelete(videoDeleteNoAuth(), fake);
+  assert.equal(res.status, 403);
+  assert.deepEqual(await res.json(), { error: "Not authorized" });
+
+  // The object and the saved path/mime are all still intact.
+  assert.deepEqual(fake.deleted, []);
+  assert.equal(fake.objects.has(path), true);
+  assert.equal(db.settings.get("thank_you_video_path"), path);
+  assert.equal(db.settings.get("thank_you_video_mime"), "video/mp4");
+});
+
+// =========================================================================
+// A bad file is rejected before anything is stored
+// =========================================================================
+
+test("POST rejects a non-video content-type (400) without storing anything", async () => {
+  const token = await adminToken();
+  const fake = makeFake();
+
+  const res = await thankYouVideoPost(
+    videoPostRaw(token, "text/plain", 64, new Uint8Array(64).fill(1)),
+    fake
+  );
+  assert.equal(res.status, 400);
+  assert.deepEqual(await res.json(), { error: "Uploaded file must be a video" });
+
+  // Nothing was uploaded and no setting was written.
+  assert.deepEqual(fake.deleted, []);
+  assert.equal(fake.objects.size, 0);
+  assert.equal(db.settings.has("thank_you_video_path"), false);
+});
+
+test("POST rejects an oversized declared Content-Length (413) without storing anything", async () => {
+  const token = await adminToken();
+  const fake = makeFake();
+
+  // Declare a length over the 80MB cap while sending only a tiny body, so the
+  // size guard fires from the Content-Length header before any bytes stream.
+  const tooBig = 90 * 1024 * 1024;
+  const res = await thankYouVideoPost(
+    videoPostRaw(token, "video/mp4", tooBig, new Uint8Array(64).fill(1)),
+    fake
+  );
+  assert.equal(res.status, 413);
+  assert.deepEqual(await res.json(), { error: "Video is too large (max 80MB)" });
+
+  // Nothing was uploaded and no setting was written.
+  assert.deepEqual(fake.deleted, []);
+  assert.equal(fake.objects.size, 0);
+  assert.equal(db.settings.has("thank_you_video_path"), false);
 });
