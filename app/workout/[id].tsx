@@ -975,7 +975,7 @@ const styles = StyleSheet.create({
   notFound: { fontFamily: fonts.serif, fontSize: 22, color: colors.foreground },
   metaItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   rowCenter: { flexDirection: "row", alignItems: "center", gap: 10 },
-  player: { height: 360, justifyContent: "space-between", backgroundColor: colors.background },
+  player: { height: 360, justifyContent: "space-between", backgroundColor: "#000" },
   playerOverlay: { flex: 1, justifyContent: "space-between" },
   playerTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20 },
   roundBtn: {

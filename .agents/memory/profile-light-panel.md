@@ -28,3 +28,10 @@ over-image text/icons invisible (dark-on-dark). Over-image text must stay light.
 over image → white text + keep the dark scrim. The Profile header (`headerPanel`
 in `app/(tabs)/profile.tsx`) is now a plain white card (`colors.card`), NOT the
 old dark glass pill.
+
+**Media-surface fills:** A media/player container that renders white controls
+(workout `player` ImageBackground, exercise `videoWrap`) must keep a NEUTRAL DARK
+fill (`#000`) even when no poster/video image is present — the flip-to-light rule
+does NOT apply to image/video surfaces, or the white controls vanish on cream.
+The recolor mistakenly set workout `player` to `colors.background` (cream); fixed
+back to `#000`.
