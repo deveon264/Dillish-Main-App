@@ -18,7 +18,7 @@ export function Logo({
   const icon = size === "lg" ? 28 : size === "sm" ? 17 : 22;
   const fontSize = size === "lg" ? 58 : size === "sm" ? 20 : 24;
   const taglineSize = size === "lg" ? 12 : size === "sm" ? 9 : 10;
-  const gap = 12;
+  const gap = 4;
 
   return (
     <View style={styles.container}>
