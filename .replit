@@ -35,4 +35,10 @@ localPort = 5000
 externalPort = 80
 
 [objectStorage]
-defaultBucketID = "replit-objstore-5246cf14-2e3a-465f-814f-b583d98a36ca"
+defaultBucketID = "replit-objstore-c12a5da0-505b-4dfa-9acc-b4d9ea85d53b"
+
+[userenv]
+
+[userenv.shared]
+PRIVATE_OBJECT_DIR = "/replit-objstore-c12a5da0-505b-4dfa-9acc-b4d9ea85d53b/.private"
+PUBLIC_OBJECT_SEARCH_PATHS = "/replit-objstore-c12a5da0-505b-4dfa-9acc-b4d9ea85d53b/public"
