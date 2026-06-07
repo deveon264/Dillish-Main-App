@@ -254,8 +254,8 @@ export default function Workouts() {
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 20 },
-  header: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 4 },
-  eyebrow: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.muted, letterSpacing: 3 },
+  header: { flexDirection: "row", alignItems: "center", gap: 12 },
+  eyebrow: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.muted, letterSpacing: 2 },
   title: { fontFamily: fonts.serif, fontSize: 34, color: colors.foreground, marginTop: 2 },
   titleItalic: { fontFamily: fonts.serifItalic, fontStyle: "italic", color: colors.foreground },
   search: {

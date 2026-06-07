@@ -243,10 +243,10 @@ export default function Water() {
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 20 },
-  header: { flexDirection: "row", alignItems: "center", gap: 10 },
-  eyebrow: { fontFamily: fonts.sansSemibold, fontSize: 12, letterSpacing: 1.6, color: colors.muted },
-  title: { fontFamily: fonts.serif, fontSize: 30, color: colors.foreground, marginTop: 2 },
-  titleItalic: { fontFamily: fonts.serifItalic, color: colors.foreground },
+  header: { flexDirection: "row", alignItems: "center", gap: 12 },
+  eyebrow: { fontFamily: fonts.sansMedium, fontSize: 12, letterSpacing: 2, color: colors.muted },
+  title: { fontFamily: fonts.serif, fontSize: 34, color: colors.foreground, marginTop: 2 },
+  titleItalic: { fontFamily: fonts.serifItalic, fontStyle: "italic", color: colors.foreground },
   hydrationCard: { marginTop: 18, padding: 18 },
   hydrationHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   hydrationEyebrow: { fontFamily: fonts.sansSemibold, fontSize: 12, letterSpacing: 1.2, color: colors.muted },
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
   bigNum: { fontFamily: fonts.sansBold, fontSize: 34, color: colors.foreground },
   bigUnit: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted },
   subInfo: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.muted, marginTop: 2 },
-  section: { fontFamily: fonts.sansSemibold, fontSize: 12, letterSpacing: 1.4, color: colors.muted, marginTop: 28, marginBottom: 14 },
+  section: { fontFamily: fonts.sansMedium, fontSize: 12, letterSpacing: 2, color: colors.muted, marginTop: 28, marginBottom: 14 },
   quickRow: { flexDirection: "row", gap: 10 },
   quick: {
     flex: 1,
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
   addBtnGrad: { width: 52, height: 52, alignItems: "center", justifyContent: "center" },
   cardTitle: { fontFamily: fonts.serifSemibold, fontSize: 18, color: colors.foreground },
   weekHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  weekEyebrow: { fontFamily: fonts.sansSemibold, fontSize: 12, letterSpacing: 1.4, color: colors.muted },
+  weekEyebrow: { fontFamily: fonts.sansSemibold, fontSize: 12, letterSpacing: 1.2, color: colors.muted },
   weekRange: { fontFamily: fonts.sans, fontSize: 12, color: colors.mutedForeground },
   emptyText: { fontFamily: fonts.sans, fontSize: 14, color: colors.muted, marginTop: 10 },
   logRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 14 },
@@ -326,6 +326,6 @@ const styles = StyleSheet.create({
     marginTop: 28,
     marginBottom: 14,
   },
-  logHeadTitle: { fontFamily: fonts.sansSemibold, fontSize: 12, letterSpacing: 1.4, color: colors.muted },
+  logHeadTitle: { fontFamily: fonts.sansMedium, fontSize: 12, letterSpacing: 2, color: colors.muted },
   entryCount: { fontFamily: fonts.sansSemibold, fontSize: 12, color: colors.primary },
 });

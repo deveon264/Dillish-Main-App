@@ -486,10 +486,10 @@ export default function Progress() {
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 20 },
-  header: { flexDirection: "row", alignItems: "center", gap: 10 },
-  eyebrow: { fontFamily: fonts.sansSemibold, fontSize: 12, letterSpacing: 1.6, color: colors.muted },
-  title: { fontFamily: fonts.serif, fontSize: 30, color: colors.foreground, marginTop: 2 },
-  titleItalic: { fontFamily: fonts.serifItalic, color: colors.foreground },
+  header: { flexDirection: "row", alignItems: "center", gap: 12 },
+  eyebrow: { fontFamily: fonts.sansMedium, fontSize: 12, letterSpacing: 2, color: colors.muted },
+  title: { fontFamily: fonts.serif, fontSize: 34, color: colors.foreground, marginTop: 2 },
+  titleItalic: { fontFamily: fonts.serifItalic, fontStyle: "italic", color: colors.foreground },
   tabBar: {
     flexDirection: "row",
     gap: 4,
@@ -544,7 +544,7 @@ const styles = StyleSheet.create({
   chartEmpty: { alignItems: "center", paddingVertical: 30, gap: 10 },
   chartEmptyText: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.muted, marginTop: 6, textAlign: "center" },
 
-  section: { fontFamily: fonts.sansSemibold, fontSize: 12, letterSpacing: 1.4, color: colors.muted, marginTop: 28, marginBottom: 14 },
+  section: { fontFamily: fonts.sansMedium, fontSize: 12, letterSpacing: 2, color: colors.muted, marginTop: 28, marginBottom: 14 },
   logCard: { padding: 18 },
   formRow: { flexDirection: "row", gap: 12 },
   formField: { flex: 1 },
