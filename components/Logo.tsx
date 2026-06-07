@@ -20,6 +20,7 @@ export function Logo({
   const taglineSize = size === "lg" ? 12 : size === "sm" ? 9 : 10;
   const gap = 6;
   const baselineNudge = size === "lg" ? -12 : size === "sm" ? -5 : -7;
+  const pillTop = size === "lg" ? -26 : size === "sm" ? -11 : -16;
 
   return (
     <View>
@@ -52,7 +53,7 @@ export function Logo({
         <View
           style={[
             styles.pill,
-            { marginLeft: mark + gap, marginTop: baselineNudge - 2 },
+            { marginLeft: mark + gap, marginTop: pillTop },
           ]}
         >
           <Text style={[styles.tagline, { fontSize: taglineSize }]}>
