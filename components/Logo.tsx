@@ -21,27 +21,27 @@ export function Logo({
   const gap = 4;
 
   return (
-    <View style={styles.row}>
-      <LinearGradient
-        colors={colors.gradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.mark, { width: mark, height: mark, borderRadius: mark / 3 }]}
-      >
-        <Ionicons name="flower-outline" size={icon} color={colors.onPrimary} />
-      </LinearGradient>
-      {showText ? (
-        <View style={[styles.textCol, { marginLeft: gap }]}>
-          <Text style={[styles.text, { fontSize, lineHeight: fontSize }]}>
+    <View>
+      <View style={styles.row}>
+        <LinearGradient
+          colors={colors.gradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.mark, { width: mark, height: mark, borderRadius: mark / 3 }]}
+        >
+          <Ionicons name="flower-outline" size={icon} color={colors.onPrimary} />
+        </LinearGradient>
+        {showText ? (
+          <Text style={[styles.text, { fontSize, lineHeight: fontSize, marginLeft: gap }]}>
             Florish
           </Text>
-          {tagline ? (
-            <View style={styles.pill}>
-              <Text style={[styles.tagline, { fontSize: taglineSize }]}>
-                {tagline.toUpperCase()}
-              </Text>
-            </View>
-          ) : null}
+        ) : null}
+      </View>
+      {showText && tagline ? (
+        <View style={[styles.pill, { marginLeft: mark + gap }]}>
+          <Text style={[styles.tagline, { fontSize: taglineSize }]}>
+            {tagline.toUpperCase()}
+          </Text>
         </View>
       ) : null}
     </View>
@@ -51,7 +51,6 @@ export function Logo({
 const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center" },
   mark: { alignItems: "center", justifyContent: "center" },
-  textCol: { alignItems: "flex-start", justifyContent: "center" },
   text: {
     fontFamily: fonts.serifSemibold,
     color: colors.foreground,
