@@ -6,8 +6,21 @@ description: Design decisions for pitch/walkthrough.html (the looping 16:9 featu
 # pitch/walkthrough.html — app walkthrough animation
 
 A self-contained, auto-playing, looping 16:9 HTML animation that walks through the
-app's features, reusing the pitch deck brand system. Served by the same port-3001
-static server as the pitch deck (`http://localhost:3001/walkthrough.html`).
+app's features, reusing the pitch deck brand system.
+
+## Serving / where to view it (IMPORTANT)
+The reliable view URL is the MAIN app domain: `https://<domain>/walkthrough/`,
+served as a static copy at `public/walkthrough/index.html` (+ `public/walkthrough/assets/*.png`).
+**Why:** the pitch deck's secondary port-3001 server is remapped to external port
+3003 by Replit (`.replit` [[ports]]: localPort 3001 -> externalPort 3003), so the
+plain-domain `:3001` URL 404s through the proxy and `localhost:3001` never works
+from a user's browser. Expo Router serves files in `public/` at the site root, so
+putting it there makes it reachable at the main domain (no port juggling). The
+canvas `walkthrough-preview` iframe points at `https://<domain>/walkthrough/`.
+
+**Two copies exist:** `pitch/walkthrough.html` (source, used by pitch/tooling
+capture scripts + the port-3001 dev server) and `public/walkthrough/index.html`
+(the served copy). If you edit one, re-copy to the other or they drift.
 
 ## Water scene uses a CSS orb, not a screenshot — on purpose
 There is **no water-tracking app screenshot** in `pitch/assets/` (only welcome,
