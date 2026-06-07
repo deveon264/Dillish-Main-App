@@ -18,6 +18,10 @@ author = "agent"
 task = "workflow.run"
 args = "Start application"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Pitch deck preview"
+
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
@@ -29,6 +33,23 @@ outputType = "webview"
 task = "shell.exec"
 args = "EXPO_PUBLIC_DOMAIN=$REPLIT_DEV_DOMAIN BROWSER=none npx expo start --clear --tunnel --web --port 5000"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Pitch deck preview"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python3 -m http.server 3001 --bind 0.0.0.0 --directory pitch"
+waitForPort = 3001
+
+[workflows.workflow.metadata]
+outputType = "console"
+isCanvasWorkflow = true
+
+[[ports]]
+localPort = 3001
+externalPort = 3003
 
 [[ports]]
 localPort = 5000
