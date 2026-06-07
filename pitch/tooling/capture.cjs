@@ -70,7 +70,7 @@ async function shoot(page, urlPath, file, mustInclude) {
     // 1) Welcome (no session)
     const page = await browser.newPage();
     await page.goto(BASE + "/welcome", { waitUntil: "networkidle2", timeout: 120000 });
-    await waitForApp(page, "SENDRY");
+    await waitForApp(page, "AJAY");
     await settle(page, 3000);
     await page.screenshot({ path: path.join(OUT, "welcome.png") });
     console.log("   saved welcome.png");
@@ -86,7 +86,7 @@ async function shoot(page, urlPath, file, mustInclude) {
     );
 
     // 3) Authenticated screens
-    await shoot(page, "/", "home.png", "Sendry");
+    await shoot(page, "/", "home.png", "Ajay");
     await shoot(page, "/workouts", "workouts.png");
     await shoot(page, "/calories", "calories.png");
     await shoot(page, "/progress", "progress.png");

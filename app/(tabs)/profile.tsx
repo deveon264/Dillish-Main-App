@@ -328,7 +328,7 @@ export default function Profile() {
     { key: "workout", title: "Workout Reminders", sub: "Daily at 7:00 AM" },
     { key: "hydration", title: "Hydration Reminders", sub: "Every 2 hours" },
     { key: "streak", title: "Streak Alerts", sub: "Don't break your streak!" },
-    { key: "content", title: "New Content Alerts", sub: "New workouts from Sendry" },
+    { key: "content", title: "New Content Alerts", sub: "New workouts from Ajay" },
     { key: "weekly", title: "Weekly Progress Report", sub: "Every Sunday evening" },
   ];
 
@@ -349,7 +349,7 @@ export default function Profile() {
   ];
 
   const PLAN_FEATURES = [
-    "Unlimited workout videos with Sendry",
+    "Unlimited workout videos with Ajay",
     "AI-powered calorie tracking",
     "Hydration & progress tracking",
     "Private progress photo gallery",

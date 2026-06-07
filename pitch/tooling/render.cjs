@@ -2,7 +2,7 @@ const path = require("path");
 const puppeteer = require("puppeteer");
 
 const HTML = "file://" + path.resolve(__dirname, "../index.html");
-const OUT = path.resolve(__dirname, "../Shape-by-Sendry-Pitch.pdf");
+const OUT = path.resolve(__dirname, "../Shape-by-Ajay-Pitch.pdf");
 const CHROMIUM = process.env.CHROMIUM_BIN;
 
 (async () => {

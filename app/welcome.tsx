@@ -75,7 +75,7 @@ export default function Welcome() {
       />
       <View style={[styles.content, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 28 }]}>
         <View style={styles.top}>
-          <Logo size="lg" tagline="by sendry" />
+          <Logo size="lg" tagline="by ajay" />
         </View>
 
         <View style={styles.center}>
