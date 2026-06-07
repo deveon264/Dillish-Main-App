@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { View, Text, StyleSheet, ImageBackground, Pressable, Animated } from "react-native";
+import { View, Text, StyleSheet, Image, Pressable, Animated, Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -52,16 +52,22 @@ function TrustItem({
   );
 }
 
+// On web, a flex-only height chain can collapse when the app is embedded in an
+// iframe (Replit web simulator, Canvas view), leaving the hero image at its
+// intrinsic size. Pin the background to the viewport height so it always covers.
+const webFill = Platform.OS === "web" ? ({ minHeight: "100vh" } as object) : null;
+
 export default function Welcome() {
   const router = useRouter();
   const insets = useInsets();
 
   return (
-    <ImageBackground
-      source={require("@/assets/images/photos/welcomehero.png")}
-      style={styles.bg}
-      resizeMode="cover"
-    >
+    <View style={[styles.bg, webFill]}>
+      <Image
+        source={require("@/assets/images/photos/welcomehero.png")}
+        style={styles.heroImg}
+        resizeMode="cover"
+      />
       <LinearGradient
         colors={colors.welcomeScrim}
         locations={[0, 0.5, 0.92]}
@@ -96,12 +102,13 @@ export default function Welcome() {
           </Pressable>
         </View>
       </View>
-    </ImageBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   bg: { flex: 1, backgroundColor: colors.background },
+  heroImg: { position: "absolute", top: 0, left: 0, width: "100%", height: "100%" },
   content: { flex: 1, paddingHorizontal: 24, justifyContent: "space-between" },
   top: { alignItems: "flex-start" },
   center: { flex: 1, justifyContent: "flex-end", paddingBottom: 28 },
