@@ -1,13 +1,13 @@
 export const palette = {
   white: "#FFFFFF",
-  cream: "#F7F0EA",
-  creamDeep: "#EBDDD2",
+  cream: "#EFE3D7",
+  creamDeep: "#E0CFBF",
   blush: "#F3C7C2",
   petal: "#FFFFFF",
-  strawberry: "#C57B86",
+  strawberry: "#DD8DA0",
   cherry: "#4A2E33",
-  royal: "#C57B86",
-  leaf: "#DCA3AB",
+  royal: "#DD8DA0",
+  leaf: "#EBB1C0",
   ink: "#4A2E33",
   mauve: "#8A6F66",
 };
@@ -15,23 +15,23 @@ export const palette = {
 // Brand RGB channels, kept in one place so a recolor is a single-line change.
 // Every soft/tinted accent shade below is derived from these — never hardcode
 // an `rgba(...)` brand tint in a screen or component file.
-const accentRgb = "197, 123, 134"; // #C57B86 Dusty Rose
+const accentRgb = "221, 141, 160"; // #DD8DA0 Rose Pink
 const successRgb = "127, 163, 124"; // #7FA37C Soft Sage
 const honeyRgb = "194, 146, 94"; // #C2925E Warm Honey Wood
 const blushRgb = "243, 199, 194"; // #F3C7C2 Soft Pink Blush
-const creamRgb = "247, 240, 234"; // #F7F0EA Warm Off-White
+const creamRgb = "239, 227, 215"; // #EFE3D7 Warm Cream
 
 export const colors = {
-  background: "#F7F0EA",
-  backgroundDeep: "#EBDDD2",
+  background: "#EFE3D7",
+  backgroundDeep: "#E0CFBF",
   card: "#FFFFFF",
   cardElevated: "#FFFFFF",
   cardBorder: `rgba(${accentRgb}, 0.16)`,
-  primary: "#C57B86",
-  accent: "#C57B86",
-  accentSoft: "#DCA3AB",
+  primary: "#DD8DA0",
+  accent: "#DD8DA0",
+  accentSoft: "#EBB1C0",
   // Deep rose — secondary-button text on light surfaces.
-  accentDark: "#8E4A55",
+  accentDark: "#9E4E61",
   // Soft accent fills — icon circles, badge/chip backgrounds, active states.
   accentTintFaint: `rgba(${accentRgb}, 0.08)`,
   accentTint: `rgba(${accentRgb}, 0.10)`,
@@ -62,21 +62,21 @@ export const colors = {
   mutedForeground: "#8A6F66",
   muted: "rgba(74, 46, 51, 0.55)",
   onPrimary: "#FFFFFF",
-  track: "#EBDDD2",
+  track: "#E0CFBF",
   success: "#7FA37C",
   danger: "#D9614F",
-  link: "#C57B86",
-  protein: "#C57B86",
+  link: "#DD8DA0",
+  protein: "#DD8DA0",
   carbs: "#C2925E",
   fats: "#D9614F",
-  gradient: ["#DCA3AB", "#C57B86"] as const,
+  gradient: ["#EBB1C0", "#DD8DA0"] as const,
   // Warm honey-wood gradient — streak pills and other celebratory fills.
   gradientGold: ["#D9B07A", "#C2925E"] as const,
   // Muted warm-sand gradient — the "not reached" bar in BarChart.
-  barTrackGradient: ["#EBDDD2", "#D8C2B2"] as const,
-  bgGradient: ["#F7F0EA", "#FFFFFF", "#F7F0EA"] as const,
+  barTrackGradient: ["#E0CFBF", "#D2BBA8"] as const,
+  bgGradient: ["#EFE3D7", "#FAF4EE", "#EFE3D7"] as const,
   // Cream fade used to scrim the welcome hero down to the cream background.
-  welcomeScrim: [`rgba(${creamRgb}, 0.5)`, `rgba(${creamRgb}, 0.82)`, "#F7F0EA"] as const,
+  welcomeScrim: [`rgba(${creamRgb}, 0.5)`, `rgba(${creamRgb}, 0.82)`, "#EFE3D7"] as const,
   radius: 16,
   radiusLg: 24,
   radiusSm: 12,
