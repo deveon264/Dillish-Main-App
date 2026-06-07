@@ -6,7 +6,7 @@ description: Why exported deck pages came out blank/cut, and how the deck is bui
 # Pitch deck (pitch/) PDF rendering
 
 The `pitch/` deck is a single `index.html` of fixed 1280x720 `.slide`
-sections, exported to `Shape-by-Sendry-Pitch.pdf` by
+sections, exported to `Shape-by-Ajay-Pitch.pdf` by
 `pitch/tooling/render.cjs` (puppeteer + system chromium).
 
 ## Blank / cut pages root cause
