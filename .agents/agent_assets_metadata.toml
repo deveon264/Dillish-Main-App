@@ -330,6 +330,30 @@ uri = "file://assets/images/photos/homehero.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "UKhw_vbwPXHi2OrBVliPD"
+uri = "file://attached_assets/hero_options/option1-wellness.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "JgtPpRSC6OD7mojtVS63Y"
+uri = "file://attached_assets/hero_options/option2-greenery.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "m72VcvxMsDh7-Ys_27kO6"
+uri = "file://attached_assets/hero_options/option3-minimal.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "tVPvdW6fpd1UUHJbA9bh5"
+uri = "file://attached_assets/hero_options/option4-gradient.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "KmpG-YsopX8HoAwCw5oyy"
 uri = "file://attached_assets/stock_images/pilates.jpg"
@@ -371,3 +395,27 @@ id = "NV1w1cBHRaR8PbVoN9E4h"
 uri = "file://attached_assets/screenshots/511858dc-4453-49e0-9028-2b93cd0060fb-00-3bc24ua5jixzj_picard_replit_dev_mockup_preview_welcome-polished_WarmEditorial.png"
 type = "image"
 title = "Variant 2 — Warm Editorial"
+
+[[outputs]]
+id = "HuStyd-cch7xKZn0JeZm8"
+uri = "file://attached_assets/hero_options/option1-wellness.png"
+type = "image"
+title = "Option 1 — Wellness scene (woman stretching in morning light)"
+
+[[outputs]]
+id = "vjLMW8JFylQb5eHW49YTo"
+uri = "file://attached_assets/hero_options/option2-greenery.png"
+type = "image"
+title = "Option 2 — Fresh eucalyptus greenery on cream"
+
+[[outputs]]
+id = "Adyf-JYeEl2UEiUufwizL"
+uri = "file://attached_assets/hero_options/option3-minimal.png"
+type = "image"
+title = "Option 3 — Minimal blush with single gold sprig"
+
+[[outputs]]
+id = "KWnoE9JDRk4jHKs_XqueA"
+uri = "file://attached_assets/hero_options/option4-gradient.png"
+type = "image"
+title = "Option 4 — Soft rose & gold abstract glow"
