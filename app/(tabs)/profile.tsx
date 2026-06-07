@@ -51,6 +51,7 @@ export default function Profile() {
   const [avatarModal, setAvatarModal] = useState(false);
   const [avatarError, setAvatarError] = useState("");
   const pickingRef = useRef(false);
+  const pendingPickRef = useRef<"camera" | "library" | null>(null);
   const [emailModal, setEmailModal] = useState(false);
   const [emailInput, setEmailInput] = useState(user?.email ?? "");
   const [emailError, setEmailError] = useState("");
@@ -176,24 +177,43 @@ export default function Profile() {
     setEditing(false);
   };
 
-  const pickAvatar = async (mode: "camera" | "library") => {
+  // Records which picker the user chose, then closes the sheet. The picker is
+  // launched only AFTER the modal has fully gone away (see runPickAvatar /
+  // onDismiss below), never in the same tick as the dismiss.
+  const startPickAvatar = (mode: "camera" | "library") => {
     if (pickingRef.current) return;
     pickingRef.current = true;
-    setAvatarModal(false);
     setAvatarError("");
-    // Wait for the Modal's dismiss animation to finish before presenting the
-    // native picker. On iOS a new view controller (camera / library) won't be
-    // presented while the Modal is still on screen, so launching in the same
-    // tick silently does nothing. InteractionManager resolves once the
-    // interaction/animation queue is clear; web falls back to a timeout that
-    // comfortably outlasts the fade animation.
-    await new Promise<void>((resolve) => {
+    pendingPickRef.current = mode;
+    setAvatarModal(false);
+    // `onDismiss` is iOS-only; it fires once the native modal view controller is
+    // fully dismissed — the only safe moment to present the picker's own view
+    // controller. On Android/web there is no such callback, so we wait for the
+    // interaction/animation queue to clear (web uses a plain timeout) and launch
+    // directly.
+    if (Platform.OS !== "ios") {
+      const launch = () => {
+        const m = pendingPickRef.current;
+        pendingPickRef.current = null;
+        if (m) runPickAvatar(m);
+      };
       if (Platform.OS === "web" || !InteractionManager?.runAfterInteractions) {
-        setTimeout(resolve, 400);
+        setTimeout(launch, 400);
       } else {
-        InteractionManager.runAfterInteractions(() => resolve());
+        InteractionManager.runAfterInteractions(launch);
       }
-    });
+    }
+  };
+
+  // Fired from the avatar Modal's onDismiss (iOS) once it has fully closed.
+  const handleAvatarModalDismissed = () => {
+    const m = pendingPickRef.current;
+    pendingPickRef.current = null;
+    if (m) runPickAvatar(m);
+  };
+
+  const runPickAvatar = async (mode: "camera" | "library") => {
+    pickingRef.current = true;
     try {
       const perm =
         mode === "camera"
@@ -659,15 +679,21 @@ export default function Profile() {
         )}
       </ScrollView>
 
-      <Modal visible={avatarModal} transparent animationType="fade" onRequestClose={() => setAvatarModal(false)}>
+      <Modal
+        visible={avatarModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAvatarModal(false)}
+        onDismiss={handleAvatarModalDismissed}
+      >
         <Pressable style={styles.modalBackdrop} onPress={() => setAvatarModal(false)}>
           <Pressable style={styles.sheet} onPress={() => {}}>
             <Text style={styles.sheetTitle}>Profile Photo</Text>
-            <Pressable style={styles.sheetOption} onPress={() => pickAvatar("camera")}>
+            <Pressable style={styles.sheetOption} onPress={() => startPickAvatar("camera")}>
               <Ionicons name="camera-outline" size={20} color={colors.accent} />
               <Text style={styles.sheetOptionText}>Take Photo</Text>
             </Pressable>
-            <Pressable style={styles.sheetOption} onPress={() => pickAvatar("library")}>
+            <Pressable style={styles.sheetOption} onPress={() => startPickAvatar("library")}>
               <Ionicons name="images-outline" size={20} color={colors.accent} />
               <Text style={styles.sheetOptionText}>Choose from Library</Text>
             </Pressable>
