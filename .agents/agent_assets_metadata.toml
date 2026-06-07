@@ -324,6 +324,12 @@ uri = "file://attached_assets/generated_images/hiit.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "cJzwARS19WWBMCsADz5Ok"
+uri = "file://assets/images/photos/homehero.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "KmpG-YsopX8HoAwCw5oyy"
 uri = "file://attached_assets/stock_images/pilates.jpg"

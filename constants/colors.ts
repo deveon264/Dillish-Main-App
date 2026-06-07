@@ -86,6 +86,9 @@ export const colors = {
   bgGradient: ["#EFE3D7", "#FAF4EE", "#EFE3D7"] as const,
   // Cream fade used to scrim the welcome hero down to the cream background.
   welcomeScrim: [`rgba(${creamRgb}, 0.5)`, `rgba(${creamRgb}, 0.82)`, "#EFE3D7"] as const,
+  // Cream fade laid over the home dashboard hero banner so its bottom edge
+  // dissolves seamlessly into the warm-sand gradient background.
+  heroFade: [`rgba(${creamRgb}, 0)`, `rgba(${creamRgb}, 0.6)`, "#EFE3D7"] as const,
   radius: 16,
   radiusLg: 24,
   radiusSm: 12,

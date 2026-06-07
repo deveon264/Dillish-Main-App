@@ -120,32 +120,45 @@ export default function Dashboard() {
   return (
     <GradientBackground>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 110 }]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 110 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.greet}>{greeting().toUpperCase()}</Text>
-            <View style={styles.nameRow}>
-              <Text style={styles.name}>{firstName}</Text>
-              <Text style={{ fontSize: 18, marginLeft: 8 }}>🌸</Text>
-            </View>
-          </View>
-          <Pressable style={styles.iconBtn} hitSlop={6} onPress={openNotifs}>
-            <Ionicons name="notifications-outline" size={20} color={colors.foreground} />
-            {unreadCount > 0 ? <View style={styles.notifDot} /> : null}
-          </Pressable>
-          <Pressable style={styles.avatarBtn} hitSlop={6} onPress={() => router.navigate("/(tabs)/profile")}>
-            {avatar ? (
-              <Image source={{ uri: avatar }} style={styles.avatarImg} />
-            ) : (
-              <View style={styles.avatarFallback}>
-                <Text style={styles.avatarInitial}>{initial}</Text>
+        {/* Hero banner with header on top */}
+        <ImageBackground
+          source={require("@/assets/images/photos/homehero.png")}
+          style={[styles.heroBanner, { paddingTop: insets.top + 56 }]}
+          resizeMode="cover"
+        >
+          <LinearGradient
+            colors={colors.heroFade}
+            locations={[0, 0.55, 1]}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.greet}>{greeting().toUpperCase()}</Text>
+              <View style={styles.nameRow}>
+                <Text style={styles.name}>{firstName}</Text>
+                <Text style={{ fontSize: 18, marginLeft: 8 }}>🌸</Text>
               </View>
-            )}
-          </Pressable>
-        </View>
+            </View>
+            <Pressable style={styles.iconBtn} hitSlop={6} onPress={openNotifs}>
+              <Ionicons name="notifications-outline" size={20} color={colors.foreground} />
+              {unreadCount > 0 ? <View style={styles.notifDot} /> : null}
+            </Pressable>
+            <Pressable style={styles.avatarBtn} hitSlop={6} onPress={() => router.navigate("/(tabs)/profile")}>
+              {avatar ? (
+                <Image source={{ uri: avatar }} style={styles.avatarImg} />
+              ) : (
+                <View style={styles.avatarFallback}>
+                  <Text style={styles.avatarInitial}>{initial}</Text>
+                </View>
+              )}
+            </Pressable>
+          </View>
+        </ImageBackground>
 
         {/* Weekly Streak */}
         <Card style={styles.streakCard}>
@@ -518,7 +531,15 @@ function MacroPill({ label, value, goal, color }: { label: string; value: number
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 20 },
-  header: { flexDirection: "row", alignItems: "center", marginBottom: 22, gap: 12 },
+  heroBanner: {
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    marginBottom: 18,
+    justifyContent: "flex-end",
+    overflow: "hidden",
+  },
+  header: { flexDirection: "row", alignItems: "center", gap: 12 },
   greet: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.muted, letterSpacing: 2 },
   nameRow: { flexDirection: "row", alignItems: "center", marginTop: 2 },
   name: { fontFamily: fonts.serif, fontSize: 34, color: colors.foreground },
