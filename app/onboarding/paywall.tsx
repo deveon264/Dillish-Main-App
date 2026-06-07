@@ -47,9 +47,9 @@ const FEATURES: { icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
 ];
 
 const TRUST: { icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
-  { icon: "lock-closed-outline", label: "Secure payment" },
+  { icon: "card-outline", label: "No card needed" },
   { icon: "refresh-outline", label: "Cancel anytime" },
-  { icon: "shield-checkmark-outline", label: "RevenueCat" },
+  { icon: "shield-checkmark-outline", label: "Manage in-app" },
 ];
 
 const SEGMENTS = 6;
@@ -64,8 +64,8 @@ export default function Paywall() {
   const activePlan = PLANS.find((p) => p.key === selected) ?? PLANS[0];
 
   const summaryLine = trial
-    ? `Start your ${TRIAL_DAYS}-day free trial, then ${activePlan.info.fullLabel}`
-    : `You'll be charged ${activePlan.info.fullLabel}`;
+    ? `Start your ${TRIAL_DAYS}-day free trial of ${activePlan.info.fullLabel} — no card needed yet`
+    : `Activate ${activePlan.info.fullLabel} — no card needed yet`;
 
   // Every exit from the paywall — the primary CTA AND the top Skip link — routes
   // through the thank-you video, which auto-plays once and then continues to the
@@ -209,7 +209,7 @@ export default function Paywall() {
           </View>
         </View>
         <Text style={styles.terms}>
-          By continuing you agree to our Terms of Service and Privacy Policy. Subscription auto-renews unless cancelled.
+          By continuing you agree to our Terms of Service and Privacy Policy. Billing isn't live yet — you won't be charged, and your coach handles payments for now.
         </Text>
       </View>
     </GradientBackground>
