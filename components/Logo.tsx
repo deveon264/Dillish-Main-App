@@ -31,7 +31,7 @@ export function Logo({
         <Ionicons name="flower-outline" size={icon} color={colors.onPrimary} />
       </LinearGradient>
       {showText ? (
-        <View style={[styles.textCol, { marginLeft: gap + 6 }]}>
+        <View style={[styles.textCol, { marginLeft: gap }]}>
           <Text style={[styles.text, { fontSize, lineHeight: fontSize }]}>
             Florish
           </Text>
@@ -59,9 +59,9 @@ const styles = StyleSheet.create({
   },
   pill: {
     alignSelf: "flex-start",
-    marginTop: 5,
-    paddingHorizontal: 9,
-    paddingVertical: 3,
+    marginTop: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
     borderRadius: 999,
     backgroundColor: colors.accentTint,
     borderWidth: 1,
