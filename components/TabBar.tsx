@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, Pressable, Platform } from "react-native";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { useInsets } from "@/hooks/useInsets";
 import { colors } from "@/constants/colors";
@@ -32,35 +33,47 @@ export function TabBar({ state, navigation }: TabBarProps) {
   return (
     <View style={[styles.wrap, { paddingBottom: insets.bottom + 8 }]}>
       <View style={styles.bar}>
-        {ORDER.map((name) => {
-          const route = routesByName[name];
-          if (!route) return null;
-          const conf = CONF[name];
-          const routeIndex = state.routes.findIndex((r) => r.key === route.key);
-          const focused = state.index === routeIndex;
+        {/* Native frosted-glass blur — content scrolls through it on iOS. */}
+        <BlurView
+          intensity={Platform.OS === "android" ? 40 : 55}
+          tint="light"
+          experimentalBlurMethod="dimezisBlurView"
+          style={[StyleSheet.absoluteFill, styles.noTouch]}
+        />
+        {/* Warm translucent wash so the glass keeps the brand tone and reads
+            cleanly even where native blur is limited (web/older Android). */}
+        <View style={[StyleSheet.absoluteFill, styles.glassTint, styles.noTouch]} />
+        <View style={styles.row}>
+          {ORDER.map((name) => {
+            const route = routesByName[name];
+            if (!route) return null;
+            const conf = CONF[name];
+            const routeIndex = state.routes.findIndex((r) => r.key === route.key);
+            const focused = state.index === routeIndex;
 
-          const onPress = () => {
-            if (Platform.OS !== "web") Haptics.selectionAsync();
-            const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
-            if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
-          };
+            const onPress = () => {
+              if (Platform.OS !== "web") Haptics.selectionAsync();
+              const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
+              if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+            };
 
-          const color = focused ? colors.primary : colors.mutedForeground;
-          const iconName = focused ? conf.icon.nameFocused : conf.icon.name;
+            const color = focused ? colors.primary : colors.mutedForeground;
+            const iconName = focused ? conf.icon.nameFocused : conf.icon.name;
 
-          return (
-            <Pressable key={name} style={styles.item} onPress={onPress}>
-              <View style={[styles.itemInner, focused && styles.itemInnerActive]}>
-                {conf.icon.lib === "ion" ? (
-                  <Ionicons name={iconName as keyof typeof Ionicons.glyphMap} size={22} color={color} />
-                ) : (
-                  <MaterialCommunityIcons name={iconName as keyof typeof MaterialCommunityIcons.glyphMap} size={22} color={color} />
-                )}
-                <Text numberOfLines={1} style={[styles.label, { color }, focused && styles.labelActive]}>{conf.label}</Text>
-              </View>
-            </Pressable>
-          );
-        })}
+            return (
+              <Pressable key={name} style={styles.item} onPress={onPress}>
+                <View style={[styles.itemInner, focused && styles.itemInnerActive]}>
+                  {conf.icon.lib === "ion" ? (
+                    <Ionicons name={iconName as keyof typeof Ionicons.glyphMap} size={22} color={color} />
+                  ) : (
+                    <MaterialCommunityIcons name={iconName as keyof typeof MaterialCommunityIcons.glyphMap} size={22} color={color} />
+                  )}
+                  <Text numberOfLines={1} style={[styles.label, { color }, focused && styles.labelActive]}>{conf.label}</Text>
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
     </View>
   );
@@ -77,13 +90,22 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   bar: {
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: colors.tabBarGlassBorder,
+    // Clip the blur layer to the rounded pill.
+    overflow: "hidden",
+  },
+  glassTint: {
+    backgroundColor: colors.tabBarGlass,
+  },
+  noTouch: {
+    pointerEvents: "none",
+  },
+  row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    borderRadius: 28,
     paddingHorizontal: 8,
     paddingVertical: 8,
   },

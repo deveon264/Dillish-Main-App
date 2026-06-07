@@ -20,6 +20,7 @@ const successRgb = "127, 163, 124"; // #7FA37C Soft Sage
 const honeyRgb = "194, 146, 94"; // #C2925E Warm Honey Wood
 const blushRgb = "243, 199, 194"; // #F3C7C2 Soft Pink Blush
 const creamRgb = "239, 227, 215"; // #EFE3D7 Warm Cream
+const surfaceRgb = "251, 246, 240"; // #FBF6F0 Warm off-white surface
 
 export const colors = {
   background: "#EFE3D7",
@@ -27,6 +28,10 @@ export const colors = {
   card: "#FBF6F0",
   cardElevated: "#FBF6F0",
   cardBorder: `rgba(${accentRgb}, 0.16)`,
+  // Frosted-glass tint laid over the native blur in the floating tab bar.
+  // Translucent so content shows through; brighter highlight for the top edge.
+  tabBarGlass: `rgba(${surfaceRgb}, 0.62)`,
+  tabBarGlassBorder: `rgba(${surfaceRgb}, 0.75)`,
   primary: "#DD8DA0",
   accent: "#DD8DA0",
   accentSoft: "#EBB1C0",
