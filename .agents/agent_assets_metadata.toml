@@ -683,3 +683,9 @@ id = "wh7Nr093mkGqiGT8fEOBm"
 uri = "file://attached_assets/minimal_options/silk1.png"
 type = "image"
 title = "Silk B — Draped cream silk (richer, more dramatic)"
+
+[[outputs]]
+id = "qsUlton2wbaUZsB_rmo37"
+uri = "file://pitch/Shape-by-Sendry-Pitch.pdf"
+type = "pdf"
+title = "Shape by Sendry - Partnership Pitch Deck"
