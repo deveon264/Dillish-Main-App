@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
 import { HelpButton } from "@/components/HelpButton";
+import { PageHeader } from "@/components/PageHeader";
 import { useInsets } from "@/hooks/useInsets";
 import { useData } from "@/contexts/DataContext";
 import { WORKOUTS, CATEGORIES, Workout } from "@/constants/workouts";
@@ -62,23 +63,22 @@ export default function Workouts() {
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 110 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.eyebrow}>EXPLORE</Text>
-            <Text style={styles.title}>
-              Workout <Text style={styles.titleItalic}>Library</Text>
-            </Text>
-          </View>
-          <HelpButton
-            title="Workout Library"
-            intro="Find the right session for today and make it your own."
-            points={[
-              "Browse every class, then filter by type and level to fit your mood.",
-              "Save favorites so your go-to workouts are always one tap away.",
-              "Tap any workout to start a guided, step-by-step session.",
-            ]}
-          />
-        </View>
+        <PageHeader
+          eyebrow="EXPLORE"
+          title="Workout"
+          accent="Library"
+          action={
+            <HelpButton
+              title="Workout Library"
+              intro="Find the right session for today and make it your own."
+              points={[
+                "Browse every class, then filter by type and level to fit your mood.",
+                "Save favorites so your go-to workouts are always one tap away.",
+                "Tap any workout to start a guided, step-by-step session.",
+              ]}
+            />
+          }
+        />
 
         <View style={styles.search}>
           <Ionicons name="search-outline" size={18} color={colors.mutedForeground} />
@@ -254,10 +254,6 @@ export default function Workouts() {
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 20 },
-  header: { flexDirection: "row", alignItems: "center", gap: 12 },
-  eyebrow: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.muted, letterSpacing: 2 },
-  title: { fontFamily: fonts.serif, fontSize: 34, color: colors.foreground, marginTop: 2 },
-  titleItalic: { fontFamily: fonts.serifItalic, fontStyle: "italic", color: colors.foreground },
   search: {
     flexDirection: "row",
     alignItems: "center",

@@ -7,6 +7,7 @@ import { GradientBackground } from "@/components/GradientBackground";
 import { Card } from "@/components/Card";
 import { ProgressRing } from "@/components/ProgressRing";
 import { ProgressBar } from "@/components/ProgressBar";
+import { SectionLabel } from "@/components/PageHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
 import { useInsets } from "@/hooks/useInsets";
@@ -313,7 +314,7 @@ export default function Dashboard() {
 
         {/* Quick Access */}
         <View style={styles.sectionHead}>
-          <Text style={styles.sectionTitleSm}>QUICK ACCESS</Text>
+          <SectionLabel>QUICK ACCESS</SectionLabel>
         </View>
         <View style={styles.qaGrid}>
           {QUICK_ACCESS.map((q) => (
@@ -330,7 +331,7 @@ export default function Dashboard() {
 
         {/* Saved Workouts */}
         <View style={styles.sectionHead}>
-          <Text style={styles.sectionTitleSm}>SAVED WORKOUTS</Text>
+          <SectionLabel>SAVED WORKOUTS</SectionLabel>
           <Pressable onPress={() => router.navigate("/(tabs)/workouts")}>
             <Text style={styles.seeAll}>See all</Text>
           </Pressable>
@@ -480,7 +481,6 @@ const styles = StyleSheet.create({
 
   sectionHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 28, marginBottom: 14 },
   sectionTitle: { fontFamily: fonts.serif, fontSize: 24, color: colors.foreground },
-  sectionTitleSm: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.muted, letterSpacing: 2 },
   seeAll: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.accent },
 
   hero: { height: 190, borderRadius: colors.radiusLg, overflow: "hidden", justifyContent: "flex-end" },

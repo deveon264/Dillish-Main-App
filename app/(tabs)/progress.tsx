@@ -7,6 +7,7 @@ import * as ImagePicker from "expo-image-picker";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Card } from "@/components/Card";
 import { HelpButton } from "@/components/HelpButton";
+import { PageHeader, SectionLabel } from "@/components/PageHeader";
 import { ProgressBar } from "@/components/ProgressBar";
 import { LineChart, LinePoint } from "@/components/LineChart";
 import { useData } from "@/contexts/DataContext";
@@ -184,23 +185,22 @@ export default function Progress() {
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 110 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.eyebrow}>WELLNESS</Text>
-            <Text style={styles.title}>
-              Your <Text style={styles.titleItalic}>Progress</Text>
-            </Text>
-          </View>
-          <HelpButton
-            title="Your Progress"
-            intro="See how far you've come and keep your goals in view."
-            points={[
-              "Track your weight over time and watch the trend take shape.",
-              "Explore charts that show your activity and results at a glance.",
-              "Log new measurements to keep your progress up to date.",
-            ]}
-          />
-        </View>
+        <PageHeader
+          eyebrow="WELLNESS"
+          title="Your"
+          accent="Progress"
+          action={
+            <HelpButton
+              title="Your Progress"
+              intro="See how far you've come and keep your goals in view."
+              points={[
+                "Track your weight over time and watch the trend take shape.",
+                "Explore charts that show your activity and results at a glance.",
+                "Log new measurements to keep your progress up to date.",
+              ]}
+            />
+          }
+        />
 
         <View style={styles.tabBar}>
           {TABS.map((t) => {
@@ -297,7 +297,7 @@ export default function Progress() {
               )}
             </Card>
 
-            <Text style={styles.section}>LOG WEIGHT</Text>
+            <SectionLabel style={styles.section}>LOG WEIGHT</SectionLabel>
             <Card style={styles.logCard}>
               <View style={styles.formRow}>
                 <View style={styles.formField}>
@@ -335,7 +335,7 @@ export default function Progress() {
               </Pressable>
             </Card>
 
-            <Text style={styles.section}>RECENT LOGS</Text>
+            <SectionLabel style={styles.section}>RECENT LOGS</SectionLabel>
             {sortedDesc.length === 0 ? (
               <Card style={{ alignItems: "center", paddingVertical: 28 }}>
                 <Ionicons name="scale-outline" size={32} color={colors.blush} />
@@ -410,7 +410,7 @@ export default function Progress() {
             ) : (
               <>
                 <View style={styles.photosHead}>
-                  <Text style={styles.section}>BEFORE & AFTER</Text>
+                  <SectionLabel style={styles.section}>BEFORE & AFTER</SectionLabel>
                   <Text style={styles.photosCount}>
                     {sortedPhotos.length} {sortedPhotos.length === 1 ? "photo" : "photos"}
                   </Text>
@@ -455,7 +455,7 @@ export default function Progress() {
                   </Card>
                 )}
 
-                <Text style={[styles.section, { marginTop: 22 }]}>PHOTO TIMELINE</Text>
+                <SectionLabel style={[styles.section, { marginTop: 22 }]}>PHOTO TIMELINE</SectionLabel>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -492,10 +492,6 @@ export default function Progress() {
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 20 },
-  header: { flexDirection: "row", alignItems: "center", gap: 12 },
-  eyebrow: { fontFamily: fonts.sansMedium, fontSize: 12, letterSpacing: 2, color: colors.muted },
-  title: { fontFamily: fonts.serif, fontSize: 34, color: colors.foreground, marginTop: 2 },
-  titleItalic: { fontFamily: fonts.serifItalic, fontStyle: "italic", color: colors.foreground },
   tabBar: {
     flexDirection: "row",
     gap: 4,
@@ -551,7 +547,7 @@ const styles = StyleSheet.create({
   chartEmpty: { alignItems: "center", paddingVertical: 30, gap: 10 },
   chartEmptyText: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.muted, marginTop: 6, textAlign: "center" },
 
-  section: { fontFamily: fonts.sansMedium, fontSize: 12, letterSpacing: 2, color: colors.muted, marginTop: 28, marginBottom: 14 },
+  section: { marginTop: 28, marginBottom: 14 },
   logCard: { padding: 18 },
   formRow: { flexDirection: "row", gap: 12 },
   formField: { flex: 1 },

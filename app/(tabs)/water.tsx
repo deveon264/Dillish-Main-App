@@ -5,6 +5,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Card } from "@/components/Card";
 import { HelpButton } from "@/components/HelpButton";
+import { PageHeader, SectionLabel } from "@/components/PageHeader";
 import { WaterCircle } from "@/components/WaterCircle";
 import { ProgressBar } from "@/components/ProgressBar";
 import { BarChart, BarDatum } from "@/components/BarChart";
@@ -104,23 +105,22 @@ export default function Water() {
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 110 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.eyebrow}>WELLNESS</Text>
-            <Text style={styles.title}>
-              Stay <Text style={styles.titleItalic}>Hydrated</Text>
-            </Text>
-          </View>
-          <HelpButton
-            title="Stay Hydrated"
-            intro="Keep your water intake on track every day."
-            points={[
-              "Log each glass with a tap as you drink through the day.",
-              "Watch your progress fill toward your daily hydration goal.",
-              "Switch days to review how well you stayed hydrated before.",
-            ]}
-          />
-        </View>
+        <PageHeader
+          eyebrow="WELLNESS"
+          title="Stay"
+          accent="Hydrated"
+          action={
+            <HelpButton
+              title="Stay Hydrated"
+              intro="Keep your water intake on track every day."
+              points={[
+                "Log each glass with a tap as you drink through the day.",
+                "Watch your progress fill toward your daily hydration goal.",
+                "Switch days to review how well you stayed hydrated before.",
+              ]}
+            />
+          }
+        />
 
         <Card style={styles.hydrationCard}>
               <View style={styles.hydrationHead}>
@@ -154,7 +154,7 @@ export default function Water() {
               </View>
             </Card>
 
-            <Text style={styles.section}>QUICK ADD</Text>
+            <SectionLabel style={styles.section}>QUICK ADD</SectionLabel>
             <View style={styles.quickRow}>
               {QUICK.map((q) => (
                 <Pressable key={q.ml} style={styles.quick} onPress={() => addWater(q.ml)}>
@@ -246,10 +246,6 @@ export default function Water() {
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 20 },
-  header: { flexDirection: "row", alignItems: "center", gap: 12 },
-  eyebrow: { fontFamily: fonts.sansMedium, fontSize: 12, letterSpacing: 2, color: colors.muted },
-  title: { fontFamily: fonts.serif, fontSize: 34, color: colors.foreground, marginTop: 2 },
-  titleItalic: { fontFamily: fonts.serifItalic, fontStyle: "italic", color: colors.foreground },
   hydrationCard: { marginTop: 18, padding: 18 },
   hydrationHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   eyebrowRow: { flexDirection: "row", alignItems: "center", gap: 8 },
@@ -266,7 +262,7 @@ const styles = StyleSheet.create({
   bigNum: { fontFamily: fonts.sansBold, fontSize: 34, color: colors.foreground },
   bigUnit: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted },
   subInfo: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.muted, marginTop: 2 },
-  section: { fontFamily: fonts.sansMedium, fontSize: 12, letterSpacing: 2, color: colors.muted, marginTop: 28, marginBottom: 14 },
+  section: { marginTop: 28, marginBottom: 14 },
   quickRow: { flexDirection: "row", gap: 10 },
   quick: {
     flex: 1,

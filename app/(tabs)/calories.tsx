@@ -8,6 +8,7 @@ import { GradientBackground } from "@/components/GradientBackground";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { HelpButton } from "@/components/HelpButton";
+import { PageHeader, SectionLabel } from "@/components/PageHeader";
 import { ProgressRing } from "@/components/ProgressRing";
 import { ProgressBar } from "@/components/ProgressBar";
 import { useData } from "@/contexts/DataContext";
@@ -222,23 +223,22 @@ export default function Calories() {
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 110 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.eyebrow}>AI POWERED</Text>
-            <Text style={styles.title}>
-              Calorie <Text style={styles.titleItalic}>Tracker</Text>
-            </Text>
-          </View>
-          <HelpButton
-            title="Calorie Tracker"
-            intro="Log what you eat and stay on top of your daily goal."
-            points={[
-              "Snap a photo, scan a barcode, or type a meal — AI does the math.",
-              "See your calories and protein, carbs, and fats against your goal.",
-              "Review everything you've logged today in one place.",
-            ]}
-          />
-        </View>
+        <PageHeader
+          eyebrow="AI POWERED"
+          title="Calorie"
+          accent="Tracker"
+          action={
+            <HelpButton
+              title="Calorie Tracker"
+              intro="Log what you eat and stay on top of your daily goal."
+              points={[
+                "Snap a photo, scan a barcode, or type a meal — AI does the math.",
+                "See your calories and protein, carbs, and fats against your goal.",
+                "Review everything you've logged today in one place.",
+              ]}
+            />
+          }
+        />
 
         <Card style={styles.goalCard}>
           <View style={styles.goalHead}>
@@ -272,7 +272,7 @@ export default function Calories() {
           </View>
         </Card>
 
-        <Text style={styles.section}>LOG A MEAL</Text>
+        <SectionLabel style={styles.section}>LOG A MEAL</SectionLabel>
         <View style={styles.tabRow}>
           {TABS.map((t) => {
             const active = tab === t.key;
@@ -619,10 +619,6 @@ function ResultMacro({ label, value }: { label: string; value: number }) {
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 20 },
-  header: { flexDirection: "row", alignItems: "center", gap: 12 },
-  eyebrow: { fontFamily: fonts.sansMedium, fontSize: 12, letterSpacing: 2, color: colors.muted },
-  title: { fontFamily: fonts.serif, fontSize: 34, color: colors.foreground, marginTop: 2 },
-  titleItalic: { fontFamily: fonts.serifItalic, fontStyle: "italic", color: colors.foreground },
   goalCard: { marginTop: 20, padding: 20 },
   goalHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   eyebrowRow: { flexDirection: "row", alignItems: "center", gap: 8 },
@@ -641,7 +637,7 @@ const styles = StyleSheet.create({
   macroDot: { width: 8, height: 8, borderRadius: 4 },
   macroLabel: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.foreground },
   macroValue: { fontFamily: fonts.sans, fontSize: 13, color: colors.muted },
-  section: { fontFamily: fonts.sansMedium, fontSize: 12, letterSpacing: 2, color: colors.muted, marginTop: 28, marginBottom: 14 },
+  section: { marginTop: 28, marginBottom: 14 },
   tabRow: {
     flexDirection: "row",
     backgroundColor: colors.card,
