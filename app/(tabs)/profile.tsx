@@ -300,6 +300,27 @@ export default function Profile() {
     { key: "support", icon: "headset-outline", label: "Support" },
   ];
 
+  const PLAN_FEATURES = [
+    "Unlimited workout videos with Dillish",
+    "AI-powered calorie tracking",
+    "Hydration & progress tracking",
+    "Private progress photo gallery",
+    "Push notifications & streak reminders",
+    "Priority support & new content first",
+  ];
+
+  const CHANGE_PLANS: {
+    key: string;
+    name: string;
+    price: string;
+    best?: boolean;
+    current?: boolean;
+  }[] = [
+    { key: "weekly", name: "Weekly", price: "₦1,999 / week" },
+    { key: "monthly", name: "Monthly", price: "₦4,999 / month" },
+    { key: "yearly", name: "Yearly", price: "₦19,999 / year · Save 67%", best: true, current: true },
+  ];
+
   return (
     <GradientBackground>
       <ScrollView
@@ -408,6 +429,94 @@ export default function Profile() {
                 </Card>
               </>
             ) : null}
+          </>
+        ) : activeTab === "Plan" ? (
+          <>
+            <Card style={styles.planCard}>
+              <View style={styles.planTopRow}>
+                <View style={styles.planIconTile}>
+                  <Ionicons name="sparkles" size={20} color={colors.onPrimary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.planName}>Florish Premium</Text>
+                  <Text style={styles.planCadence}>Yearly Plan</Text>
+                </View>
+                <View style={styles.planActiveBadge}>
+                  <View style={styles.planActiveDot} />
+                  <Text style={styles.planActiveText}>Active</Text>
+                </View>
+              </View>
+
+              <View style={styles.planStatsRow}>
+                <View style={styles.planStatTile}>
+                  <Text style={styles.planStatNum}>₦19,999</Text>
+                  <Text style={styles.planStatLbl}>/ year</Text>
+                </View>
+                <View style={styles.planStatTile}>
+                  <Text style={styles.planStatNum}>Jun 1</Text>
+                  <Text style={styles.planStatLbl}>Renews</Text>
+                </View>
+                <View style={styles.planStatTile}>
+                  <Text style={styles.planStatNum}>365</Text>
+                  <Text style={styles.planStatLbl}>days left</Text>
+                </View>
+              </View>
+
+              <View style={styles.planBtnRow}>
+                <Pressable style={({ pressed }) => [styles.planManageBtn, { opacity: pressed ? 0.9 : 1 }]}>
+                  <LinearGradient
+                    colors={colors.gradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.planManageInner}
+                  >
+                    <Text style={styles.planManageText}>Manage Plan</Text>
+                  </LinearGradient>
+                </Pressable>
+                <Pressable style={({ pressed }) => [styles.planBillingBtn, { opacity: pressed ? 0.85 : 1 }]}>
+                  <Text style={styles.planBillingText}>Billing</Text>
+                </Pressable>
+              </View>
+            </Card>
+
+            <Text style={styles.label}>WHAT'S INCLUDED</Text>
+            <Card>
+              {PLAN_FEATURES.map((f, i) => (
+                <View key={f} style={[styles.includedRow, i > 0 && styles.includedRowGap]}>
+                  <View style={styles.includedCheck}>
+                    <Ionicons name="checkmark" size={13} color={colors.primary} />
+                  </View>
+                  <Text style={styles.includedText}>{f}</Text>
+                </View>
+              ))}
+            </Card>
+
+            <Text style={styles.label}>CHANGE PLAN</Text>
+            {CHANGE_PLANS.map((p) => (
+              <Card key={p.key} style={[styles.changeCard, p.current && styles.changeCardCurrent]}>
+                <View style={{ flex: 1 }}>
+                  <View style={styles.changeNameRow}>
+                    <Text style={styles.changeName}>{p.name}</Text>
+                    {p.best ? (
+                      <View style={styles.bestBadge}>
+                        <Text style={styles.bestBadgeText}>BEST VALUE</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  <Text style={styles.changePrice}>{p.price}</Text>
+                </View>
+                {p.current ? (
+                  <View style={styles.currentMark}>
+                    <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+                    <Text style={styles.currentMarkText}>Current</Text>
+                  </View>
+                ) : (
+                  <Pressable style={({ pressed }) => [styles.switchBtn, { opacity: pressed ? 0.85 : 1 }]}>
+                    <Text style={styles.switchBtnText}>Switch</Text>
+                  </Pressable>
+                )}
+              </Card>
+            ))}
           </>
         ) : (
         <>
@@ -1064,4 +1173,83 @@ const styles = StyleSheet.create({
   goalScaleRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 10 },
   goalScaleText: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted },
   version: { fontFamily: fonts.sans, fontSize: 12, color: colors.mutedForeground, textAlign: "center", marginTop: 18 },
+  planCard: { marginTop: 4 },
+  planTopRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  planIconTile: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.primary,
+  },
+  planName: { fontFamily: fonts.serifSemibold, fontSize: 19, color: colors.foreground },
+  planCadence: { fontFamily: fonts.sans, fontSize: 12, color: colors.mutedForeground, marginTop: 2 },
+  planActiveBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: colors.successTint,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  planActiveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.success },
+  planActiveText: { fontFamily: fonts.sansSemibold, fontSize: 12, color: colors.success },
+  planStatsRow: { flexDirection: "row", gap: 10, marginTop: 18 },
+  planStatTile: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+    backgroundColor: colors.track,
+    borderRadius: colors.radius,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  planStatNum: { fontFamily: fonts.serifSemibold, fontSize: 18, color: colors.foreground },
+  planStatLbl: { fontFamily: fonts.sans, fontSize: 11, color: colors.mutedForeground, marginTop: 3, textAlign: "center" },
+  planBtnRow: { flexDirection: "row", gap: 10, marginTop: 16 },
+  planManageBtn: { flex: 1, borderRadius: colors.radius, overflow: "hidden" },
+  planManageInner: { minHeight: 50, alignItems: "center", justifyContent: "center", borderRadius: colors.radius },
+  planManageText: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.onPrimary },
+  planBillingBtn: {
+    flex: 1,
+    minHeight: 50,
+    borderRadius: colors.radius,
+    borderWidth: 1,
+    borderColor: colors.accentBorderMd,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "transparent",
+  },
+  planBillingText: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.accentDark },
+  includedRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  includedRowGap: { marginTop: 14 },
+  includedCheck: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.accentTintMd,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  includedText: { fontFamily: fonts.sans, fontSize: 14, color: colors.foreground, flex: 1 },
+  changeCard: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 12 },
+  changeCardCurrent: { borderColor: colors.primary, backgroundColor: colors.accentTint },
+  changeNameRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  changeName: { fontFamily: fonts.serifSemibold, fontSize: 18, color: colors.foreground },
+  changePrice: { fontFamily: fonts.sans, fontSize: 13, color: colors.mutedForeground, marginTop: 3 },
+  bestBadge: { backgroundColor: colors.blushTintMd, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 },
+  bestBadgeText: { fontFamily: fonts.sansSemibold, fontSize: 9, letterSpacing: 0.5, color: colors.accentDark },
+  currentMark: { flexDirection: "row", alignItems: "center", gap: 6 },
+  currentMarkText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.primary },
+  switchBtn: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.accentBorderMd,
+    paddingHorizontal: 18,
+    paddingVertical: 9,
+  },
+  switchBtnText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.accentDark },
 });
