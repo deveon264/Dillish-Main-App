@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, Image, Platform, ActivityIndicator, TextInput, Modal } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, Image, Platform, ActivityIndicator, TextInput, Modal, ActionSheetIOS, Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
@@ -125,6 +125,31 @@ export default function Calories() {
     } catch {
       setError("Unable to open the camera or library on this device.");
     }
+  };
+
+  const choosePhotoSource = () => {
+    if (Platform.OS === "web") {
+      pickImage(false);
+      return;
+    }
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ["Take Photo", "Choose from Library", "Cancel"],
+          cancelButtonIndex: 2,
+        },
+        (index) => {
+          if (index === 0) pickImage(true);
+          else if (index === 1) pickImage(false);
+        }
+      );
+      return;
+    }
+    Alert.alert("Add a meal photo", "Take a new photo or choose one from your library.", [
+      { text: "Take Photo", onPress: () => pickImage(true) },
+      { text: "Choose from Library", onPress: () => pickImage(false) },
+      { text: "Cancel", style: "cancel" },
+    ]);
   };
 
   const analyze = async (b64: string) => {
@@ -417,7 +442,7 @@ export default function Calories() {
             </View>
           </Card>
         ) : (
-          <Pressable onPress={() => pickImage(tab === "photo" ? Platform.OS !== "web" : false)}>
+          <Pressable onPress={() => (tab === "photo" ? choosePhotoSource() : pickImage(false))}>
             <Card style={styles.dropCard}>
               <View style={styles.dropInner}>
                 <View style={styles.dropIcon}>
