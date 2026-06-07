@@ -1,10 +1,1 @@
-- [Exercise video streaming & admin uploads](exercise-video-streaming.md) — bytes in object storage (sidecar signed URLs, NOT @google-cloud SDK — won't bundle in Metro), Postgres key only, 302-to-GCS for Range, mock-auth header gating limit.
-- [Expo + Replit quirks](expo-replit-quirks.md) — SDK54 pinning, fonts, --tunnel, legacy-peer-deps.
-- [Server-verified identity & admin model](server-identity-auth.md) — session token doubles as admin token; passcode only gates admin signup; coach email pinned both ways.
-- [Light theme & scrim inversion](profile-light-panel.md) — app is a single LIGHT strawberry-cherry theme; over-image content keeps dark scrims + white text, solid surfaces are light + dark ink; blue/green are small pops only.
-- [Streak/week math duplication](streak-week-math.md) — weekly-streak/week-day computation has copies that must stay in sync.
-- [Weight tracking derivation](weight-tracking-derivation.md) — how current/start weight are computed for Progress + Profile; logs decoupled from profile.
-- [Workout favorites](workout-favorites.md) — DataContext favorites slice powers the library Saved filter; home "saved" still uses w.featured.
-- [Server profile persistence](server-profile-persistence.md) — profile metrics live in users.profile JSONB tied to account; PATCH merges atomically via `jsonb || jsonb` (never read-modify-write); local storage is just a cache.
-- [Profile avatar storage](profile-avatar-storage.md) — avatars are bytes in object storage (mirror posters), users row keeps only key/mime; avatarVersion cache-busts; /api/me no longer carries the image; legacy data: URIs still render.
-- [Visual QA of auth-gated screens](visual-qa-auth-gated.md) — screenshot browser has no session; temp mock-login in AuthContext + seed DataContext, shoot URL paths, then revert; in-component tab views aren't URL-addressable.
+- [Mockup preview screenshots](mockup-preview-screenshots.md) — external_url screenshots of mockup-sandbox `/preview/*` can capture blank/stale; add a unique `?v=N` to force a fresh render.

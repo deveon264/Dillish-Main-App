@@ -1,0 +1,56 @@
+:root {
+  --cream: #F7F0EA;
+  --cream-deep: #EBDDD2;
+  --ink: #4A2E33;
+  --accent: #C57B86;
+  --accent-soft: #DCA3AB;
+  --accent-dark: #8E4A55;
+  --muted: rgba(74, 46, 51, 0.55);
+  --accent-tint-faint: rgba(197, 123, 134, 0.08);
+  --accent-tint: rgba(197, 123, 134, 0.1);
+  --accent-tint-md: rgba(197, 123, 134, 0.12);
+  --accent-border-soft: rgba(197, 123, 134, 0.2);
+  --accent-border-md: rgba(197, 123, 134, 0.28);
+  --honey: #C2925E;
+
+  --font-serif: "Cormorant Garamond", serif;
+  --font-sans: "DM Sans", sans-serif;
+}
+
+.wp-serif {
+  font-family: var(--font-serif);
+}
+.wp-sans {
+  font-family: var(--font-sans);
+}
+
+.wp-fade {
+  opacity: 0;
+  animation: wpFadeUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.wp-fade-soft {
+  opacity: 0;
+  animation: wpFade 1.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.wp-d1 { animation-delay: 0.08s; }
+.wp-d2 { animation-delay: 0.18s; }
+.wp-d3 { animation-delay: 0.3s; }
+.wp-d4 { animation-delay: 0.42s; }
+.wp-d5 { animation-delay: 0.54s; }
+
+@keyframes wpFadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes wpFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes wpPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.16); }
+}
+.wp-pulse { animation: wpPulse 1.7s ease-in-out infinite; }
+.wp-pulse-2 { animation: wpPulse 1.7s ease-in-out 0.35s infinite; }
+.wp-pulse-3 { animation: wpPulse 1.7s ease-in-out 0.7s infinite; }

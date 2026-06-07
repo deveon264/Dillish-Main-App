@@ -305,3 +305,15 @@ id = "r4ed4-iGYuNlcEl_cjACB"
 uri = "file://attached_assets/stock_images/welcomehero.jpg"
 type = "image"
 title = "elegant wellness portrait of a confident woman, soft warm light, beauty"
+
+[[outputs]]
+id = "7PHbt7FHrCvmMM8aMi6pO"
+uri = "file://attached_assets/screenshots/511858dc-4453-49e0-9028-2b93cd0060fb-00-3bc24ua5jixzj_picard_replit_dev_mockup_preview_welcome-polished_Refined.png"
+type = "image"
+title = "Variant 1 — Refined"
+
+[[outputs]]
+id = "NV1w1cBHRaR8PbVoN9E4h"
+uri = "file://attached_assets/screenshots/511858dc-4453-49e0-9028-2b93cd0060fb-00-3bc24ua5jixzj_picard_replit_dev_mockup_preview_welcome-polished_WarmEditorial.png"
+type = "image"
+title = "Variant 2 — Warm Editorial"
