@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, Image, Platform, ActivityIndicator, TextInput, Modal, ActionSheetIOS, Alert } from "react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { View, Text, StyleSheet, ScrollView, Pressable, Image, Platform, ActivityIndicator, Animated, Easing, TextInput, Modal, ActionSheetIOS, Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
@@ -28,11 +28,47 @@ type AnalysisResult = {
 
 type LogTab = "photo" | "text" | "scan";
 
+// Gentle placeholder shown in the meal hero while a stock photo is being
+// fetched (text-logged meals). A soft opacity pulse plus a spinner makes the
+// wait feel intentional rather than broken. On failure the hero falls back to
+// the fork-and-knife icon (handled by the caller).
+function PhotoShimmer() {
+  const pulse = useRef(new Animated.Value(0.35)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 0.75,
+          duration: 750,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0.35,
+          duration: 750,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+
+  return (
+    <View style={styles.heroFallback}>
+      <Animated.View style={[StyleSheet.absoluteFill, styles.heroShimmer, { opacity: pulse }]} />
+      <ActivityIndicator color="rgba(255,255,255,0.5)" />
+    </View>
+  );
+}
+
 export default function Calories() {
   const insets = useInsets();
   const { profile, calorieLogs, addCalorie, deleteCalorie } = useData();
   const [image, setImage] = useState<string | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoLoading, setPhotoLoading] = useState(false);
   const [base64, setBase64] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -99,6 +135,7 @@ export default function Calories() {
     setError(null);
     setResult(null);
     setPhotoUrl(null);
+    setPhotoLoading(false);
     try {
       const perm = fromCamera
         ? await ImagePicker.requestCameraPermissionsAsync()
@@ -180,6 +217,7 @@ export default function Calories() {
   };
 
   const fetchFoodPhoto = async (name: string) => {
+    setPhotoLoading(true);
     try {
       const resp = await fetch(`${getApiUrl()}/api/food-photo`, {
         method: "POST",
@@ -191,12 +229,15 @@ export default function Calories() {
       if (url) setPhotoUrl(url);
     } catch {
       // Silent: the hero keeps its fork-and-knife fallback.
+    } finally {
+      setPhotoLoading(false);
     }
   };
 
   const reset = () => {
     setImage(null);
     setPhotoUrl(null);
+    setPhotoLoading(false);
     setBase64(null);
     setResult(null);
     setError(null);
@@ -387,6 +428,8 @@ export default function Calories() {
                       style={StyleSheet.absoluteFill}
                     />
                   </>
+                ) : photoLoading ? (
+                  <PhotoShimmer />
                 ) : (
                   <View style={styles.heroFallback}>
                     <Ionicons name="restaurant" size={42} color="rgba(255,255,255,0.28)" />
@@ -812,6 +855,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  heroShimmer: { backgroundColor: "rgba(255,255,255,0.08)" },
   aiBadge: {
     position: "absolute",
     top: 12,
