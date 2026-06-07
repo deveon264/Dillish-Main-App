@@ -2,3 +2,4 @@
 - [iOS image-picker after RN Modal](avatar-picker-ios-modal.md) — expo-image-picker silently no-ops if launched right after closing a RN <Modal> on iOS; launch from Modal `onDismiss`, not a timer.
 - [Expo Router API-route cache](expo-router-api-cache.md) — new app/api/*+api.ts routes 404 until `.expo/web/cache` is wiped; `--clear` is NOT enough; baked into scripts/post-merge.sh.
 - [Device-local persistence](device-local-persistence.md) — calorie/water/etc logs are AsyncStorage-only, keyed by uid; mutators must await setJSON, and load must hydrate local slices before any network await.
+- [Pitch deck PDF render](pitch-deck-pdf-render.md) — fixed-height HTML deck exported blank/cut pages: zero `.deck` gap+padding in `@media print`; watch per-slide overflow clip; re-render via pitch/tooling/render.cjs.

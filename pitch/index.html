@@ -134,6 +134,11 @@
   table.scn tr.hot td:last-child { border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
 
   .stat-num { font-family: "Cormorant Garamond", serif; font-weight: 600; color: var(--ink); line-height: 1; }
+
+  /* print: one slide per page, no accumulating gaps */
+  @media print {
+    .deck { gap: 0; padding: 0; }
+  }
 </style>
 </head>
 <body>
@@ -157,9 +162,9 @@
         <div class="eyebrow" style="margin-bottom:22px;">A partnership proposal</div>
         <h1 class="display">Your name is<br>already <em>on it.</em></h1>
         <p class="lead" style="margin-top:26px; max-width:480px;">
-          A finished, beautiful fitness app for women, built around your coaching
-          and branded <strong>Shape by Sendry</strong>. The product is ready.
-          What it needs next is you.
+          A women's fitness app in the making, built around your coaching
+          and branded <strong>Shape by Sendry</strong>. The foundation and the
+          brand are here. What it needs next is you.
         </p>
 
         <div class="row" style="gap:12px; margin-top:38px;">
@@ -201,12 +206,12 @@
         <div class="card col grow" style="padding:32px;">
           <div class="stat-num" style="font-size:52px; color:var(--rose-deep);">Reach</div>
           <div style="font-weight:700; margin-top:10px; font-size:17px;">An engaged audience</div>
-          <p class="small" style="margin-top:8px;">A loyal, multi-country following is the single hardest asset to build. It is also the one piece a finished app cannot create on its own.</p>
+          <p class="small" style="margin-top:8px;">A loyal, multi-country following is the single hardest asset to build. It is also the one piece a product cannot create on its own.</p>
         </div>
         <div class="card col grow" style="padding:32px;">
           <div class="stat-num" style="font-size:52px; color:var(--rose-deep);">Timing</div>
-          <div style="font-weight:700; margin-top:10px; font-size:17px;">The product is ready</div>
-          <p class="small" style="margin-top:8px;">Most creators are pitched an idea. You are being handed a polished, working app that already carries your name.</p>
+          <div style="font-weight:700; margin-top:10px; font-size:17px;">Getting in early</div>
+          <p class="small" style="margin-top:8px;">Most creators join once a product is finished. You can help shape this one from the start, and it already carries your name.</p>
         </div>
       </div>
     </div>
@@ -218,11 +223,11 @@
     <div class="pad row" style="gap:64px;">
       <div class="col grow" style="justify-content:center; max-width:600px;">
         <div class="eyebrow">Meet Shape</div>
-        <h1 class="h-xl" style="margin-top:18px;">Not a concept.<br>A <em>finished</em> app.</h1>
+        <h1 class="h-xl" style="margin-top:18px;">Not just an idea.<br>A real <em>start.</em></h1>
         <p class="lead" style="margin-top:24px;">
-          Shape is a premium fitness and wellness app made for women. It is
-          designed, built and polished, the same quality you see on this screen,
-          and ready for the app stores.
+          Shape is a premium fitness and wellness app for women, in active
+          development. The look, the brand and the first screens are real, and
+          there is plenty still to build before launch.
         </p>
         <div class="col" style="gap:18px; margin-top:30px;">
           <div class="row center" style="gap:14px;"><div class="mark sm"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"/></svg></div><span class="lead" style="font-size:18px;">Your workout videos sit at the heart of the experience.</span></div>
@@ -241,26 +246,26 @@
   <section class="slide">
     <div class="pad">
       <div class="eyebrow">A tour of the app</div>
-      <h1 class="h-lg" style="margin-top:16px;">Every screen, already <em>built.</em></h1>
+      <h1 class="h-lg" style="margin-top:16px;">The first screens, already <em>designed.</em></h1>
 
-      <div class="row between" style="gap:22px; margin-top:40px; align-items:flex-start;">
+      <div class="row between" style="gap:22px; margin-top:30px; align-items:flex-start;">
         <div class="col center" style="width:255px;">
-          <div class="phone" style="width:236px; height:512px;"><img src="assets/home.png" alt="Home" /></div>
+          <div class="phone" style="width:182px; height:394px;"><img src="assets/home.png" alt="Home" /></div>
           <div style="font-weight:700; margin-top:18px; font-size:15px; text-align:center;">Today's workout</div>
           <p class="small" style="text-align:center; margin-top:5px;">Members open straight into a session led by you.</p>
         </div>
         <div class="col center" style="width:255px;">
-          <div class="phone" style="width:236px; height:512px;"><img src="assets/workouts.png" alt="Workout library" /></div>
+          <div class="phone" style="width:182px; height:394px;"><img src="assets/workouts.png" alt="Workout library" /></div>
           <div style="font-weight:700; margin-top:18px; font-size:15px; text-align:center;">Workout library</div>
           <p class="small" style="text-align:center; margin-top:5px;">Your full collection of guided routines, organised by type.</p>
         </div>
         <div class="col center" style="width:255px;">
-          <div class="phone" style="width:236px; height:512px;"><img src="assets/calories.png" alt="AI calorie tracker" /></div>
+          <div class="phone" style="width:182px; height:394px;"><img src="assets/calories.png" alt="AI calorie tracker" /></div>
           <div style="font-weight:700; margin-top:18px; font-size:15px; text-align:center;">AI calorie tracker</div>
           <p class="small" style="text-align:center; margin-top:5px;">Snap a photo or describe a meal, AI does the counting.</p>
         </div>
         <div class="col center" style="width:255px;">
-          <div class="phone" style="width:236px; height:512px;"><img src="assets/progress.png" alt="Progress" /></div>
+          <div class="phone" style="width:182px; height:394px;"><img src="assets/progress.png" alt="Progress" /></div>
           <div style="font-weight:700; margin-top:18px; font-size:15px; text-align:center;">Progress tracking</div>
           <p class="small" style="text-align:center; margin-top:5px;">Weight, goals and photos keep members coming back.</p>
         </div>
@@ -381,8 +386,8 @@
           <div class="row center between"><div style="font-weight:700; font-size:20px;">The founder brings</div><span class="stat-num" style="font-size:40px;">60%</span></div>
           <div class="rule" style="margin:16px 0 20px; background:var(--ink);"></div>
           <ul style="list-style:none; display:flex; flex-direction:column; gap:14px;">
-            <li class="lead" style="font-size:17px;">The finished, polished product.</li>
-            <li class="lead" style="font-size:17px;">All development, at no cost to you.</li>
+            <li class="lead" style="font-size:17px;">The product and its ongoing development.</li>
+            <li class="lead" style="font-size:17px;">All the building, at no cost to you.</li>
             <li class="lead" style="font-size:17px;">Hosting, maintenance and updates.</li>
             <li class="lead" style="font-size:17px;">The day-to-day running of the business.</li>
           </ul>
@@ -398,15 +403,15 @@
       <div class="eyebrow">Where we are, and what is next</div>
       <h1 class="h-xl" style="margin-top:14px;">You are the final <em>piece.</em></h1>
       <p class="lead" style="margin-top:18px; max-width:780px;">
-        The app is built and waiting. Your commitment unlocks the last stage and
-        the launch.
+        An early build and the brand are in place. Your commitment unlocks the
+        next stages and the launch.
       </p>
 
       <div class="row" style="gap:0; margin-top:54px; align-items:flex-start;">
         <div class="col" style="flex:1; padding-right:26px;">
-          <div class="row center" style="gap:12px;"><div class="mark sm" style="background:linear-gradient(155deg,#7FA37C,#5f8a5c);"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"/></svg></div><span class="eyebrow" style="color:var(--sage);">Done</span></div>
-          <div style="font-family:'Cormorant Garamond',serif; font-size:26px; margin-top:14px; font-weight:600;">Built and branded</div>
-          <p class="small" style="margin-top:8px;">The product is designed, developed and named Shape by Sendry.</p>
+          <div class="row center" style="gap:12px;"><div class="mark sm" style="background:linear-gradient(155deg,#7FA37C,#5f8a5c);"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"/></svg></div><span class="eyebrow" style="color:var(--sage);">So far</span></div>
+          <div style="font-family:'Cormorant Garamond',serif; font-size:26px; margin-top:14px; font-weight:600;">Started and branded</div>
+          <p class="small" style="margin-top:8px;">The concept, an early build and the brand Shape by Sendry are in place.</p>
         </div>
         <div class="col" style="flex:1; padding:0 26px; border-left:1px solid rgba(138,111,102,0.25);">
           <div class="row center" style="gap:12px;"><div class="mark sm">2</div><span class="eyebrow">Next</span></div>
@@ -415,8 +420,8 @@
         </div>
         <div class="col" style="flex:1; padding:0 26px; border-left:1px solid rgba(138,111,102,0.25);">
           <div class="row center" style="gap:12px;"><div class="mark sm">3</div><span class="eyebrow">Launch</span></div>
-          <div style="font-family:'Cormorant Garamond',serif; font-size:26px; margin-top:14px; font-weight:600;">Final build and release</div>
-          <p class="small" style="margin-top:8px;">We complete the last polish and launch on the app stores.</p>
+          <div style="font-family:'Cormorant Garamond',serif; font-size:26px; margin-top:14px; font-weight:600;">Build and release</div>
+          <p class="small" style="margin-top:8px;">We complete the remaining development and launch on the app stores.</p>
         </div>
         <div class="col" style="flex:1; padding-left:26px; border-left:1px solid rgba(138,111,102,0.25);">
           <div class="row center" style="gap:12px;"><div class="mark sm">4</div><span class="eyebrow">Grow</span></div>
@@ -440,9 +445,9 @@
 
       <h1 class="display" style="max-width:900px;">Let's build it,<br><em>together.</em></h1>
       <p class="lead" style="margin-top:24px; max-width:620px;">
-        Come on board as co-founder and the face of Shape by Sendry. The app is
-        ready, the brand is yours, and the upside is shared. All it needs now is
-        your yes.
+        Come on board as co-founder and the face of Shape by Sendry. The
+        foundation is here, the brand is yours, and the upside is shared. Let's
+        build the rest together.
       </p>
 
       <div class="row" style="gap:14px; margin-top:40px;">
