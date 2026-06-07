@@ -390,6 +390,18 @@ uri = "file://attached_assets/studio_options/studio2.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "epg5UX0O2zs20xkk_MilU"
+uri = "file://attached_assets/minimal_options/minimal1.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "0iUgK6n7HseLp5NFBkzl5"
+uri = "file://attached_assets/minimal_options/minimal2.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "KmpG-YsopX8HoAwCw5oyy"
 uri = "file://attached_assets/stock_images/pilates.jpg"
@@ -629,3 +641,15 @@ id = "mUINzb-FhSaV7xRDYWfoi"
 uri = "file://attached_assets/studio_options/studio2.png"
 type = "image"
 title = "Studio 2 — Warmer golden light with sheer curtains & plants"
+
+[[outputs]]
+id = "kk0bNUt8TqV5RH6J0Ki82"
+uri = "file://attached_assets/minimal_options/minimal1.png"
+type = "image"
+title = "Minimal 1 — Cream with delicate gold leaf sprig"
+
+[[outputs]]
+id = "zyXwz6Gyoirdx04-_IjYy"
+uri = "file://attached_assets/minimal_options/minimal2.png"
+type = "image"
+title = "Minimal 2 — Blush gradient with dusty-rose floral sprig"
