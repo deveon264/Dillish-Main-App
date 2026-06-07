@@ -140,6 +140,24 @@ export async function uploadThankYouVideoStream(
   );
 }
 
+// Streams a re-hosted meal stock photo to its OWN private folder. Kept separate
+// from exercise-* folders so the scheduled exercise-cleanup sweep never treats a
+// meal photo as an orphan. Returns the full object path; the last segment is an
+// unguessable uuid the client uses as the lookup key for the GET endpoint.
+export async function uploadMealPhotoStream(
+  body: ReadableStream<Uint8Array>,
+  contentType: string,
+  contentLength: number
+): Promise<string> {
+  return putObjectStream(
+    `${getPrivateDir()}/meal-photos/${uuid()}`,
+    body,
+    contentType,
+    contentLength,
+    "image/jpeg"
+  );
+}
+
 // Streams a poster image to the private exercise-posters folder.
 export async function uploadExercisePosterStream(
   body: ReadableStream<Uint8Array>,

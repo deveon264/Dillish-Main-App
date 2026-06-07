@@ -42,6 +42,7 @@ export default function Calories() {
   const [mealType, setMealType] = useState("Lunch");
   const [mealMenu, setMealMenu] = useState(false);
   const [mealText, setMealText] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const tk = todayKey();
   const todayLogs = useMemo(() => calorieLogs.filter((l) => todayKey(new Date(l.ts)) === tk), [calorieLogs, tk]);
@@ -203,19 +204,51 @@ export default function Calories() {
     setMealMenu(false);
   };
 
+  // Re-hosts a chosen stock photo into Object Storage so the saved log keeps its
+  // image even if the original Pexels URL stops working. Returns the durable
+  // app-served URL, or falls back to the original URL if re-hosting fails so the
+  // meal still logs with a picture.
+  const rehostStockPhoto = async (url: string): Promise<string> => {
+    try {
+      const resp = await fetch(`${getApiUrl()}/api/meal-photo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      if (resp.ok) {
+        const { key } = (await resp.json()) as { key: string | null };
+        if (key) return `${getApiUrl()}/api/meal-photo?key=${encodeURIComponent(key)}`;
+      }
+    } catch {
+      // Network/transient: fall back to the original URL below.
+    }
+    return url;
+  };
+
   const save = async () => {
-    if (!result) return;
-    await addCalorie({
-      name: result.name,
-      kcal: result.kcal * qty,
-      protein: result.protein * qty,
-      carbs: result.carbs * qty,
-      fats: result.fats * qty,
-      photoUri: image ?? photoUrl ?? undefined,
-      mealType,
-    });
-    if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    reset();
+    if (!result || saving) return;
+    setSaving(true);
+    try {
+      // Photo/scan logs already hold a durable device image; only a text-meal's
+      // stock photo (no device image) needs re-hosting so it survives Pexels.
+      let photoUri = image ?? undefined;
+      if (!photoUri && photoUrl) {
+        photoUri = await rehostStockPhoto(photoUrl);
+      }
+      await addCalorie({
+        name: result.name,
+        kcal: result.kcal * qty,
+        protein: result.protein * qty,
+        carbs: result.carbs * qty,
+        fats: result.fats * qty,
+        photoUri,
+        mealType,
+      });
+      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      reset();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const analyzeText = async (text: string) => {
@@ -395,19 +428,23 @@ export default function Calories() {
               </View>
 
               <View style={styles.btnRow}>
-                <Pressable style={styles.retakeBtn} onPress={reset}>
+                <Pressable style={styles.retakeBtn} onPress={reset} disabled={saving}>
                   <Ionicons name="refresh" size={16} color={colors.foreground} />
                   <Text style={styles.retakeText}>Retake</Text>
                 </Pressable>
-                <Pressable style={styles.logBtn} onPress={save}>
+                <Pressable style={[styles.logBtn, saving && { opacity: 0.7 }]} onPress={save} disabled={saving}>
                   <LinearGradient
                     colors={colors.gradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={styles.logBtnGrad}
                   >
-                    <Ionicons name="add" size={18} color={colors.onPrimary} />
-                    <Text style={styles.logBtnText}>Log This Meal</Text>
+                    {saving ? (
+                      <ActivityIndicator size="small" color={colors.onPrimary} />
+                    ) : (
+                      <Ionicons name="add" size={18} color={colors.onPrimary} />
+                    )}
+                    <Text style={styles.logBtnText}>{saving ? "Saving..." : "Log This Meal"}</Text>
                   </LinearGradient>
                 </Pressable>
               </View>
