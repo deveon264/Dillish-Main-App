@@ -354,6 +354,30 @@ uri = "file://attached_assets/hero_options/option4-gradient.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "3ea1NLsMlLm3cSpaFfcB4"
+uri = "file://attached_assets/generated_images/home_opt1_seaside_stretch.png"
+type = "image"
+title = "seaside stretch banner"
+
+[[generated]]
+id = "yLbGfkpCqLGynPJWSYl-e"
+uri = "file://attached_assets/generated_images/home_opt2_pink_sunrise.png"
+type = "image"
+title = "pink sunrise banner"
+
+[[generated]]
+id = "ODiUDzGb2xnJ3BnZhMadk"
+uri = "file://attached_assets/generated_images/home_opt3_airy_studio.png"
+type = "image"
+title = "airy studio banner"
+
+[[generated]]
+id = "-A6_SfrPk1p1thrpOnXZt"
+uri = "file://attached_assets/generated_images/home_opt4_floral_calm.png"
+type = "image"
+title = "floral calm banner"
+
 [[outputs]]
 id = "KmpG-YsopX8HoAwCw5oyy"
 uri = "file://attached_assets/stock_images/pilates.jpg"
@@ -419,3 +443,51 @@ id = "KWnoE9JDRk4jHKs_XqueA"
 uri = "file://attached_assets/hero_options/option4-gradient.png"
 type = "image"
 title = "Option 4 — Soft rose & gold abstract glow"
+
+[[outputs]]
+id = "z8rURFvywuIyrjIlKuPn3"
+uri = "file://attached_assets/stock_images/beach_golden_yoga.jpg"
+type = "image"
+title = "woman doing yoga stretch on beach at golden hour sunrise, warm soft tones, serene"
+
+[[outputs]]
+id = "23cP5tUT24qYwIfL2FmcV"
+uri = "file://attached_assets/stock_images/window_meditation.jpg"
+type = "image"
+title = "serene woman meditating by large bright window soft morning light, calm warm pastel tones"
+
+[[outputs]]
+id = "vNlSWG5D_wZW6_Z2CObYy"
+uri = "file://attached_assets/stock_images/pink_sunrise_ocea.jpg"
+type = "image"
+title = "peaceful pink sunrise over calm ocean horizon, soft warm pastel sky, minimal"
+
+[[outputs]]
+id = "pbxndsIAvPpkWDxpYUOZG"
+uri = "file://attached_assets/stock_images/floral_wellness.jpg"
+type = "image"
+title = "soft pink peonies and eucalyptus on warm cream linen, wellness flatlay, gentle natural light"
+
+[[outputs]]
+id = "uQ5xY8cUo9FYXFBR-m6P1"
+uri = "file://attached_assets/generated_images/home_opt1_seaside_stretch.png"
+type = "image"
+title = "Option 1 — Seaside golden-hour stretch"
+
+[[outputs]]
+id = "o4HAnwCSB-PZHfyB8VRPY"
+uri = "file://attached_assets/generated_images/home_opt2_pink_sunrise.png"
+type = "image"
+title = "Option 2 — Soft pink sunrise over the sea"
+
+[[outputs]]
+id = "9CC8laXJmaTqvZ0TGrGnx"
+uri = "file://attached_assets/generated_images/home_opt3_airy_studio.png"
+type = "image"
+title = "Option 3 — Airy sunlit studio meditation"
+
+[[outputs]]
+id = "XAkZUX6km-vRw9kUVK3V3"
+uri = "file://attached_assets/generated_images/home_opt4_floral_calm.png"
+type = "image"
+title = "Option 4 — Soft pink peonies still life"
