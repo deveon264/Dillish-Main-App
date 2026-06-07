@@ -186,12 +186,13 @@ export default function Dashboard() {
         </Card>
 
         {/* Today's Workout hero */}
-        <Pressable onPress={() => router.push(`/workout/${featured.id}`)} style={{ marginTop: 24 }}>
+        <View style={{ marginTop: 24 }}>
+          <View style={styles.heroBadge}>
+            <Text style={styles.heroBadgeText}>TODAY'S WORKOUT WITH DILLISH</Text>
+          </View>
+          <Pressable onPress={() => router.push(`/workout/${featured.id}`)}>
           <ImageBackground source={featured.image} style={styles.hero} imageStyle={styles.heroImg}>
             <LinearGradient colors={["rgba(16,17,17,0.1)", "rgba(16,17,17,0.88)"]} style={StyleSheet.absoluteFill} />
-            <View style={styles.heroBadge}>
-              <Text style={styles.heroBadgeText}>TODAY'S WORKOUT WITH DILLISH</Text>
-            </View>
             <View style={styles.heroContent}>
               <Text style={styles.heroTitle}>{featured.title}</Text>
               <View style={styles.heroMeta}>
@@ -213,7 +214,8 @@ export default function Dashboard() {
               <Ionicons name="play" size={22} color={colors.onPrimary} />
             </View>
           </ImageBackground>
-        </Pressable>
+          </Pressable>
+        </View>
 
         {/* Today's stats — compact tiles */}
         <View style={styles.statRow}>
@@ -603,9 +605,8 @@ const styles = StyleSheet.create({
   hero: { height: 190, borderRadius: colors.radiusLg, overflow: "hidden", justifyContent: "flex-end" },
   heroImg: { borderRadius: colors.radiusLg },
   heroBadge: {
-    position: "absolute",
-    top: 16,
-    left: 16,
+    alignSelf: "flex-start",
+    marginBottom: 10,
     backgroundColor: "rgba(16,17,17,0.55)",
     paddingHorizontal: 14,
     paddingVertical: 7,
