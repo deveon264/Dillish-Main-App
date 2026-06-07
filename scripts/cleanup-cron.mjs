@@ -4,8 +4,13 @@
 // This is a standalone Node script (NOT an Expo Router route, NOT bundled by
 // Metro) meant to be run on a recurring schedule — e.g. a Replit Scheduled
 // Deployment with the run command `node scripts/cleanup-cron.mjs`. It calls the
-// admin-gated `POST /api/exercise-cleanup` endpoint of the deployed web app so
-// orphaned exercise-video objects get reclaimed without anyone pressing a button.
+// admin-gated cleanup endpoints of the deployed web app so orphaned storage
+// objects get reclaimed without anyone pressing a button:
+//   - POST /api/exercise-cleanup    reclaims orphaned exercise videos/posters
+//                                    (reconciled against the `exercises` table)
+//   - POST /api/meal-photo-cleanup   reclaims meal-photo objects older than the
+//                                    endpoint's age window (logs are device-local,
+//                                    so age — not a DB join — is the only signal)
 //
 // Auth: rather than introducing a new machine secret, it mints the very same
 // HMAC-signed admin Bearer token the endpoint already verifies, using the
@@ -86,8 +91,25 @@ async function main() {
   const adminEmail = (process.env.ADMIN_EMAIL || DEFAULT_ADMIN_EMAIL).trim();
   const dryRun = process.env.CLEANUP_DRY_RUN === "1";
   const token = mintAdminToken(sessionSecret, adminEmail);
-  const url = `${base.replace(/\/$/, "")}/api/exercise-cleanup${dryRun ? "?dryRun=1" : ""}`;
+  const root = base.replace(/\/$/, "");
+  const query = dryRun ? "?dryRun=1" : "";
 
+  // Both sweeps run on the same schedule and share the same admin token. They
+  // are independent storage folders, so a failure of one must not skip the
+  // other; the worst exit code across the two becomes the script's exit code so
+  // the Scheduled Deployment surfaces any failure.
+  let worstExit = 0;
+  for (const path of ["exercise-cleanup", "meal-photo-cleanup"]) {
+    const ok = await triggerCleanup(`${root}/api/${path}${query}`, token, dryRun);
+    if (!ok) worstExit = 1;
+  }
+  process.exit(worstExit);
+}
+
+// Fires a single cleanup endpoint and logs its one-line summary. Returns true
+// on success, false on any failure (network, non-2xx) so the caller can decide
+// the overall exit code without aborting the other sweep.
+async function triggerCleanup(url, token, dryRun) {
   log(`Triggering cleanup${dryRun ? " (dry run)" : ""} -> ${url}`);
 
   let res;
@@ -97,14 +119,14 @@ async function main() {
       headers: { Authorization: `Bearer ${token}` },
     });
   } catch (err) {
-    console.error("[cleanup-cron] Request failed:", err?.message ?? err);
-    process.exit(1);
+    console.error("[cleanup-cron] Request failed:", url, err?.message ?? err);
+    return false;
   }
 
   const body = await res.text();
   if (!res.ok) {
-    console.error(`[cleanup-cron] Endpoint returned ${res.status}: ${body.slice(0, 500)}`);
-    process.exit(1);
+    console.error(`[cleanup-cron] ${url} returned ${res.status}: ${body.slice(0, 500)}`);
+    return false;
   }
 
   let summary;
@@ -115,10 +137,11 @@ async function main() {
   }
 
   log(
-    `Done. scanned=${summary.scanned} referenced=${summary.referenced} ` +
+    `Done ${url}. scanned=${summary.scanned} ` +
+      `referenced=${summary.referenced ?? "n/a"} ` +
       `orphans=${summary.orphans} deleted=${summary.deleted} failed=${summary.failed}`
   );
-  process.exit(0);
+  return true;
 }
 
 main().catch((err) => {

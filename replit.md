@@ -8,18 +8,30 @@ passcode that mints a short-lived HMAC admin token.
 
 # Scheduled storage cleanup
 
-Orphaned exercise-video objects (uploaded to storage but never linked to an
-`exercises` row) are reclaimed by `POST /api/exercise-cleanup`. This runs
-automatically on a schedule via `scripts/cleanup-cron.mjs`.
+Two storage sweeps run automatically on a schedule via
+`scripts/cleanup-cron.mjs` (one cron run triggers both):
+
+- **Exercise media** — orphaned exercise-video/poster objects (uploaded to
+  storage but never linked to an `exercises` row) are reclaimed by
+  `POST /api/exercise-cleanup`, reconciling storage against the `exercises`
+  table.
+- **Meal photos** — re-hosted meal-log stock photos (`meal-photos/<uuid>`)
+  are reclaimed by `POST /api/meal-photo-cleanup`. Calorie logs live on the
+  device, not in Postgres, so there is no DB table to reference-count against:
+  this sweep instead deletes any `meal-photos/*` object older than a fixed age
+  window (90 days). A photo on a still-recent log is well within that window
+  and is never removed.
 
 How it works:
 - `scripts/cleanup-cron.mjs` is a standalone Node script. It mints the same
-  HMAC admin Bearer token the endpoint already verifies (signed with the
-  existing `SESSION_SECRET` — no extra secret needed) and calls the endpoint.
+  HMAC admin Bearer token both endpoints already verify (signed with the
+  existing `SESSION_SECRET` — no extra secret needed) and calls each endpoint.
+  A failure of one sweep does not skip the other.
 - Each run logs a one-line summary both from the script and from the server
-  (`exercise-cleanup by ...: scanned=… deleted=…`), visible in the deployment
-  logs so a coach can confirm it ran.
-- `CLEANUP_DRY_RUN=1` previews without deleting.
+  (`exercise-cleanup by ...: scanned=… deleted=…` and
+  `meal-photo-cleanup by ...: scanned=… deleted=… maxAgeDays=90`), visible in
+  the deployment logs so a coach can confirm it ran.
+- `CLEANUP_DRY_RUN=1` previews without deleting (applies to both sweeps).
 
 To enable the recurring trigger in production:
 1. Publish the web app (autoscale) as usual.
