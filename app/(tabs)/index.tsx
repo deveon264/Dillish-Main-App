@@ -190,7 +190,7 @@ export default function Dashboard() {
           <ImageBackground source={featured.image} style={styles.hero} imageStyle={styles.heroImg}>
             <LinearGradient colors={["rgba(16,17,17,0.1)", "rgba(16,17,17,0.88)"]} style={StyleSheet.absoluteFill} />
             <View style={styles.heroBadge}>
-              <Text style={styles.heroBadgeText}>TODAY'S WORKOUT</Text>
+              <Text style={styles.heroBadgeText}>TODAY'S WORKOUT WITH DILLISH</Text>
             </View>
             <View style={styles.heroContent}>
               <Text style={styles.heroTitle}>{featured.title}</Text>
