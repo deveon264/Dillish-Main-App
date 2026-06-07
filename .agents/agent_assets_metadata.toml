@@ -408,6 +408,18 @@ uri = "file://attached_assets/minimal_options/cream_plain.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "-NZlLukw70e6V0EM9aa7a"
+uri = "file://attached_assets/minimal_options/silk1.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "O0qD__J_ZPx77DvGf2-uY"
+uri = "file://attached_assets/minimal_options/silk2.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "KmpG-YsopX8HoAwCw5oyy"
 uri = "file://attached_assets/stock_images/pilates.jpg"
@@ -659,3 +671,15 @@ id = "zyXwz6Gyoirdx04-_IjYy"
 uri = "file://attached_assets/minimal_options/minimal2.png"
 type = "image"
 title = "Minimal 2 — Blush gradient with dusty-rose floral sprig"
+
+[[outputs]]
+id = "PlRQmaBh4BMbq4eV0OYWQ"
+uri = "file://attached_assets/minimal_options/silk2.png"
+type = "image"
+title = "Silk A — Soft flowing cream waves (lighter, calm)"
+
+[[outputs]]
+id = "wh7Nr093mkGqiGT8fEOBm"
+uri = "file://attached_assets/minimal_options/silk1.png"
+type = "image"
+title = "Silk B — Draped cream silk (richer, more dramatic)"
