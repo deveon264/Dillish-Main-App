@@ -69,6 +69,8 @@ export default function Calories() {
   const [image, setImage] = useState<string | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoLoading, setPhotoLoading] = useState(false);
+  const [imgLoading, setImgLoading] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const [base64, setBase64] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -130,6 +132,18 @@ export default function Calories() {
 
   const now = new Date();
   const dateStr = `${now.toLocaleDateString("en-US", { weekday: "short" })}, ${now.getDate()} ${now.toLocaleDateString("en-US", { month: "short" })}`;
+
+  const heroUri = image ?? photoUrl;
+
+  // Keep the loading placeholder up until the <Image> bytes finish downloading.
+  // Whenever the hero URI changes we reset to a loading state; the Image's own
+  // onLoad/onError callbacks then clear it (or surface the fork/knife fallback).
+  useEffect(() => {
+    if (heroUri) {
+      setImgLoading(true);
+      setImgError(false);
+    }
+  }, [heroUri]);
 
   const pickImage = async (fromCamera: boolean) => {
     setError(null);
@@ -423,15 +437,25 @@ export default function Calories() {
           <Card style={{ marginTop: 14 }}>
             <View style={styles.resultBox}>
               <View style={styles.heroWrap}>
-                {image || photoUrl ? (
+                {heroUri && !imgError ? (
                   <>
-                    <Image source={{ uri: (image ?? photoUrl)! }} style={styles.heroImg} />
+                    <Image
+                      source={{ uri: heroUri }}
+                      style={styles.heroImg}
+                      onLoadStart={() => setImgLoading(true)}
+                      onLoad={() => setImgLoading(false)}
+                      onError={() => {
+                        setImgLoading(false);
+                        setImgError(true);
+                      }}
+                    />
                     <LinearGradient
                       colors={["transparent", "rgba(16,17,17,0.82)"]}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
                       style={StyleSheet.absoluteFill}
                     />
+                    {imgLoading ? <PhotoShimmer /> : null}
                   </>
                 ) : photoLoading ? (
                   <PhotoShimmer />
