@@ -287,6 +287,11 @@ export default function Calories() {
       });
       if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       reset();
+    } catch (e: any) {
+      // The save only resolves once the log is durably written to storage; if
+      // that fails, keep the result on screen so the user can retry instead of
+      // silently losing the meal.
+      Alert.alert("Couldn't save meal", e?.message ?? "Please try again.");
     } finally {
       setSaving(false);
     }

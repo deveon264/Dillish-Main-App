@@ -211,6 +211,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         getJSON<string[]>(keyFor(uid, "notifs_read"), []),
       ]);
       if (!active) return;
+
+      // Hydrate the device-local-only slices immediately, before the (network-
+      // bound) profile reconciliation below. Otherwise a meal/water/workout
+      // logged while that fetch is in flight would be clobbered when this load
+      // finally calls its setters with the stale snapshot read from disk.
+      setWaterLogs(w);
+      setProgressPhotos([...ph].sort((a, b) => b.ts - a.ts));
+      setCalorieLogs(c);
+      setCompletions(wk);
+      setFavorites(fav);
+      setNotifReadIds(nr);
+
       let mergedProfile = { ...DEFAULT_PROFILE, ...p };
 
       // The server is the source of truth for profile metrics so they survive a
@@ -252,8 +264,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (!active) return;
+      // Profile (and weight, which can be seeded from it) is set last because it
+      // depends on the server reconciliation above; the device-local slices were
+      // already hydrated before that network call.
       setProfile(mergedProfile);
-      setWaterLogs(w);
 
       let weightArr = [...wt].sort((a, b) => b.ts - a.ts);
       if (weightArr.length === 0) {
@@ -264,11 +278,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }
       }
       setWeightLogs(weightArr);
-      setProgressPhotos([...ph].sort((a, b) => b.ts - a.ts));
-      setCalorieLogs(c);
-      setCompletions(wk);
-      setFavorites(fav);
-      setNotifReadIds(nr);
       setReady(true);
     })();
     return () => {
@@ -394,11 +403,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const addCalorie = useCallback(
     async (entry: Omit<CalorieLog, "id" | "ts">) => {
       if (!uid) return;
+      // Await the disk write before resolving so callers (e.g. the meal-log
+      // save flow) know the entry is durably persisted — a fire-and-forget
+      // write could be lost if the app is force-closed right after logging.
+      const newEntry: CalorieLog = { ...entry, id: genId(), ts: Date.now() };
+      let nextArr: CalorieLog[] = [];
       setCalorieLogs((prev) => {
-        const next = [{ ...entry, id: genId(), ts: Date.now() }, ...prev];
-        setJSON(keyFor(uid, "calories"), next);
-        return next;
+        nextArr = [newEntry, ...prev];
+        return nextArr;
       });
+      const ok = await setJSON(keyFor(uid, "calories"), nextArr);
+      if (!ok) {
+        setCalorieLogs((prev) => prev.filter((l) => l.id !== newEntry.id));
+        throw new Error("Could not save meal — storage may be full.");
+      }
     },
     [uid]
   );
@@ -406,11 +424,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const deleteCalorie = useCallback(
     async (id: string) => {
       if (!uid) return;
+      let nextArr: CalorieLog[] = [];
       setCalorieLogs((prev) => {
-        const next = prev.filter((l) => l.id !== id);
-        setJSON(keyFor(uid, "calories"), next);
-        return next;
+        nextArr = prev.filter((l) => l.id !== id);
+        return nextArr;
       });
+      await setJSON(keyFor(uid, "calories"), nextArr);
     },
     [uid]
   );
