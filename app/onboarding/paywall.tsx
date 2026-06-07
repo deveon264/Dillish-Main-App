@@ -9,50 +9,33 @@ import { Logo } from "@/components/Logo";
 import { pageHeaderStyles } from "@/components/PageHeader";
 import { useInsets } from "@/hooks/useInsets";
 import { useSubscription } from "@/contexts/SubscriptionContext";
+import { PLANS as PLAN_CATALOG, TRIAL_DAYS, type PlanKey } from "@/lib/subscription";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
-type PlanKey = "yearly" | "monthly" | "weekly";
+// Display order on the paywall (recommended first). Prices, period labels, and
+// the summary line all come from the shared catalog in lib/subscription so the
+// numbers here always match the Plan tab and billing.
+const PLAN_DISPLAY_ORDER: PlanKey[] = ["yearly", "monthly", "weekly"];
 
-type Plan = {
-  key: PlanKey;
-  name: string;
-  sub: string;
-  price: string;
-  per: string;
-  note?: string;
-  recommended?: boolean;
-  summary: string;
+const PLAN_BILLING_COPY: Record<PlanKey, string> = {
+  yearly: "Billed annually",
+  monthly: "Billed every month",
+  weekly: "Billed every week",
 };
 
-const PLANS: Plan[] = [
-  {
-    key: "yearly",
-    name: "Yearly",
-    sub: "Billed annually · Save 60%",
-    price: "$4.99",
-    per: "/mo",
-    note: "$59.99 / year",
-    recommended: true,
-    summary: "$59.99/year",
-  },
-  {
-    key: "monthly",
-    name: "Monthly",
-    sub: "Billed every month",
-    price: "$12.99",
-    per: "/mo",
-    summary: "$12.99/month",
-  },
-  {
-    key: "weekly",
-    name: "Weekly",
-    sub: "Billed every week",
-    price: "$4.49",
-    per: "/wk",
-    summary: "$4.49/week",
-  },
-];
+const PLANS = PLAN_DISPLAY_ORDER.map((key) => {
+  const info = PLAN_CATALOG[key];
+  // The savings callout ("Save 67%") lives in the catalog's fullLabel so it
+  // stays in lockstep with the prices instead of being re-typed here.
+  const save = info.fullLabel.match(/Save\s+\d+%/i)?.[0];
+  return {
+    key,
+    info,
+    sub: save ? `${PLAN_BILLING_COPY[key]} · ${save}` : PLAN_BILLING_COPY[key],
+    recommended: info.best,
+  };
+});
 
 const PLAN_PERKS = ["All workouts", "AI calorie tracker", "Progress analytics"];
 
@@ -81,8 +64,8 @@ export default function Paywall() {
   const activePlan = PLANS.find((p) => p.key === selected) ?? PLANS[0];
 
   const summaryLine = trial
-    ? `Start your 7-day free trial, then ${activePlan.summary}`
-    : `You'll be charged ${activePlan.summary}`;
+    ? `Start your ${TRIAL_DAYS}-day free trial, then ${activePlan.info.fullLabel}`
+    : `You'll be charged ${activePlan.info.fullLabel}`;
 
   // Every exit from the paywall — the primary CTA AND the top Skip link — routes
   // through the thank-you video, which auto-plays once and then continues to the
@@ -127,7 +110,7 @@ export default function Paywall() {
         <View style={styles.trialCard}>
           <View style={{ flex: 1 }}>
             <Text style={styles.trialTitle}>Free trial included</Text>
-            <Text style={styles.trialSub}>7 days free, cancel anytime</Text>
+            <Text style={styles.trialSub}>{TRIAL_DAYS} days free, cancel anytime</Text>
           </View>
           <Switch
             value={trial}
@@ -163,15 +146,14 @@ export default function Paywall() {
                     {on ? <View style={styles.radioDot} /> : null}
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.planName}>{plan.name}</Text>
+                    <Text style={styles.planName}>{plan.info.name}</Text>
                     <Text style={styles.planSub}>{plan.sub}</Text>
                   </View>
                   <View style={styles.planPriceWrap}>
                     <View style={styles.priceRow}>
-                      <Text style={styles.planPrice}>{plan.price}</Text>
-                      <Text style={styles.planPer}> {plan.per}</Text>
+                      <Text style={styles.planPrice}>{plan.info.amountLabel}</Text>
+                      <Text style={styles.planPer}> {plan.info.periodLabel}</Text>
                     </View>
-                    {plan.note ? <Text style={styles.planNote}>{plan.note}</Text> : null}
                   </View>
                 </View>
 
@@ -294,7 +276,6 @@ const styles = StyleSheet.create({
   priceRow: { flexDirection: "row", alignItems: "baseline" },
   planPrice: { fontFamily: fonts.serifSemibold, fontSize: 24, color: colors.foreground },
   planPer: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.muted },
-  planNote: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, marginTop: 2 },
   perksRow: {
     flexDirection: "row",
     flexWrap: "wrap",
