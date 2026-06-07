@@ -300,6 +300,30 @@ uri = "file://attached_assets/generated_images/hiit_light.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "V_E3d5_mL9ABNd49_4eGi"
+uri = "file://attached_assets/generated_images/pilates.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "dsB46LrPZyEZGbXt2CLP3"
+uri = "file://attached_assets/generated_images/yoga.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "ycSYK9xYx3wSYI7LXuAPO"
+uri = "file://attached_assets/generated_images/strength.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "mvxELfRX6N0JImByDIzGV"
+uri = "file://attached_assets/generated_images/hiit.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "KmpG-YsopX8HoAwCw5oyy"
 uri = "file://attached_assets/stock_images/pilates.jpg"
