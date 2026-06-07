@@ -8,6 +8,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useEventListener } from "expo";
 import { GradientBackground } from "@/components/GradientBackground";
+import { pageHeaderStyles } from "@/components/PageHeader";
 import { Button } from "@/components/Button";
 import { getWorkout } from "@/constants/workouts";
 import { listWorkoutExercises, videoUrl, posterUrl } from "@/lib/exercises";
@@ -613,7 +614,7 @@ export default function WorkoutPlayer() {
               <Text style={styles.playerTitle}>
                 {titleHead}
                 {titleHead ? " " : ""}
-                <Text style={styles.playerTitleItalic}>{titleTail}</Text>
+                <Text style={pageHeaderStyles.titleAccent}>{titleTail}</Text>
               </Text>
               <View style={styles.rating}>
                 <Ionicons name="star" size={14} color={colors.accent} />
@@ -1043,7 +1044,6 @@ const styles = StyleSheet.create({
   infoActions: { flexDirection: "row", alignItems: "center", gap: 10 },
   titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 12 },
   playerTitle: { flex: 1, fontFamily: fonts.serifSemibold, fontSize: 30, color: colors.foreground },
-  playerTitleItalic: { fontFamily: fonts.serifItalic, fontStyle: "italic", color: colors.foreground },
   rating: { flexDirection: "row", alignItems: "center", gap: 4, marginLeft: 10 },
   ratingText: { fontFamily: fonts.sansSemibold, fontSize: 14, color: colors.foreground },
   metaRow: { flexDirection: "row", gap: 18, marginTop: 12, flexWrap: "wrap" },

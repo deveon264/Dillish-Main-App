@@ -6,6 +6,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Button } from "@/components/Button";
 import { Logo } from "@/components/Logo";
+import { pageHeaderStyles } from "@/components/PageHeader";
 import { useInsets } from "@/hooks/useInsets";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
@@ -105,9 +106,9 @@ export default function Paywall() {
           ))}
         </View>
 
-        <Text style={styles.title}>
+        <Text style={[pageHeaderStyles.title, styles.title]}>
           Start your{"\n"}
-          <Text style={styles.titleItalic}>florish journey</Text>
+          <Text style={pageHeaderStyles.titleAccent}>florish journey</Text>
         </Text>
         <Text style={styles.subtitle}>
           Unlock personalized workouts, calorie tracking, and full wellness features.
@@ -230,8 +231,7 @@ const styles = StyleSheet.create({
   segments: { flexDirection: "row", gap: 6, marginTop: 22 },
   segment: { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.track },
   segmentActive: { backgroundColor: colors.accent },
-  title: { fontFamily: fonts.serif, fontSize: 38, lineHeight: 40, color: colors.foreground, marginTop: 26 },
-  titleItalic: { fontFamily: fonts.serifItalic, fontStyle: "italic", color: colors.foreground },
+  title: { fontSize: 38, lineHeight: 40, marginTop: 26 },
   subtitle: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted, marginTop: 12, lineHeight: 22 },
   trialCard: {
     flexDirection: "row",

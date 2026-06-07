@@ -16,6 +16,7 @@ import { GradientBackground } from "@/components/GradientBackground";
 import { useInsets } from "@/hooks/useInsets";
 import { useAuth } from "@/contexts/AuthContext";
 import { AdminControls } from "@/components/AdminControls";
+import { PageHeader } from "@/components/PageHeader";
 import { listExercises, deleteExercise, posterUrl, UploadedExercise } from "@/lib/exercises";
 import { findExerciseImage } from "@/constants/workouts";
 import { colors } from "@/constants/colors";
@@ -81,22 +82,24 @@ export default function ExerciseLibrary() {
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Pressable style={styles.roundBtn} onPress={() => router.back()} hitSlop={8}>
-            <Ionicons name="chevron-back" size={22} color={colors.foreground} />
-          </Pressable>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.eyebrow}>FLORISH</Text>
-            <Text style={styles.title}>
-              Exercise <Text style={styles.titleItalic}>Videos</Text>
-            </Text>
-          </View>
-          {isAdmin && (
-            <Pressable style={styles.uploadBtn} onPress={() => router.push("/admin/upload-exercise")} hitSlop={8}>
-              <Ionicons name="add" size={22} color={colors.onPrimary} />
+        <PageHeader
+          variant="compact"
+          eyebrow="FLORISH"
+          title="Exercise"
+          accent="Videos"
+          leading={
+            <Pressable style={styles.roundBtn} onPress={() => router.back()} hitSlop={8}>
+              <Ionicons name="chevron-back" size={22} color={colors.foreground} />
             </Pressable>
-          )}
-        </View>
+          }
+          action={
+            isAdmin ? (
+              <Pressable style={styles.uploadBtn} onPress={() => router.push("/admin/upload-exercise")} hitSlop={8}>
+                <Ionicons name="add" size={22} color={colors.onPrimary} />
+              </Pressable>
+            ) : null
+          }
+        />
 
         {isAdmin && <AdminControls />}
 
@@ -243,7 +246,6 @@ export default function ExerciseLibrary() {
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 20 },
-  header: { flexDirection: "row", alignItems: "center", gap: 12 },
   roundBtn: {
     width: 42,
     height: 42,
@@ -262,9 +264,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  eyebrow: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.muted, letterSpacing: 3 },
-  title: { fontFamily: fonts.serif, fontSize: 30, color: colors.foreground, marginTop: 2 },
-  titleItalic: { fontFamily: fonts.serifItalic, fontStyle: "italic", color: colors.foreground },
   center: { alignItems: "center", justifyContent: "center", paddingVertical: 80, gap: 12 },
   muted: { fontFamily: fonts.sans, fontSize: 14, color: colors.muted, textAlign: "center", paddingHorizontal: 20 },
   emptyTitle: { fontFamily: fonts.serifSemibold, fontSize: 20, color: colors.foreground },

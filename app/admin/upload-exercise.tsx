@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { GradientBackground } from "@/components/GradientBackground";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/Button";
 import { useInsets } from "@/hooks/useInsets";
 import { useAuth } from "@/contexts/AuthContext";
@@ -181,17 +182,18 @@ export default function UploadExercise() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.header}>
-          <Pressable style={styles.roundBtn} onPress={() => router.back()} hitSlop={8}>
-            <Ionicons name="chevron-back" size={22} color={colors.foreground} />
-          </Pressable>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.eyebrow}>COACH</Text>
-            <Text style={styles.title}>
-              Upload <Text style={styles.titleItalic}>Exercise</Text>
-            </Text>
-          </View>
-        </View>
+        <PageHeader
+          variant="compact"
+          eyebrow="COACH"
+          title="Upload"
+          accent="Exercise"
+          style={styles.header}
+          leading={
+            <Pressable style={styles.roundBtn} onPress={() => router.back()} hitSlop={8}>
+              <Ionicons name="chevron-back" size={22} color={colors.foreground} />
+            </Pressable>
+          }
+        />
 
         {forWorkout && (
           <View style={styles.forCard}>
@@ -255,7 +257,7 @@ export default function UploadExercise() {
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 20 },
-  header: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 8 },
+  header: { marginBottom: 8 },
   roundBtn: {
     width: 42,
     height: 42,
@@ -266,9 +268,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  eyebrow: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.muted, letterSpacing: 3 },
-  title: { fontFamily: fonts.serif, fontSize: 30, color: colors.foreground, marginTop: 2 },
-  titleItalic: { fontFamily: fonts.serifItalic, fontStyle: "italic", color: colors.foreground },
   forCard: {
     flexDirection: "row",
     alignItems: "center",

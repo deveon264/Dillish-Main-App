@@ -4,31 +4,52 @@ import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
 // Single source of truth for the page-header and section-label type scale shared
-// across the tab screens. Tweak the look here and every tab follows.
+// across the app. Tweak the look here and every screen follows.
+//
+// Two scales are supported:
+// - "default" (tab screens): title 34 / eyebrow letterSpacing 2
+// - "compact" (stacked/back-button screens like the library and admin tools):
+//   title 30 / eyebrow letterSpacing 3
 export const pageHeaderStyles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", gap: 12 },
   eyebrow: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.muted, letterSpacing: 2 },
+  eyebrowCompact: { letterSpacing: 3 },
   title: { fontFamily: fonts.serif, fontSize: 34, color: colors.foreground, marginTop: 2 },
+  titleCompact: { fontSize: 30 },
   titleAccent: { fontFamily: fonts.serifItalic, fontStyle: "italic", color: colors.foreground },
   sectionLabel: { fontFamily: fonts.sansMedium, fontSize: 12, letterSpacing: 2, color: colors.muted },
 });
 
 type PageHeaderProps = {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   accent?: string;
   action?: ReactNode;
+  leading?: ReactNode;
+  variant?: "default" | "compact";
   style?: StyleProp<ViewStyle>;
 };
 
-// Eyebrow + serif title with an optional italic accent word, plus an optional
-// trailing action (e.g. a HelpButton).
-export function PageHeader({ eyebrow, title, accent, action, style }: PageHeaderProps) {
+// Optional eyebrow + serif title with an optional italic accent word. Supports a
+// leading element (e.g. a back button) and a trailing action (e.g. a HelpButton).
+export function PageHeader({
+  eyebrow,
+  title,
+  accent,
+  action,
+  leading,
+  variant = "default",
+  style,
+}: PageHeaderProps) {
+  const compact = variant === "compact";
   return (
     <View style={[pageHeaderStyles.header, style]}>
+      {leading}
       <View style={{ flex: 1 }}>
-        <Text style={pageHeaderStyles.eyebrow}>{eyebrow}</Text>
-        <Text style={pageHeaderStyles.title}>
+        {eyebrow ? (
+          <Text style={[pageHeaderStyles.eyebrow, compact && pageHeaderStyles.eyebrowCompact]}>{eyebrow}</Text>
+        ) : null}
+        <Text style={[pageHeaderStyles.title, compact && pageHeaderStyles.titleCompact]}>
           {accent ? (
             <>
               {title} <Text style={pageHeaderStyles.titleAccent}>{accent}</Text>
