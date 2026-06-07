@@ -402,6 +402,12 @@ uri = "file://attached_assets/minimal_options/minimal2.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "arvwqqw8ndLZgsIils0Bx"
+uri = "file://attached_assets/minimal_options/cream_plain.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "KmpG-YsopX8HoAwCw5oyy"
 uri = "file://attached_assets/stock_images/pilates.jpg"
