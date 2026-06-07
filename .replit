@@ -22,21 +22,17 @@ args = "Start application"
 name = "Start application"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "EXPO_PUBLIC_DOMAIN=$REPLIT_DEV_DOMAIN BROWSER=none npx expo start --tunnel --web --port 5000"
-waitForPort = 5000
-
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "EXPO_PUBLIC_DOMAIN=$REPLIT_DEV_DOMAIN BROWSER=none npx expo start --clear --tunnel --web --port 5000"
+waitForPort = 5000
 
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 23636
-externalPort = 3002
 
 [objectStorage]
 defaultBucketID = "replit-objstore-c12a5da0-505b-4dfa-9acc-b4d9ea85d53b"
