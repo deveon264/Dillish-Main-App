@@ -44,11 +44,11 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export type PlanInfo = {
   key: PlanKey;
   name: string;
-  // Short price, e.g. "₦19,999".
+  // Short price, e.g. "$19.99".
   amountLabel: string;
   // Period suffix, e.g. "/ year".
   periodLabel: string;
-  // Full marketing line, e.g. "₦19,999 / year · Save 67%".
+  // Full marketing line, e.g. "$19.99 / year · Save 67%".
   fullLabel: string;
   periodDays: number;
   best?: boolean;
@@ -60,25 +60,25 @@ export const PLANS: Record<PlanKey, PlanInfo> = {
   weekly: {
     key: "weekly",
     name: "Weekly",
-    amountLabel: "₦1,999",
+    amountLabel: "$1.99",
     periodLabel: "/ week",
-    fullLabel: "₦1,999 / week",
+    fullLabel: "$1.99 / week",
     periodDays: 7,
   },
   monthly: {
     key: "monthly",
     name: "Monthly",
-    amountLabel: "₦4,999",
+    amountLabel: "$4.99",
     periodLabel: "/ month",
-    fullLabel: "₦4,999 / month",
+    fullLabel: "$4.99 / month",
     periodDays: 30,
   },
   yearly: {
     key: "yearly",
     name: "Yearly",
-    amountLabel: "₦19,999",
+    amountLabel: "$19.99",
     periodLabel: "/ year",
-    fullLabel: "₦19,999 / year · Save 67%",
+    fullLabel: "$19.99 / year · Save 67%",
     periodDays: 365,
     best: true,
   },
