@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
   },
   pill: {
     alignSelf: "flex-start",
-    marginTop: 1,
+    marginTop: -2,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 999,
