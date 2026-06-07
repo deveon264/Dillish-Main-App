@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Shape by Ajay - App Walkthrough</title>
+<meta property="og:title" content="Shape by Ajay - App Walkthrough" />
+<meta property="og:description" content="A 16:9 animated tour of the Shape by Ajay app: guided workouts, AI calorie tracking, water goals, and progress." />
+<meta name="twitter:title" content="Shape by Ajay - App Walkthrough" />
+<meta name="twitter:description" content="A 16:9 animated tour of the Shape by Ajay app: guided workouts, AI calorie tracking, water goals, and progress." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --cream: #EFE3D7;
+    --cream-deep: #E0CFBF;
+    --card: #FBF6F0;
+    --rose: #DD8DA0;
+    --rose-soft: #EBB1C0;
+    --rose-deep: #9E4E61;
+    --ink: #4A2E33;
+    --honey: #C2925E;
+    --blush: #F3C7C2;
+    --sage: #7FA37C;
+    --muted: #8A6F66;
+    --body: #6E5650;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: radial-gradient(120% 120% at 18% 12%, #f3e6da 0%, #e6d3c4 46%, #d8c5b6 100%);
+    font-family: "DM Sans", -apple-system, sans-serif;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  .viewport { position: fixed; inset: 0; overflow: hidden; }
+
+  .stage {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 1280px; height: 720px;
+    transform-origin: center center;
+    background: var(--cream);
+    overflow: hidden;
+  }
+
+  /* ===== persistent ambient background ===== */
+  .amb { position: absolute; border-radius: 50%; pointer-events: none; filter: blur(8px); }
+  .amb.a1 {
+    top: -260px; right: -180px; width: 680px; height: 680px;
+    background: radial-gradient(circle, rgba(243,199,194,0.62), rgba(243,199,194,0) 68%);
+    animation: drift1 17s ease-in-out infinite;
+  }
+  .amb.a2 {
+    bottom: -320px; left: -220px; width: 640px; height: 640px;
+    background: radial-gradient(circle, rgba(221,141,160,0.30), rgba(221,141,160,0) 70%);
+    animation: drift2 21s ease-in-out infinite;
+  }
+  .amb.a3 {
+    top: 40%; left: 44%; width: 420px; height: 420px;
+    background: radial-gradient(circle, rgba(194,146,94,0.18), rgba(194,146,94,0) 72%);
+    animation: drift3 19s ease-in-out infinite;
+  }
+  @keyframes drift1 { 0%,100%{ transform: translate(0,0) scale(1);} 50%{ transform: translate(-60px,50px) scale(1.12);} }
+  @keyframes drift2 { 0%,100%{ transform: translate(0,0) scale(1);} 50%{ transform: translate(70px,-40px) scale(1.1);} }
+  @keyframes drift3 { 0%,100%{ transform: translate(0,0) scale(1);} 50%{ transform: translate(50px,40px) scale(0.88);} }
+
+  /* faint drifting petals for life */
+  .petal { position: absolute; color: rgba(158,78,97,0.16); pointer-events: none; }
+  .petal svg { width: 100%; height: 100%; display: block; }
+  .pt1 { top: 12%; left: 30%; width: 30px; height: 30px; animation: float1 14s ease-in-out infinite; }
+  .pt2 { top: 70%; left: 22%; width: 22px; height: 22px; animation: float2 16s ease-in-out infinite; }
+  .pt3 { top: 26%; right: 16%; width: 26px; height: 26px; animation: float1 18s ease-in-out infinite reverse; }
+  .pt4 { bottom: 18%; right: 30%; width: 18px; height: 18px; animation: float2 13s ease-in-out infinite; }
+  @keyframes float1 { 0%,100%{ transform: translate(0,0) rotate(0deg);} 50%{ transform: translate(18px,-26px) rotate(40deg);} }
+  @keyframes float2 { 0%,100%{ transform: translate(0,0) rotate(0deg);} 50%{ transform: translate(-16px,-22px) rotate(-35deg);} }
+
+  /* ===== persistent corner lockup ===== */
+  .anchor {
+    position: absolute; top: 40px; z-index: 40;
+    display: flex; align-items: center; gap: 12px;
+    opacity: 0; transform: translateY(-12px);
+    transition: opacity .7s ease, transform .7s ease;
+  }
+  .anchor.pos-left { left: 56px; right: auto; }
+  .anchor.pos-right { right: 56px; left: auto; flex-direction: row-reverse; }
+  .anchor.show { opacity: 1; transform: translateY(0); }
+  .mark {
+    border-radius: 16px;
+    background: linear-gradient(155deg, #E69DAE, #C76C82);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 10px 22px rgba(158,78,97,0.30);
+    flex: none;
+  }
+  .mark svg { stroke: #fff; }
+  .anchor .mark { width: 42px; height: 42px; }
+  .anchor .mark svg { width: 24px; height: 24px; }
+  .anchor .wm { font-family: "Cormorant Garamond", serif; font-weight: 600; font-size: 24px; color: var(--ink); line-height: 1; }
+  .anchor .wm b { color: var(--rose-deep); font-weight: 600; font-style: italic; }
+
+  /* ===== bottom timeline ===== */
+  .timeline { position: absolute; left: 0; bottom: 0; height: 4px; width: 100%; background: rgba(158,78,97,0.10); z-index: 40; }
+  .timeline i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--rose-soft), var(--rose-deep)); }
+
+  /* ===== scenes ===== */
+  .scene {
+    position: absolute; inset: 0; z-index: 10;
+    opacity: 0; transform: scale(1.015);
+    transition: opacity .85s ease, transform .85s ease;
+    pointer-events: none;
+  }
+  .scene.s-active { opacity: 1; transform: scale(1); }
+
+  .pad { position: absolute; inset: 0; padding: 76px 92px; display: flex; }
+
+  /* phone frame */
+  .phone {
+    border-radius: 40px; padding: 7px;
+    background: linear-gradient(160deg, #fff, #efd9d9 55%, #d99fae);
+    box-shadow: 0 36px 70px rgba(74,46,51,0.30), 0 6px 16px rgba(74,46,51,0.16);
+    flex: none; overflow: hidden;
+  }
+  .phone .screen { position: relative; width: 100%; height: 100%; border-radius: 33px; overflow: hidden; }
+  .phone img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+  /* ken-burns: always gently moving */
+  .scene.s-active .phone img { animation: kb 13s ease-in-out infinite alternate; }
+  @keyframes kb { from { transform: scale(1.02) translateY(0); } to { transform: scale(1.09) translateY(-12px); } }
+  /* screen sheen sweep */
+  .phone .sheen { position: absolute; top: 0; left: -60%; width: 50%; height: 100%; z-index: 3;
+    background: linear-gradient(105deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.42) 50%, rgba(255,255,255,0) 100%);
+    transform: skewX(-12deg); }
+  .scene.s-active .phone .sheen { animation: sheen 6.5s ease-in-out infinite; }
+  @keyframes sheen { 0%,72%{ left:-60%; } 88%,100%{ left:130%; } }
+
+  /* typography */
+  .eyebrow { font-size: 14px; letter-spacing: 0.26em; text-transform: uppercase; color: var(--rose-deep); font-weight: 700; }
+  .eyebrow .n { color: var(--rose); }
+  h1 { font-family: "Cormorant Garamond", serif; font-weight: 500; color: var(--ink); line-height: 1.02; letter-spacing: 0.005em; }
+  .display { font-size: 110px; }
+  .h-xl { font-size: 84px; }
+  .h-lg { font-size: 66px; }
+  h1 em { font-style: italic; color: var(--rose-deep); }
+  .lead { color: var(--body); font-size: 23px; line-height: 1.55; font-weight: 400; max-width: 460px; }
+  .rule { width: 70px; height: 3px; border-radius: 3px; background: var(--rose); }
+
+  /* line reveal helper */
+  .rline { overflow: hidden; display: block; }
+  .rline > span { display: inline-block; transform: translateY(112%); }
+  .scene.s-active .rline > span { animation: lineUp .9s cubic-bezier(.16,1,.3,1) forwards; }
+  @keyframes lineUp { to { transform: translateY(0); } }
+
+  /* generic fade-rise items, staggered via --d */
+  .ri { opacity: 0; transform: translateY(26px); }
+  .scene.s-active .ri { animation: riseIn .8s cubic-bezier(.16,1,.3,1) forwards; animation-delay: var(--d, 0s); }
+  @keyframes riseIn { to { opacity: 1; transform: translateY(0); } }
+
+  /* phone entrance: mask + lift */
+  .dev-rise { opacity: 0; transform: translateY(70px) scale(.96); clip-path: inset(8% 0 0 0 round 40px); }
+  .scene.s-active .dev-rise { animation: devRise 1.05s cubic-bezier(.16,1,.3,1) forwards; animation-delay: var(--d, .1s); }
+  @keyframes devRise { to { opacity: 1; transform: translateY(0) scale(1); clip-path: inset(0 0 0 0 round 40px); } }
+
+  .dev-side { opacity: 0; transform: translateX(60px) scale(.96); }
+  .scene.s-active .dev-side { animation: devSide 1.05s cubic-bezier(.16,1,.3,1) forwards; animation-delay: var(--d, .1s); }
+  @keyframes devSide { to { opacity: 1; transform: translateX(0) scale(1); } }
+  .dev-side.left { transform: translateX(-60px) scale(.96); }
+
+  /* chips */
+  .chips { display: flex; flex-wrap: wrap; gap: 12px; max-width: 440px; }
+  .chip { display: inline-flex; align-items: center; gap: 9px; padding: 11px 18px; border-radius: 999px;
+    background: var(--card); border: 1px solid rgba(221,141,160,0.26); color: var(--rose-deep);
+    font-size: 16px; font-weight: 600; box-shadow: 0 10px 22px rgba(74,46,51,0.07);
+    opacity: 0; transform: translateY(18px) scale(.96); }
+  .scene.s-active .chip { animation: chipIn .6s cubic-bezier(.16,1,.3,1) forwards; animation-delay: var(--d, 0s); }
+  @keyframes chipIn { to { opacity: 1; transform: translateY(0) scale(1); } }
+  .chip .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--rose); flex: none; }
+  .chip.c2 .dot { background: var(--honey); }
+  .chip.c3 .dot { background: var(--sage); }
+  .chip.c4 .dot { background: var(--rose-deep); }
+
+  /* floating feature badge near phone */
+  .badge {
+    position: absolute; z-index: 6;
+    display: flex; align-items: center; gap: 12px;
+    background: var(--card); border: 1px solid rgba(221,141,160,0.22);
+    border-radius: 18px; padding: 13px 18px;
+    box-shadow: 0 18px 36px rgba(74,46,51,0.14);
+    opacity: 0; transform: translateY(20px) scale(.92);
+  }
+  .scene.s-active .badge { animation: riseIn .7s cubic-bezier(.16,1,.3,1) forwards; animation-delay: var(--d, .8s); }
+  .badge .bi { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex: none;
+    background: linear-gradient(155deg, var(--rose-soft), var(--rose-deep)); }
+  .badge .bi svg { width: 21px; height: 21px; stroke: #fff; }
+  .badge .bt b { display: block; font-family: "Cormorant Garamond", serif; font-size: 21px; color: var(--ink); line-height: 1.05; }
+  .badge .bt span { display: block; font-size: 12.5px; color: var(--muted); letter-spacing: 0.02em; }
+  .badge.bob { animation-name: riseIn; }
+  .scene.s-active .badge.bob { animation: riseIn .7s cubic-bezier(.16,1,.3,1) forwards, bob 5s ease-in-out 1.4s infinite; }
+  @keyframes bob { 0%,100%{ transform: translateY(0);} 50%{ transform: translateY(-9px);} }
+
+  /* ===== intro / outro ===== */
+  .center { align-items: center; justify-content: center; text-align: center; flex-direction: column; }
+  .bigmark {
+    width: 132px; height: 132px; border-radius: 36px;
+    background: linear-gradient(155deg, #E69DAE, #C76C82);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 28px 58px rgba(158,78,97,0.34);
+    opacity: 0; transform: scale(.5) rotate(-18deg);
+  }
+  .scene.s-active .bigmark { animation: markPop 1s cubic-bezier(.34,1.56,.64,1) forwards; }
+  @keyframes markPop { to { opacity: 1; transform: scale(1) rotate(0deg); } }
+  .scene.s-active .bigmark { animation: markPop 1s cubic-bezier(.34,1.56,.64,1) forwards; }
+  .bigmark svg { width: 76px; height: 76px; stroke: #fff; }
+  .scene.s-active .bigmark svg path { animation: draw 1.4s ease forwards; stroke-dasharray: 60; stroke-dashoffset: 60; animation-delay: .35s; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+
+  .wordmark-xl { font-family: "Cormorant Garamond", serif; font-weight: 500; color: var(--ink); font-size: 104px; line-height: 1; }
+  .wordmark-xl em { font-style: italic; color: var(--rose-deep); }
+  .tagline { font-size: 25px; color: var(--body); letter-spacing: 0.01em; }
+  .subline { font-size: 13px; letter-spacing: 0.42em; text-transform: uppercase; color: var(--rose-deep); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="viewport">
+  <div class="stage" id="stage">
+
+    <!-- persistent ambient layer -->
+    <div class="amb a1"></div>
+    <div class="amb a2"></div>
+    <div class="amb a3"></div>
+    <div class="petal pt1">PETAL</div>
+    <div class="petal pt2">PETAL</div>
+    <div class="petal pt3">PETAL</div>
+    <div class="petal pt4">PETAL</div>
+
+    <!-- persistent corner lockup -->
+    <div class="anchor" id="anchor">
+      <div class="mark">MARK</div>
+      <div class="wm">Shape <b>by Ajay</b></div>
+    </div>
+
+    <!-- ===== SCENE 0: brand intro ===== -->
+    <div class="scene" data-scene="0">
+      <div class="pad center">
+        <div class="bigmark" style="margin-bottom:34px;">MARK</div>
+        <div class="subline ri" style="--d:.9s; margin-bottom:18px;">A walkthrough</div>
+        <div class="wordmark-xl"><span class="rline"><span>Shape <em>by Ajay</em></span></span></div>
+        <div class="rule ri" style="--d:1.2s; margin:26px 0;"></div>
+        <div class="tagline ri" style="--d:1.4s;">Bloom into your best self.</div>
+      </div>
+    </div>
+
+    <!-- ===== SCENE 1: welcome ===== -->
+    <div class="scene" data-scene="1">
+      <div class="pad" style="align-items:center; gap:84px;">
+        <div class="phone dev-rise" style="width:300px; height:642px;">
+          <div class="screen"><img src="assets/welcome.png" alt="Welcome screen" /><div class="sheen"></div></div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:22px;">
+          <div class="eyebrow ri" style="--d:.5s;"><span class="n">01</span> &nbsp;/&nbsp; Welcome</div>
+          <h1 class="h-xl"><span class="rline"><span>Your studio,</span></span><span class="rline"><span><em>in your pocket.</em></span></span></h1>
+          <div class="rule ri" style="--d:.9s;"></div>
+          <p class="lead ri" style="--d:1.05s;">A calm, beautiful home for your fitness journey. Open the app and you are ready to move.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SCENE 2: home dashboard ===== -->
+    <div class="scene" data-scene="2">
+      <div class="pad" style="align-items:center; justify-content:space-between;">
+        <div style="display:flex; flex-direction:column; gap:24px; max-width:520px;">
+          <div class="eyebrow ri" style="--d:.4s;"><span class="n">02</span> &nbsp;/&nbsp; Your home base</div>
+          <h1 class="h-xl"><span class="rline"><span>Everything in</span></span><span class="rline"><span><em>one place.</em></span></span></h1>
+          <p class="lead ri" style="--d:.85s;">Workouts, nutrition, hydration, and progress, all on a single calm dashboard.</p>
+          <div class="chips" style="margin-top:6px;">
+            <span class="chip c1" style="--d:1.05s;"><i class="dot"></i>Workouts</span>
+            <span class="chip c2" style="--d:1.18s;"><i class="dot"></i>Calories</span>
+            <span class="chip c3" style="--d:1.31s;"><i class="dot"></i>Water</span>
+            <span class="chip c4" style="--d:1.44s;"><i class="dot"></i>Progress</span>
+          </div>
+        </div>
+        <div class="phone dev-side" style="--d:.15s; width:312px; height:646px;">
+          <div class="screen"><img src="assets/home.png" alt="Home dashboard" /><div class="sheen"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SCENE 3: workouts ===== -->
+    <div class="scene" data-scene="3">
+      <div class="pad" style="align-items:center; gap:80px;">
+        <div class="phone dev-side left" style="--d:.15s; width:296px; height:642px; position:relative;">
+          <div class="screen"><img src="assets/workouts.png" alt="Workout library" /><div class="sheen"></div></div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:22px;">
+          <div class="eyebrow ri" style="--d:.45s;"><span class="n">03</span> &nbsp;/&nbsp; Guided workouts</div>
+          <h1 class="display"><span class="rline"><span><em>Workouts</em></span></span></h1>
+          <div class="rule ri" style="--d:.9s;"></div>
+          <p class="lead ri" style="--d:1.05s;">Follow along with video sessions led by Ajay. New routines, ready whenever you are.</p>
+        </div>
+      </div>
+      <div class="badge bob" style="--d:.95s; top:120px; left:300px;">
+        <div class="bi"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9v6M18 9v6M6 12h12M3 10v4M21 10v4"/></svg></div>
+        <div class="bt"><b>Press play</b><span>Video led sessions</span></div>
+      </div>
+    </div>
+
+    <!-- ===== SCENE 4: calories ===== -->
+    <div class="scene" data-scene="4">
+      <div class="pad" style="align-items:center; justify-content:space-between;">
+        <div style="display:flex; flex-direction:column; gap:22px; max-width:520px;">
+          <div class="eyebrow ri" style="--d:.45s;"><span class="n">04</span> &nbsp;/&nbsp; AI calorie tracking</div>
+          <h1 class="h-xl"><span class="rline"><span>Snap a photo.</span></span><span class="rline"><span><em>We do the math.</em></span></span></h1>
+          <div class="rule ri" style="--d:.9s;"></div>
+          <p class="lead ri" style="--d:1.05s;">Log a meal in seconds. Smart estimates keep healthy eating effortless, never tedious.</p>
+        </div>
+        <div class="phone dev-side" style="--d:.15s; width:300px; height:642px; position:relative;">
+          <div class="screen"><img src="assets/calories.png" alt="AI calorie tracker" /><div class="sheen"></div></div>
+        </div>
+      </div>
+      <div class="badge bob" style="--d:.95s; right:300px; bottom:130px;">
+        <div class="bi" style="background:linear-gradient(155deg,#D9B07A,#B07C44);"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
+        <div class="bt"><b>Auto totals</b><span>Calories counted for you</span></div>
+      </div>
+    </div>
+
+    <!-- ===== SCENE 5: water ===== -->
+    <div class="scene" data-scene="5">
+      <div class="pad center" style="gap:48px;">
+        <div style="display:flex; align-items:center; gap:74px;">
+          <div class="orb">
+            <div class="fill"><span class="wave w1"></span><span class="wave w2"></span></div>
+            <div class="orb-label"><b>6 / 8</b><span>glasses</span></div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:22px; text-align:left;">
+            <div class="eyebrow ri" style="--d:.45s;"><span class="n">05</span> &nbsp;/&nbsp; Hydration</div>
+            <h1 class="h-xl" style="text-align:left;"><span class="rline"><span>Stay</span></span><span class="rline"><span><em>hydrated.</em></span></span></h1>
+            <div class="rule ri" style="--d:.9s;"></div>
+            <p class="lead ri" style="--d:1.05s;">Set a daily water goal and watch it fill, one glass at a time. Gentle reminders, real habits.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SCENE 6: progress ===== -->
+    <div class="scene" data-scene="6">
+      <div class="pad" style="align-items:center; gap:80px;">
+        <div class="phone dev-side left" style="--d:.15s; width:296px; height:642px;">
+          <div class="screen"><img src="assets/progress.png" alt="Progress tracking" /><div class="sheen"></div></div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:22px;">
+          <div class="eyebrow ri" style="--d:.45s;"><span class="n">06</span> &nbsp;/&nbsp; Progress</div>
+          <h1 class="h-xl"><span class="rline"><span>See how far</span></span><span class="rline"><span><em>you have come.</em></span></span></h1>
+          <div class="rule ri" style="--d:.9s;"></div>
+          <p class="lead ri" style="--d:1.05s;">Every workout and every week, visualized. Watch the streaks build and the momentum grow.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SCENE 7: outro ===== -->
+    <div class="scene" data-scene="7">
+      <div class="pad center">
+        <div class="bigmark" style="margin-bottom:30px;">MARK</div>
+        <div class="wordmark-xl"><span class="rline"><span>Shape <em>by Ajay</em></span></span></div>
+        <div class="rule ri" style="--d:1.1s; margin:26px 0;"></div>
+        <div class="tagline ri" style="--d:1.25s; margin-bottom:14px;">Bloom into your best self.</div>
+        <div class="subline ri" style="--d:1.5s;">Train. Track. Transform.</div>
+      </div>
+    </div>
+
+    <!-- bottom timeline (synced to full loop) -->
+    <div class="timeline"><i></i></div>
+
+  </div>
+</div>
+
+<style>
+  /* water orb */
+  .orb { position: relative; width: 280px; height: 280px; border-radius: 50%; overflow: hidden;
+    background: radial-gradient(circle at 36% 30%, #fff, #f4e2e4 60%, #ecd2d6);
+    box-shadow: inset 0 6px 18px rgba(255,255,255,0.7), 0 28px 56px rgba(74,46,51,0.18), 0 0 0 8px rgba(255,255,255,0.5);
+    flex: none; }
+  .orb .fill { position: absolute; left: 0; right: 0; bottom: 0; height: 0; overflow: hidden;
+    background: linear-gradient(180deg, var(--rose-soft), var(--rose-deep)); }
+  .scene.s-active .orb .fill { animation: fillUp 2.4s cubic-bezier(.32,.9,.4,1) .35s forwards; }
+  @keyframes fillUp { to { height: 70%; } }
+  .orb .wave { position: absolute; top: -22px; left: 50%; width: 560px; height: 560px; margin-left: -280px;
+    border-radius: 42%; background: rgba(255,255,255,0.18); }
+  .orb .wave.w1 { animation: spin 7s linear infinite; }
+  .orb .wave.w2 { top: -18px; background: rgba(255,255,255,0.12); animation: spin 11s linear infinite reverse; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .orb .orb-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 4; }
+  .orb .orb-label b { font-family: "Cormorant Garamond", serif; font-size: 56px; color: var(--ink); line-height: 1; }
+  .orb .orb-label span { font-size: 14px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--rose-deep); font-weight: 700; margin-top: 4px; }
+</style>
+
+<script>
+  // ---- petal + mark SVG injection ----
+  var PETAL = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1.6 2.6 1.6 6 0 8.6C10.4 8 10.4 4.6 12 2Zm0 20c-1.6-2.6-1.6-6 0-8.6 1.6 2.6 1.6 6 0 8.6ZM2 12c2.6-1.6 6-1.6 8.6 0C8 13.6 4.6 13.6 2 12Zm20 0c-2.6 1.6-6 1.6-8.6 0C16 10.4 19.4 10.4 22 12Z"/></svg>';
+  var MARK = '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="M12 8.5C12 5.7 10.4 3.5 12 3.5s0 2.2 0 5Z"/><path d="M12 15.5c0 2.8 1.6 5 0 5s0-2.2 0-5Z"/><path d="M8.5 12c-2.8 0-5-1.6-5 0s2.2 0 5 0Z"/><path d="M15.5 12c2.8 0 5 1.6 5 0s-2.2 0-5 0Z"/><path d="M9.5 9.5C7.5 7.5 6 5.5 7 4.5s2.5 3 2.5 5Z"/><path d="M14.5 14.5c2 2 3.5 4 2.5 5s-2.5-3-2.5-5Z"/><path d="M14.5 9.5c2-2 3.5-4 2.5-5s-2.5 3-2.5 5Z"/><path d="M9.5 14.5c-2 2-3.5 4-2.5 5s2.5-3 2.5-5Z"/></svg>';
+  document.querySelectorAll('.petal').forEach(function(p){ p.innerHTML = PETAL; });
+  document.querySelectorAll('.mark, .bigmark').forEach(function(m){ m.innerHTML = MARK; });
+
+  // ---- responsive fit ----
+  var stage = document.getElementById('stage');
+  function fit(){
+    var s = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
+    stage.style.transform = 'translate(-50%,-50%) scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit); fit();
+
+  // ---- scene playback ----
+  var scenes = Array.prototype.slice.call(document.querySelectorAll('.scene'));
+  var anchor = document.getElementById('anchor');
+  var DUR = [4600, 4200, 4400, 4200, 4200, 4400, 4200, 4800]; // ms per scene
+  var TOTAL = DUR.reduce(function(a,b){ return a + b; }, 0);
+
+  // cumulative scene start offsets, so one clock drives both scene + timeline
+  var STARTS = [];
+  (function(){ var acc = 0; for (var k = 0; k < DUR.length; k++){ STARTS.push(acc); acc += DUR[k]; } })();
+
+  var tlBar = document.querySelector('.timeline i');
+
+  // anchor sits on the clear side: right when phone is on the left, else left
+  var ANCHOR_SIDE = { 1: 'right', 2: 'left', 3: 'right', 4: 'left', 5: 'left', 6: 'right' };
+
+  var current = -1;
+  function show(n){
+    if (n === current) return;
+    current = n;
+    scenes.forEach(function(s, idx){ s.classList.toggle('s-active', idx === n); });
+    var visible = n >= 1 && n <= 6;
+    anchor.classList.toggle('show', visible);
+    anchor.classList.toggle('pos-left', visible && ANCHOR_SIDE[n] === 'left');
+    anchor.classList.toggle('pos-right', visible && ANCHOR_SIDE[n] === 'right');
+  }
+  function sceneAt(t){
+    for (var k = scenes.length - 1; k >= 0; k--){ if (t >= STARTS[k]) return k; }
+    return 0;
+  }
+
+  // single rAF clock: scene selection and timeline bar share one elapsed value,
+  // so they can never drift apart over long loops / screen recordings
+  var startTs = null;
+  function loop(ts){
+    if (startTs === null) startTs = ts;
+    var t = (ts - startTs) % TOTAL;
+    show(sceneAt(t));
+    tlBar.style.width = (t / TOTAL * 100) + '%';
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+</script>
+</body>
+</html>

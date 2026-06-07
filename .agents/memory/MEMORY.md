@@ -3,3 +3,4 @@
 - [Expo Router API-route cache](expo-router-api-cache.md) — new app/api/*+api.ts routes 404 until `.expo/web/cache` is wiped; `--clear` is NOT enough; baked into scripts/post-merge.sh.
 - [Device-local persistence](device-local-persistence.md) — calorie/water/etc logs are AsyncStorage-only, keyed by uid; mutators must await setJSON, and load must hydrate local slices before any network await.
 - [Pitch deck PDF render](pitch-deck-pdf-render.md) — fixed-height HTML deck exported blank/cut pages: zero `.deck` gap+padding in `@media print`; watch per-slide overflow clip; re-render via pitch/tooling/render.cjs.
+- [Walkthrough animation](walkthrough-animation.md) — pitch/walkthrough.html looping 16:9 feature reel: water scene is a CSS orb (no screenshot exists, intentional); one rAF clock drives scene+timeline; anchor flips sides per scene.
