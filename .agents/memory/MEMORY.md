@@ -1,2 +1,3 @@
 - [Logo lockup tuning](logo-lockup.md) — welcome `Logo size="lg"` (components/Logo.tsx) wordmark+pill geometry: device-vs-web pitfalls, never set wordmark lineHeight < fontSize on native.
 - [iOS image-picker after RN Modal](avatar-picker-ios-modal.md) — expo-image-picker silently no-ops if launched right after closing a RN <Modal> on iOS; launch from Modal `onDismiss`, not a timer.
+- [Expo Router API-route cache](expo-router-api-cache.md) — new app/api/*+api.ts routes 404 until `.expo/web/cache` is wiped; `--clear` is NOT enough; baked into scripts/post-merge.sh.
