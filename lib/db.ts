@@ -109,6 +109,14 @@ export function ensureSchema(): Promise<void> {
       .then(() =>
         pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile JSONB`)
       )
+      // Per-member subscription state (plan, status, renewal date, provider
+      // ids) persisted account-side as a JSON blob so the plan a member is on
+      // follows them across logins and devices. Added after the initial
+      // release; backfill so existing environments pick it up without a manual
+      // migration.
+      .then(() =>
+        pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription JSONB`)
+      )
       .then(() => undefined)
       .catch((e) => {
         schemaReady = null;

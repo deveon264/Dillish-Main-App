@@ -8,6 +8,7 @@ import { Button } from "@/components/Button";
 import { Logo } from "@/components/Logo";
 import { pageHeaderStyles } from "@/components/PageHeader";
 import { useInsets } from "@/hooks/useInsets";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
@@ -75,6 +76,7 @@ export default function Paywall() {
   const insets = useInsets();
   const [selected, setSelected] = useState<PlanKey>("yearly");
   const [trial, setTrial] = useState(true);
+  const { subscribe } = useSubscription();
 
   const activePlan = PLANS.find((p) => p.key === selected) ?? PLANS[0];
 
@@ -86,6 +88,14 @@ export default function Paywall() {
   // through the thank-you video, which auto-plays once and then continues to the
   // dashboard (or skips straight there when no video is set).
   const proceed = () => router.replace("/onboarding/thank-you");
+
+  // The primary CTA starts the chosen subscription (with a trial when toggled
+  // on) before continuing. Fire-and-forget so navigation is never blocked; the
+  // Plan tab reconciles with the server on next load.
+  const subscribeAndProceed = () => {
+    subscribe(selected, { trial });
+    proceed();
+  };
 
   return (
     <GradientBackground>
@@ -212,7 +222,7 @@ export default function Paywall() {
             <Button
               label={trial ? "Start Free Trial" : "Subscribe Now"}
               iconRight="arrow-forward"
-              onPress={proceed}
+              onPress={subscribeAndProceed}
             />
           </View>
         </View>

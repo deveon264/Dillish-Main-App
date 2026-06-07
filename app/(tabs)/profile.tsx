@@ -12,6 +12,16 @@ import { ProgressBar } from "@/components/ProgressBar";
 import { useAuth } from "@/contexts/AuthContext";
 import { avatarUri } from "@/lib/avatar";
 import { useData } from "@/contexts/DataContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import {
+  PLANS,
+  PLAN_ORDER,
+  type PlanKey,
+  daysLeft as subDaysLeft,
+  isSubscriptionActive,
+  formatRenewalShort,
+  formatRenewalLong,
+} from "@/lib/subscription";
 import { useInsets } from "@/hooks/useInsets";
 import { todayKey } from "@/lib/storage";
 import { colors, palette } from "@/constants/colors";
@@ -37,6 +47,7 @@ export default function Profile() {
   const insets = useInsets();
   const { user, isAdmin, logout, updateUser, uploadAvatar, removeAvatar: removeAvatarFn } = useAuth();
   const { profile, completions, calorieLogs, weightLogs, waterLogs, updateProfile } = useData();
+  const { subscription, switchPlan, cancel, resume, subscribe } = useSubscription();
 
   const [editing, setEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("Profile");
@@ -62,6 +73,9 @@ export default function Profile() {
   const [goalWeightError, setGoalWeightError] = useState<string | null>(null);
   const [waterGoalInput, setWaterGoalInput] = useState((profile.waterGoalMl / 1000).toFixed(2));
   const [waterGoalError, setWaterGoalError] = useState<string | null>(null);
+  const [billingModal, setBillingModal] = useState(false);
+  const [planBusy, setPlanBusy] = useState<PlanKey | "cancel" | "resume" | null>(null);
+  const [planError, setPlanError] = useState<string | null>(null);
 
   useEffect(() => {
     setGoalWeightInput(profile.goalWeight != null ? String(profile.goalWeight) : "");
@@ -171,6 +185,40 @@ export default function Profile() {
     setWaterGoalError(null);
     await updateProfile({ waterGoalMl: ml });
   };
+
+  // --- Subscription / Plan tab -------------------------------------------
+  const planActive = isSubscriptionActive(subscription);
+  const currentPlan = PLANS[subscription.planKey] ?? PLANS.yearly;
+  const planDaysLeft = subDaysLeft(subscription);
+  const renewalShort = formatRenewalShort(subscription.currentPeriodEnd);
+  const renewalLong = formatRenewalLong(subscription.currentPeriodEnd);
+  const isTrial = subscription.status === "trialing";
+  const willCancel = planActive && subscription.cancelAtPeriodEnd;
+
+  const planStatusLabel = !planActive
+    ? "Inactive"
+    : willCancel
+    ? "Cancels soon"
+    : isTrial
+    ? "Free trial"
+    : "Active";
+
+  const runPlanAction = async (
+    key: PlanKey | "cancel" | "resume",
+    fn: () => Promise<{ ok: boolean; error?: string }>
+  ) => {
+    if (planBusy) return;
+    setPlanError(null);
+    setPlanBusy(key);
+    const res = await fn();
+    if (!res.ok) setPlanError(res.error ?? "Something went wrong. Please try again.");
+    setPlanBusy(null);
+  };
+
+  const onSwitchPlan = (key: PlanKey) =>
+    runPlanAction(key, () => (planActive ? switchPlan(key) : subscribe(key)));
+  const onCancelPlan = () => runPlanAction("cancel", () => cancel());
+  const onResumePlan = () => runPlanAction("resume", () => resume());
 
   const saveName = async () => {
     if (name.trim()) await updateUser({ name: name.trim() });
@@ -309,18 +357,6 @@ export default function Profile() {
     "Priority support & new content first",
   ];
 
-  const CHANGE_PLANS: {
-    key: string;
-    name: string;
-    price: string;
-    best?: boolean;
-    current?: boolean;
-  }[] = [
-    { key: "weekly", name: "Weekly", price: "₦1,999 / week" },
-    { key: "monthly", name: "Monthly", price: "₦4,999 / month" },
-    { key: "yearly", name: "Yearly", price: "₦19,999 / year · Save 67%", best: true, current: true },
-  ];
-
   return (
     <GradientBackground>
       <ScrollView
@@ -438,45 +474,95 @@ export default function Profile() {
                   <Ionicons name="sparkles" size={20} color={colors.onPrimary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.planName}>Florish Premium</Text>
-                  <Text style={styles.planCadence}>Yearly Plan</Text>
+                  <Text style={styles.planName}>{planActive ? "Florish Premium" : "No active plan"}</Text>
+                  <Text style={styles.planCadence}>
+                    {planActive ? `${currentPlan.name} Plan` : "Choose a plan to get started"}
+                  </Text>
                 </View>
-                <View style={styles.planActiveBadge}>
-                  <View style={styles.planActiveDot} />
-                  <Text style={styles.planActiveText}>Active</Text>
+                <View
+                  style={[
+                    styles.planActiveBadge,
+                    !planActive && styles.planInactiveBadge,
+                    willCancel && styles.planCancelBadge,
+                  ]}
+                >
+                  {planActive && !willCancel ? <View style={styles.planActiveDot} /> : null}
+                  <Text
+                    style={[
+                      styles.planActiveText,
+                      !planActive && styles.planInactiveText,
+                      willCancel && styles.planCancelText,
+                    ]}
+                  >
+                    {planStatusLabel}
+                  </Text>
                 </View>
               </View>
 
-              <View style={styles.planStatsRow}>
-                <View style={styles.planStatTile}>
-                  <Text style={styles.planStatNum}>₦19,999</Text>
-                  <Text style={styles.planStatLbl}>/ year</Text>
-                </View>
-                <View style={styles.planStatTile}>
-                  <Text style={styles.planStatNum}>Jun 1</Text>
-                  <Text style={styles.planStatLbl}>Renews</Text>
-                </View>
-                <View style={styles.planStatTile}>
-                  <Text style={styles.planStatNum}>365</Text>
-                  <Text style={styles.planStatLbl}>days left</Text>
-                </View>
-              </View>
+              {planActive ? (
+                <>
+                  <View style={styles.planStatsRow}>
+                    <View style={styles.planStatTile}>
+                      <Text style={styles.planStatNum}>{currentPlan.amountLabel}</Text>
+                      <Text style={styles.planStatLbl}>{currentPlan.periodLabel}</Text>
+                    </View>
+                    <View style={styles.planStatTile}>
+                      <Text style={styles.planStatNum}>{renewalShort}</Text>
+                      <Text style={styles.planStatLbl}>{willCancel ? "Ends" : "Renews"}</Text>
+                    </View>
+                    <View style={styles.planStatTile}>
+                      <Text style={styles.planStatNum}>{planDaysLeft}</Text>
+                      <Text style={styles.planStatLbl}>days left</Text>
+                    </View>
+                  </View>
 
-              <View style={styles.planBtnRow}>
-                <Pressable style={({ pressed }) => [styles.planManageBtn, { opacity: pressed ? 0.9 : 1 }]}>
+                  <View style={styles.planBtnRow}>
+                    <Pressable
+                      onPress={() => { setPlanError(null); setBillingModal(true); }}
+                      style={({ pressed }) => [styles.planManageBtn, { opacity: pressed ? 0.9 : 1 }]}
+                    >
+                      <LinearGradient
+                        colors={colors.gradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.planManageInner}
+                      >
+                        <Text style={styles.planManageText}>Manage Plan</Text>
+                      </LinearGradient>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => { setPlanError(null); setBillingModal(true); }}
+                      style={({ pressed }) => [styles.planBillingBtn, { opacity: pressed ? 0.85 : 1 }]}
+                    >
+                      <Text style={styles.planBillingText}>Billing</Text>
+                    </Pressable>
+                  </View>
+                </>
+              ) : (
+                <Pressable
+                  onPress={() => onSwitchPlan(currentPlan.key)}
+                  disabled={!!planBusy}
+                  style={({ pressed }) => [styles.planManageBtn, { marginTop: 18, opacity: pressed || planBusy ? 0.9 : 1 }]}
+                >
                   <LinearGradient
                     colors={colors.gradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={styles.planManageInner}
                   >
-                    <Text style={styles.planManageText}>Manage Plan</Text>
+                    <Text style={styles.planManageText}>
+                      {planBusy ? "Activating…" : `Subscribe — ${currentPlan.fullLabel}`}
+                    </Text>
                   </LinearGradient>
                 </Pressable>
-                <Pressable style={({ pressed }) => [styles.planBillingBtn, { opacity: pressed ? 0.85 : 1 }]}>
-                  <Text style={styles.planBillingText}>Billing</Text>
-                </Pressable>
-              </View>
+              )}
+
+              {planError ? <Text style={styles.planErrorText}>{planError}</Text> : null}
+              {willCancel ? (
+                <Text style={styles.planNoteText}>
+                  Your plan won't renew. You keep access until {renewalLong}.
+                </Text>
+              ) : null}
             </Card>
 
             <Text style={styles.label}>WHAT'S INCLUDED</Text>
@@ -491,32 +577,44 @@ export default function Profile() {
               ))}
             </Card>
 
-            <Text style={styles.label}>CHANGE PLAN</Text>
-            {CHANGE_PLANS.map((p) => (
-              <Card key={p.key} style={[styles.changeCard, p.current && styles.changeCardCurrent]}>
-                <View style={{ flex: 1 }}>
-                  <View style={styles.changeNameRow}>
-                    <Text style={styles.changeName}>{p.name}</Text>
-                    {p.best ? (
-                      <View style={styles.bestBadge}>
-                        <Text style={styles.bestBadgeText}>BEST VALUE</Text>
-                      </View>
-                    ) : null}
+            <Text style={styles.label}>{planActive ? "CHANGE PLAN" : "CHOOSE A PLAN"}</Text>
+            {PLAN_ORDER.map((key) => {
+              const p = PLANS[key];
+              const isCurrent = planActive && key === subscription.planKey;
+              const busy = planBusy === key;
+              return (
+                <Card key={p.key} style={[styles.changeCard, isCurrent && styles.changeCardCurrent]}>
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.changeNameRow}>
+                      <Text style={styles.changeName}>{p.name}</Text>
+                      {p.best ? (
+                        <View style={styles.bestBadge}>
+                          <Text style={styles.bestBadgeText}>BEST VALUE</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    <Text style={styles.changePrice}>{p.fullLabel}</Text>
                   </View>
-                  <Text style={styles.changePrice}>{p.price}</Text>
-                </View>
-                {p.current ? (
-                  <View style={styles.currentMark}>
-                    <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
-                    <Text style={styles.currentMarkText}>Current</Text>
-                  </View>
-                ) : (
-                  <Pressable style={({ pressed }) => [styles.switchBtn, { opacity: pressed ? 0.85 : 1 }]}>
-                    <Text style={styles.switchBtnText}>Switch</Text>
-                  </Pressable>
-                )}
-              </Card>
-            ))}
+                  {isCurrent ? (
+                    <View style={styles.currentMark}>
+                      <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+                      <Text style={styles.currentMarkText}>Current</Text>
+                    </View>
+                  ) : (
+                    <Pressable
+                      onPress={() => onSwitchPlan(key)}
+                      disabled={!!planBusy}
+                      style={({ pressed }) => [styles.switchBtn, { opacity: pressed || planBusy ? 0.6 : 1 }]}
+                    >
+                      <Text style={styles.switchBtnText}>
+                        {busy ? "…" : planActive ? "Switch" : "Select"}
+                      </Text>
+                    </Pressable>
+                  )}
+                </Card>
+              );
+            })}
+            {planError ? <Text style={styles.planErrorText}>{planError}</Text> : null}
           </>
         ) : (
         <>
@@ -857,6 +955,74 @@ export default function Profile() {
                 <Text style={styles.editCancelText}>Cancel</Text>
               </Pressable>
             </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal visible={billingModal} transparent animationType="fade" onRequestClose={() => setBillingModal(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setBillingModal(false)}>
+          <Pressable style={styles.sheet} onPress={() => {}}>
+            <Text style={styles.sheetTitle}>Manage Plan</Text>
+            <Text style={styles.sheetSub}>
+              {planActive
+                ? `${currentPlan.name} · ${currentPlan.fullLabel}`
+                : "You don't have an active plan."}
+            </Text>
+
+            <View style={styles.billingRow}>
+              <Text style={styles.billingLabel}>Status</Text>
+              <Text style={styles.billingValue}>{planStatusLabel}</Text>
+            </View>
+            <View style={styles.billingRow}>
+              <Text style={styles.billingLabel}>{willCancel ? "Access until" : "Renews on"}</Text>
+              <Text style={styles.billingValue}>{renewalLong}</Text>
+            </View>
+            <View style={styles.billingRow}>
+              <Text style={styles.billingLabel}>Days left</Text>
+              <Text style={styles.billingValue}>{planDaysLeft}</Text>
+            </View>
+
+            <Text style={styles.billingNote}>
+              Payments are handled by your coach for now. Plan changes apply immediately in the app.
+            </Text>
+
+            {planError ? <Text style={styles.planErrorText}>{planError}</Text> : null}
+
+            {planActive && willCancel ? (
+              <Pressable
+                onPress={onResumePlan}
+                disabled={!!planBusy}
+                style={({ pressed }) => [styles.editSave, { opacity: pressed || planBusy ? 0.9 : 1 }]}
+              >
+                <LinearGradient
+                  colors={colors.gradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.editSaveInner}
+                >
+                  <Text style={styles.editSaveText}>
+                    {planBusy === "resume" ? "Resuming…" : "Resume plan"}
+                  </Text>
+                </LinearGradient>
+              </Pressable>
+            ) : planActive ? (
+              <Pressable
+                onPress={onCancelPlan}
+                disabled={!!planBusy}
+                style={({ pressed }) => [styles.cancelPlanBtn, { opacity: pressed || planBusy ? 0.8 : 1 }]}
+              >
+                <Text style={styles.cancelPlanText}>
+                  {planBusy === "cancel" ? "Cancelling…" : "Cancel subscription"}
+                </Text>
+              </Pressable>
+            ) : null}
+
+            <Pressable
+              onPress={() => setBillingModal(false)}
+              style={({ pressed }) => [styles.editCancel, { opacity: pressed ? 0.85 : 1 }]}
+            >
+              <Text style={styles.editCancelText}>Close</Text>
+            </Pressable>
           </Pressable>
         </Pressable>
       </Modal>
@@ -1252,4 +1418,31 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   switchBtnText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.accentDark },
+  planInactiveBadge: { backgroundColor: colors.track },
+  planInactiveText: { color: colors.mutedForeground },
+  planCancelBadge: { backgroundColor: colors.blushTint },
+  planCancelText: { color: colors.danger },
+  planErrorText: { fontFamily: fonts.sans, fontSize: 13, color: colors.danger, marginTop: 12 },
+  planNoteText: { fontFamily: fonts.sans, fontSize: 13, color: colors.mutedForeground, marginTop: 12 },
+  billingRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 11,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.cardBorder,
+  },
+  billingLabel: { fontFamily: fonts.sans, fontSize: 14, color: colors.mutedForeground },
+  billingValue: { fontFamily: fonts.sansSemibold, fontSize: 14, color: colors.foreground },
+  billingNote: { fontFamily: fonts.sans, fontSize: 12, color: colors.mutedForeground, marginTop: 14, lineHeight: 18 },
+  cancelPlanBtn: {
+    minHeight: 50,
+    borderRadius: colors.radius,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 18,
+  },
+  cancelPlanText: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.danger },
 });

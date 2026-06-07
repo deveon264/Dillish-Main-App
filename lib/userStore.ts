@@ -1,5 +1,6 @@
 import { getPool, ensureSchema } from "@/lib/db";
 import { type Profile, sanitizeProfile, sanitizeProfilePatch } from "@/lib/profile";
+import { type Subscription, sanitizeSubscription } from "@/lib/subscription";
 
 // Server-side persistence for member/coach accounts. Identity lives here (not on
 // the device) so the server can trust who is signed in. The coach is simply the
@@ -230,6 +231,38 @@ export async function patchUserProfile(id: string, patch: unknown): Promise<Prof
   const raw = rows[0].profile;
   const obj = raw == null ? {} : typeof raw === "string" ? JSON.parse(raw) : raw;
   return sanitizeProfile(obj);
+}
+
+// Reads the account's stored subscription, or null if the account has never had
+// one (the `subscription` column is still NULL). Sanitizes on read so a
+// hand-edited or legacy blob can't surface broken values.
+export async function getUserSubscription(id: string): Promise<Subscription | null> {
+  await ensureSchema();
+  const { rows } = await getPool().query(`SELECT subscription FROM users WHERE id = $1`, [id]);
+  if (!rows[0]) return null;
+  const raw = rows[0].subscription;
+  if (raw == null) return null;
+  const obj = typeof raw === "string" ? JSON.parse(raw) : raw;
+  return sanitizeSubscription(obj);
+}
+
+// Persists the full subscription record (subscription transitions are computed
+// server-side as a whole, not patched field-by-field). Returns the stored,
+// sanitized result, or null if the account row no longer exists.
+export async function setUserSubscription(
+  id: string,
+  sub: Subscription
+): Promise<Subscription | null> {
+  await ensureSchema();
+  const clean = sanitizeSubscription(sub);
+  const { rows } = await getPool().query(
+    `UPDATE users SET subscription = $1::jsonb WHERE id = $2 RETURNING subscription`,
+    [JSON.stringify(clean), id]
+  );
+  if (!rows[0]) return null;
+  const raw = rows[0].subscription;
+  const obj = raw == null ? {} : typeof raw === "string" ? JSON.parse(raw) : raw;
+  return sanitizeSubscription(obj);
 }
 
 export async function emailTaken(email: string, exceptId?: string): Promise<boolean> {

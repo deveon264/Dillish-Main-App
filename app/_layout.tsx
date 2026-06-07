@@ -24,6 +24,7 @@ import {
 } from "@expo-google-fonts/dm-sans";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DataProvider } from "@/contexts/DataContext";
+import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { colors } from "@/constants/colors";
 
@@ -93,6 +94,7 @@ export default function RootLayout() {
           <ErrorBoundary>
             <AuthProvider>
               <DataProvider>
+                <SubscriptionProvider>
                 <StatusBar style="dark" />
                 <Stack
                   screenOptions={{
@@ -105,6 +107,7 @@ export default function RootLayout() {
                     options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }}
                   />
                 </Stack>
+                </SubscriptionProvider>
               </DataProvider>
             </AuthProvider>
           </ErrorBoundary>
