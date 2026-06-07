@@ -1378,7 +1378,7 @@ const styles = StyleSheet.create({
   planBtnRow: { flexDirection: "row", gap: 10, marginTop: 16 },
   planManageBtn: { flex: 1, borderRadius: colors.radius, overflow: "hidden" },
   planManageInner: { minHeight: 50, alignItems: "center", justifyContent: "center", borderRadius: colors.radius },
-  planManageText: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.onPrimary },
+  planManageText: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.onPrimaryStrong },
   planBillingBtn: {
     flex: 1,
     minHeight: 50,

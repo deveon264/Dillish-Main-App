@@ -188,7 +188,7 @@ export default function Water() {
                   end={{ x: 1, y: 1 }}
                   style={styles.addBtnGrad}
                 >
-                  <Ionicons name="add" size={24} color={colors.onPrimary} />
+                  <Ionicons name="add" size={24} color={colors.onPrimaryStrong} />
                 </LinearGradient>
               </Pressable>
             </View>

@@ -512,9 +512,9 @@ export default function Calories() {
                     style={styles.logBtnGrad}
                   >
                     {saving ? (
-                      <ActivityIndicator size="small" color={colors.onPrimary} />
+                      <ActivityIndicator size="small" color={colors.onPrimaryStrong} />
                     ) : (
-                      <Ionicons name="add" size={18} color={colors.onPrimary} />
+                      <Ionicons name="add" size={18} color={colors.onPrimaryStrong} />
                     )}
                     <Text style={styles.logBtnText}>{saving ? "Saving..." : "Log This Meal"}</Text>
                   </LinearGradient>
@@ -550,7 +550,7 @@ export default function Calories() {
                   end={{ x: 1, y: 0 }}
                   style={styles.analyzeBtnGrad}
                 >
-                  <Ionicons name="sparkles" size={14} color={colors.onPrimary} />
+                  <Ionicons name="sparkles" size={14} color={colors.onPrimaryStrong} />
                   <Text style={styles.analyzeBtnText}>Analyze</Text>
                 </LinearGradient>
               </Pressable>
@@ -857,7 +857,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
-  analyzeBtnText: { fontFamily: fonts.sansSemibold, fontSize: 14, color: colors.onPrimary },
+  analyzeBtnText: { fontFamily: fonts.sansSemibold, fontSize: 14, color: colors.onPrimaryStrong },
   chipsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 14 },
   suggestChip: {
     backgroundColor: colors.cardElevated,
@@ -960,7 +960,7 @@ const styles = StyleSheet.create({
     gap: 8,
     height: 52,
   },
-  logBtnText: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.onPrimary },
+  logBtnText: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.onPrimaryStrong },
   modalBackdrop: { flex: 1, backgroundColor: "rgba(16,17,17,0.45)", justifyContent: "center", paddingHorizontal: 40 },
   modalSheet: {
     backgroundColor: colors.card,

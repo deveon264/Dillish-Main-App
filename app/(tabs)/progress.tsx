@@ -329,7 +329,7 @@ export default function Progress() {
               {logError ? <Text style={styles.logErrorText}>{logError}</Text> : null}
               <Pressable style={styles.logBtn} onPress={logWeight}>
                 <LinearGradient colors={colors.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.logBtnGrad}>
-                  <Ionicons name="add" size={20} color={colors.onPrimary} />
+                  <Ionicons name="add" size={20} color={colors.onPrimaryStrong} />
                   <Text style={styles.logBtnText}>Log Weight</Text>
                 </LinearGradient>
               </Pressable>
@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 16,
   },
-  logBtnText: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.onPrimary },
+  logBtnText: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.onPrimaryStrong },
   logErrorText: { fontFamily: fonts.sans, fontSize: 13, color: colors.danger, marginTop: 10 },
 
   logRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 14 },

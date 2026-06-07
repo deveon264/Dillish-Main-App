@@ -224,10 +224,10 @@ export default function UploadThankYou() {
           disabled={busy}
         >
           {busy ? (
-            <ActivityIndicator color={colors.onPrimary} />
+            <ActivityIndicator color={colors.onPrimaryStrong} />
           ) : (
             <>
-              <Ionicons name="cloud-upload-outline" size={18} color={colors.onPrimary} />
+              <Ionicons name="cloud-upload-outline" size={18} color={colors.onPrimaryStrong} />
               <Text style={styles.submitText}>{hasExisting ? "Replace Video" : "Save Video"}</Text>
             </>
           )}
@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     marginTop: 16,
   },
-  submitText: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.onPrimary },
+  submitText: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.onPrimaryStrong },
   removeBtn: {
     flexDirection: "row",
     alignItems: "center",

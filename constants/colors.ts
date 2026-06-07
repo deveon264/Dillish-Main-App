@@ -67,6 +67,10 @@ export const colors = {
   mutedForeground: "#8A6F66",
   muted: "rgba(74, 46, 51, 0.55)",
   onPrimary: "#FFFFFF",
+  // Dark text/icons for solid pink (primary) buttons — white sits at only
+  // ~2.5:1 on the rose fill, this deep ink reaches ~4.85:1 (AA) without
+  // touching the brand pink itself.
+  onPrimaryStrong: "#4A2E33",
   track: "#E0CFBF",
   success: "#7FA37C",
   danger: "#D9614F",

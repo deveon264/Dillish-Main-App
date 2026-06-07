@@ -477,7 +477,7 @@ export default function WorkoutPlayer() {
               <Text style={styles.restAddText}>15s</Text>
             </Pressable>
             <Pressable style={styles.restStartBtn} onPress={goNext}>
-              <Ionicons name="play" size={18} color={colors.onPrimary} />
+              <Ionicons name="play" size={18} color={colors.onPrimaryStrong} />
               <Text style={styles.restStartText}>Start now</Text>
             </Pressable>
           </View>
@@ -1271,5 +1271,5 @@ const styles = StyleSheet.create({
     borderRadius: colors.radius,
     backgroundColor: colors.primary,
   },
-  restStartText: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.onPrimary },
+  restStartText: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.onPrimaryStrong },
 });

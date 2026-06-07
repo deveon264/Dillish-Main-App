@@ -242,10 +242,10 @@ export default function UploadExercise() {
           disabled={busy}
         >
           {busy ? (
-            <ActivityIndicator color={colors.onPrimary} />
+            <ActivityIndicator color={colors.onPrimaryStrong} />
           ) : (
             <>
-              <Ionicons name="cloud-upload-outline" size={18} color={colors.onPrimary} />
+              <Ionicons name="cloud-upload-outline" size={18} color={colors.onPrimaryStrong} />
               <Text style={styles.submitText}>Publish to Library</Text>
             </>
           )}
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     marginTop: 16,
   },
-  submitText: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.onPrimary },
+  submitText: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.onPrimaryStrong },
   guard: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32, gap: 8 },
   guardTitle: { fontFamily: fonts.serifSemibold, fontSize: 24, color: colors.foreground, marginTop: 8 },
   guardText: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted, textAlign: "center" },

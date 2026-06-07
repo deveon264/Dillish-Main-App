@@ -49,7 +49,7 @@ export function Button({
   };
 
   const textColor =
-    variant === "primary" ? colors.onPrimary : variant === "outline" ? colors.accentDark : colors.accent;
+    variant === "primary" ? colors.onPrimaryStrong : variant === "outline" ? colors.accentDark : colors.accent;
 
   const Inner = (
     <View style={styles.row}>
@@ -73,7 +73,7 @@ export function Button({
           end={{ x: 1, y: 1 }}
           style={[styles.base, (disabled || loading) && { opacity: 0.5 }]}
         >
-          {loading ? <ActivityIndicator color={colors.onPrimary} /> : Inner}
+          {loading ? <ActivityIndicator color={colors.onPrimaryStrong} /> : Inner}
         </LinearGradient>
       </Pressable>
     );

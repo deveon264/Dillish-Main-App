@@ -163,10 +163,10 @@ export default function EditPoster() {
 
         <Pressable style={[styles.save, (busy || !poster) && { opacity: 0.6 }]} onPress={save} disabled={busy || !poster}>
           {busy ? (
-            <ActivityIndicator color={colors.onPrimary} />
+            <ActivityIndicator color={colors.onPrimaryStrong} />
           ) : (
             <>
-              <Ionicons name="checkmark-circle-outline" size={18} color={colors.onPrimary} />
+              <Ionicons name="checkmark-circle-outline" size={18} color={colors.onPrimaryStrong} />
               <Text style={styles.saveText}>Save Poster</Text>
             </>
           )}
@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     marginTop: 28,
   },
-  saveText: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.onPrimary },
+  saveText: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.onPrimaryStrong },
   guard: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32, gap: 8 },
   guardTitle: { fontFamily: fonts.serifSemibold, fontSize: 24, color: colors.foreground, marginTop: 8 },
   guardText: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted, textAlign: "center" },
