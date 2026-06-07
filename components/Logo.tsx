@@ -19,7 +19,7 @@ export function Logo({
   const fontSize = size === "lg" ? 48 : size === "sm" ? 20 : 24;
   const taglineSize = size === "lg" ? 12 : size === "sm" ? 9 : 10;
   const gap = 6;
-  const baselineNudge = size === "lg" ? -12 : size === "sm" ? -5 : -7;
+  const textTop = size === "lg" ? -4 : size === "sm" ? 5 : 7;
   const pillTop = size === "lg" ? -26 : size === "sm" ? -11 : -16;
 
   return (
@@ -41,7 +41,7 @@ export function Logo({
                 fontSize,
                 lineHeight: fontSize,
                 marginLeft: gap,
-                transform: [{ translateY: baselineNudge }],
+                marginTop: textTop,
               },
             ]}
           >
@@ -66,7 +66,7 @@ export function Logo({
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "center" },
+  row: { flexDirection: "row", alignItems: "flex-start" },
   mark: { alignItems: "center", justifyContent: "center" },
   text: {
     fontFamily: fonts.serifSemibold,
