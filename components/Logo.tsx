@@ -17,7 +17,7 @@ export function Logo({
   const mark = size === "lg" ? 56 : size === "sm" ? 34 : 44;
   const icon = size === "lg" ? 28 : size === "sm" ? 17 : 22;
   const fontSize = size === "lg" ? 48 : size === "sm" ? 20 : 24;
-  const taglineSize = size === "lg" ? 12 : size === "sm" ? 9 : 10;
+  const taglineSize = size === "lg" ? 10 : size === "sm" ? 8 : 9;
   const gap = 4;
 
   return (
@@ -60,8 +60,8 @@ const styles = StyleSheet.create({
   pill: {
     alignSelf: "flex-end",
     marginTop: -6,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
     borderRadius: 999,
     backgroundColor: colors.accentTint,
     borderWidth: 1,
@@ -70,6 +70,6 @@ const styles = StyleSheet.create({
   tagline: {
     fontFamily: fonts.sansSemibold,
     color: colors.accent,
-    letterSpacing: 2,
+    letterSpacing: 1.5,
   },
 });
