@@ -1,9 +1,9 @@
 export const palette = {
-  white: "#FFFFFF",
+  white: "#FBF6F0",
   cream: "#EFE3D7",
   creamDeep: "#E0CFBF",
   blush: "#F3C7C2",
-  petal: "#FFFFFF",
+  petal: "#FBF6F0",
   strawberry: "#DD8DA0",
   cherry: "#4A2E33",
   royal: "#DD8DA0",
@@ -24,8 +24,8 @@ const creamRgb = "239, 227, 215"; // #EFE3D7 Warm Cream
 export const colors = {
   background: "#EFE3D7",
   backgroundDeep: "#E0CFBF",
-  card: "#FFFFFF",
-  cardElevated: "#FFFFFF",
+  card: "#FBF6F0",
+  cardElevated: "#FBF6F0",
   cardBorder: `rgba(${accentRgb}, 0.16)`,
   primary: "#DD8DA0",
   accent: "#DD8DA0",
