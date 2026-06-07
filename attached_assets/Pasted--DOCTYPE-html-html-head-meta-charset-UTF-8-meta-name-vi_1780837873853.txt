@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile & Settings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        * { -webkit-tap-highlight-color: transparent; }
+        .nav-tab { transition: all 0.2s ease; }
+        .btn-tap { transition: all 0.15s ease; }
+        .btn-tap:active { transform: scale(0.97); opacity: 0.85; }
+        .panel-section { animation: fadeIn 0.28s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .toggle-switch { transition: background 0.25s cubic-bezier(0.4,0,0.2,1); }
+        .toggle-knob { transition: left 0.25s cubic-bezier(0.4,0,0.2,1), right 0.25s cubic-bezier(0.4,0,0.2,1); }
+        .edit-field:focus { outline: none; }
+        .row-tap { transition: background 0.15s ease; }
+        .row-tap:active { background: rgba(201,137,122,0.08) !important; }
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .card-glow { box-shadow: 0 4px 24px rgba(201,137,122,0.10); }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        serif: ['Cormorant Garamond', 'serif'],
+                        sans: ['DM Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        blush: '#F2D4CC',
+                        rose: '#C9897A',
+                        petal: '#F7EBE8',
+                        mauve: '#9B6E6A',
+                        cream: '#FAF6F3',
+                        charcoal: '#2C2422',
+                        mist: '#E8DDD9',
+                        sand: '#1e1614',
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="font-sans flex justify-center items-start" style="background: #2C2422;">
+
+<div id="profile-settings-screen" class="relative w-full max-w-[375px] mx-auto overflow-hidden flex flex-col" style="height: 840px; background: linear-gradient(160deg, #2C2422 0%, #1e1614 60%, #2C2422 100%);">
+
+    <!-- Subtle radial accents -->
+    <div class="absolute inset-0 pointer-events-none" style="background: radial-gradient(ellipse at 80% 10%, rgba(242,212,204,0.07) 0%, transparent 55%), radial-gradient(ellipse at 10% 90%, rgba(201,137,122,0.05) 0%, transparent 50%);"></div>
+
+    <!-- Header -->
+    <div id="top-header" class="relative z-20 flex-shrink-0 px-5 pt-11 pb-4 flex items-center justify-between">
+        <div>
+            <p class="text-[9px] font-sans font-light tracking-[0.25em] uppercase mb-0.5" style="color: rgba(247,235,232,0.35);">Florish</p>
+            <h1 class="font-serif leading-none" style="font-size: 28px; font-weight: 300; color: #F7EBE8;">My <em class="italic" style="color: #F2D4CC; font-weight: 400;">Profile</em></h1>
+        </div>
+        <div class="relative">
+            <div class="w-11 h-11 rounded-full overflow-hidden" style="border: 1.5px solid rgba(201,137,122,0.5);">
+                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-1.jpg" class="w-full h-full object-cover" alt="avatar" />
+            </div>
+            <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center" style="background: #C9897A;">
+                <i class="fa-solid fa-check text-[7px]" style="color: #fff;"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab Bar -->
+    <div id="section-tabs" class="relative z-20 flex-shrink-0 px-5 mb-4">
+        <div class="flex gap-0 rounded-2xl overflow-hidden" style="background: rgba(247,235,232,0.06); border: 1px solid rgba(242,212,204,0.10);">
+            <button id="tab-profile" class="section-tab flex-1 py-2.5 text-[10px] font-sans font-medium min-h-[36px] btn-tap" style="background: #C9897A; color: #fff; border-radius: 14px;">
+                Profile
+            </button>
+            <button id="tab-subscription" class="section-tab flex-1 py-2.5 text-[10px] font-sans font-light min-h-[36px] btn-tap" style="color: rgba(247,235,232,0.4); background: transparent;">
+                Plan
+            </button>
+            <button id="tab-history" class="section-tab flex-1 py-2.5 text-[10px] font-sans font-light min-h-[36px] btn-tap" style="color: rgba(247,235,232,0.4); background: transparent;">
+                History
+            </button>
+            <button id="tab-settings" class="section-tab flex-1 py-2.5 text-[10px] font-sans font-light min-h-[36px] btn-tap" style="color: rgba(247,235,232,0.4); background: transparent;">
+                Settings
+            </button>
+        </div>
+    </div>
+
+    <!-- Scrollable Content -->
+    <div id="main-scroll" class="relative z-10 flex-1 overflow-y-auto px-5 pb-28">
+
+        <!-- PROFILE PANEL -->
+        <div id="profile-panel" class="panel-section">
+
+            <!-- User Hero -->
+            <div id="profile-hero-card" class="mb-5">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="relative flex-shrink-0">
+                        <div class="w-[72px] h-[72px] rounded-full overflow-hidden" style="border: 2px solid rgba(201,137,122,0.5);">
+                            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-1.jpg" class="w-full h-full object-cover" alt="profile" />
+                        </div>
+                        <button class="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full flex items-center justify-center btn-tap" style="background: #C9897A; border: 2px solid #2C2422;">
+                            <i class="fa-solid fa-camera text-[8px]" style="color: #fff;"></i>
+                        </button>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h2 class="font-serif font-light text-[22px] leading-tight truncate" style="color: #F7EBE8;">Sophia Adeyemi</h2>
+                        <p class="text-[11px] font-sans font-light mt-0.5 truncate" style="color: rgba(247,235,232,0.4);">sophia@email.com</p>
+                        <div class="flex items-center gap-2 mt-2">
+                            <span class="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-sans font-medium" style="background: rgba(201,137,122,0.18); color: #F2D4CC; border: 1px solid rgba(201,137,122,0.35);">
+                                <i class="fa-solid fa-crown text-[7px]"></i> Premium
+                            </span>
+                            <span class="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-sans font-light" style="background: rgba(247,235,232,0.06); color: rgba(247,235,232,0.5); border: 1px solid rgba(242,212,204,0.12);">
+                                <i class="fa-solid fa-fire text-[7px]" style="color: #C9897A;"></i> 12 day streak
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats Row -->
+                <div class="grid grid-cols-4 gap-2">
+                    <div class="flex flex-col items-center py-3 rounded-2xl card-glow" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.10);">
+                        <span class="font-sans font-medium text-[16px] leading-none" style="color: #F7EBE8;">26</span>
+                        <span class="text-[9px] font-sans font-light mt-1" style="color: rgba(247,235,232,0.4);">Age</span>
+                    </div>
+                    <div class="flex flex-col items-center py-3 rounded-2xl card-glow" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.10);">
+                        <span class="font-sans font-medium text-[16px] leading-none" style="color: #F7EBE8;">62.4</span>
+                        <span class="text-[9px] font-sans font-light mt-1" style="color: rgba(247,235,232,0.4);">kg</span>
+                    </div>
+                    <div class="flex flex-col items-center py-3 rounded-2xl card-glow" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.10);">
+                        <span class="font-sans font-medium text-[16px] leading-none" style="color: #F7EBE8;">169</span>
+                        <span class="text-[9px] font-sans font-light mt-1" style="color: rgba(247,235,232,0.4);">cm</span>
+                    </div>
+                    <div class="flex flex-col items-center py-3 rounded-2xl card-glow" style="background: rgba(201,137,122,0.18); border: 1px solid rgba(201,137,122,0.3);">
+                        <span class="font-sans font-medium text-[16px] leading-none" style="color: #F2D4CC;">21.8</span>
+                        <span class="text-[9px] font-sans font-light mt-1" style="color: rgba(247,235,232,0.4);">BMI</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="mb-5" style="height: 1px; background: rgba(242,212,204,0.10);"></div>
+
+            <!-- Personal Details -->
+            <div id="personal-details-card" class="mb-5">
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-[10px] font-sans font-light tracking-[0.2em] uppercase" style="color: rgba(247,235,232,0.35);">Personal Details</p>
+                    <button id="save-details-btn" class="px-4 py-1.5 rounded-full text-[10px] font-sans font-medium btn-tap" style="background: #C9897A; color: #fff;">Save</button>
+                </div>
+                <div class="space-y-3">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[9px] font-sans font-light tracking-widest uppercase mb-1.5 block" style="color: rgba(247,235,232,0.35);">First Name</label>
+                            <input type="text" value="Sophia" class="edit-field w-full rounded-xl px-3.5 py-3 text-[13px] font-sans font-light min-h-[44px]" style="background: rgba(247,235,232,0.07); border: 1px solid rgba(242,212,204,0.12); color: #F7EBE8;" />
+                        </div>
+                        <div>
+                            <label class="text-[9px] font-sans font-light tracking-widest uppercase mb-1.5 block" style="color: rgba(247,235,232,0.35);">Last Name</label>
+                            <input type="text" value="Adeyemi" class="edit-field w-full rounded-xl px-3.5 py-3 text-[13px] font-sans font-light min-h-[44px]" style="background: rgba(247,235,232,0.07); border: 1px solid rgba(242,212,204,0.12); color: #F7EBE8;" />
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-[9px] font-sans font-light tracking-widest uppercase mb-1.5 block" style="color: rgba(247,235,232,0.35);">Email</label>
+                        <input type="email" value="sophia@email.com" class="edit-field w-full rounded-xl px-3.5 py-3 text-[13px] font-sans font-light min-h-[44px]" style="background: rgba(247,235,232,0.07); border: 1px solid rgba(242,212,204,0.12); color: #F7EBE8;" />
+                    </div>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="text-[9px] font-sans font-light tracking-widest uppercase mb-1.5 block" style="color: rgba(247,235,232,0.35);">Age</label>
+                            <input type="number" value="26" class="edit-field w-full rounded-xl px-3.5 py-3 text-[13px] font-sans font-light min-h-[44px]" style="background: rgba(247,235,232,0.07); border: 1px solid rgba(242,212,204,0.12); color: #F7EBE8;" />
+                        </div>
+                        <div>
+                            <label class="text-[9px] font-sans font-light tracking-widest uppercase mb-1.5 block" style="color: rgba(247,235,232,0.35);">Weight</label>
+                            <input type="number" value="62.4" step="0.1" class="edit-field w-full rounded-xl px-3.5 py-3 text-[13px] font-sans font-light min-h-[44px]" style="background: rgba(247,235,232,0.07); border: 1px solid rgba(242,212,204,0.12); color: #F7EBE8;" />
+                        </div>
+                        <div>
+                            <label class="text-[9px] font-sans font-light tracking-widest uppercase mb-1.5 block" style="color: rgba(247,235,232,0.35);">Height</label>
+                            <input type="number" value="169" class="edit-field w-full rounded-xl px-3.5 py-3 text-[13px] font-sans font-light min-h-[44px]" style="background: rgba(247,235,232,0.07); border: 1px solid rgba(242,212,204,0.12); color: #F7EBE8;" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="mb-5" style="height: 1px; background: rgba(242,212,204,0.10);"></div>
+
+            <!-- Fitness Goal -->
+            <div id="fitness-goal-card" class="mb-5">
+                <p class="text-[10px] font-sans font-light tracking-[0.2em] uppercase mb-3" style="color: rgba(247,235,232,0.35);">Fitness Goal</p>
+                <div class="grid grid-cols-3 gap-2.5">
+                    <button class="goal-btn flex flex-col items-center gap-2 py-3.5 rounded-2xl btn-tap active-goal" style="background: rgba(201,137,122,0.18); border: 1.5px solid rgba(201,137,122,0.45);">
+                        <i class="fa-solid fa-fire text-[15px]" style="color: #C9897A;"></i>
+                        <span class="text-[10px] font-sans font-medium" style="color: #F7EBE8;">Lose Weight</span>
+                    </button>
+                    <button class="goal-btn flex flex-col items-center gap-2 py-3.5 rounded-2xl btn-tap" style="background: rgba(247,235,232,0.05); border: 1.5px solid rgba(242,212,204,0.08);">
+                        <i class="fa-solid fa-dumbbell text-[15px]" style="color: rgba(247,235,232,0.25);"></i>
+                        <span class="text-[10px] font-sans font-light" style="color: rgba(247,235,232,0.4);">Build Muscle</span>
+                    </button>
+                    <button class="goal-btn flex flex-col items-center gap-2 py-3.5 rounded-2xl btn-tap" style="background: rgba(247,235,232,0.05); border: 1.5px solid rgba(242,212,204,0.08);">
+                        <i class="fa-solid fa-heart-pulse text-[15px]" style="color: rgba(247,235,232,0.25);"></i>
+                        <span class="text-[10px] font-sans font-light" style="color: rgba(247,235,232,0.4);">Stay Fit</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="mb-5" style="height: 1px; background: rgba(242,212,204,0.10);"></div>
+
+            <!-- Goal Weight -->
+            <div id="goal-weight-card" class="mb-5">
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-[10px] font-sans font-light tracking-[0.2em] uppercase" style="color: rgba(247,235,232,0.35);">Goal Weight</p>
+                    <span class="text-[10px] font-sans font-medium" style="color: #C9897A;">4.4 kg to go</span>
+                </div>
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="flex-1 flex items-center gap-2 rounded-xl px-3.5 py-3 min-h-[44px]" style="background: rgba(247,235,232,0.07); border: 1px solid rgba(242,212,204,0.12);">
+                        <input type="number" value="58" class="edit-field flex-1 bg-transparent text-[14px] font-sans font-light" style="color: #F7EBE8;" />
+                        <span class="text-[11px] font-sans font-light" style="color: rgba(247,235,232,0.3);">kg</span>
+                    </div>
+                    <button class="px-5 py-3 rounded-xl text-[11px] font-sans font-medium btn-tap min-h-[44px]" style="background: #C9897A; color: #fff;">Update</button>
+                </div>
+                <div class="w-full rounded-full overflow-hidden" style="height: 4px; background: rgba(247,235,232,0.08);">
+                    <div class="rounded-full h-full" style="width: 58%; background: linear-gradient(90deg, #F2D4CC 0%, #C9897A 100%);"></div>
+                </div>
+                <div class="flex items-center justify-between mt-2">
+                    <span class="text-[9px] font-sans font-light" style="color: rgba(247,235,232,0.3);">Start: 65.6 kg</span>
+                    <span class="text-[9px] font-sans font-light" style="color: rgba(247,235,232,0.3);">Goal: 58 kg</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- SUBSCRIPTION PANEL -->
+        <div id="subscription-panel" class="panel-section hidden">
+
+            <!-- Current Plan -->
+            <div id="current-plan-card" class="mb-5 rounded-2xl p-5 card-glow" style="background: linear-gradient(135deg, rgba(242,212,204,0.12) 0%, rgba(201,137,122,0.08) 100%); border: 1px solid rgba(201,137,122,0.25);">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background: #C9897A;">
+                            <i class="fa-solid fa-crown text-[13px]" style="color: #fff;"></i>
+                        </div>
+                        <div>
+                            <p class="font-sans font-medium text-[14px]" style="color: #F7EBE8;">Florish Premium</p>
+                            <p class="text-[10px] font-sans font-light" style="color: rgba(247,235,232,0.45);">Yearly Plan</p>
+                        </div>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-full text-[9px] font-sans font-medium" style="background: rgba(100,190,120,0.15); color: #4CAF72; border: 1px solid rgba(100,190,120,0.25);">Active</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2 mb-4">
+                    <div class="flex flex-col items-center py-2.5 rounded-xl" style="background: rgba(247,235,232,0.07);">
+                        <span class="font-sans font-medium text-[12px]" style="color: #F7EBE8;">₦19,999</span>
+                        <span class="text-[8px] font-sans font-light mt-0.5" style="color: rgba(247,235,232,0.4);">/ year</span>
+                    </div>
+                    <div class="flex flex-col items-center py-2.5 rounded-xl" style="background: rgba(247,235,232,0.07);">
+                        <span class="font-sans font-medium text-[12px]" style="color: #F7EBE8;">Jun 1</span>
+                        <span class="text-[8px] font-sans font-light mt-0.5" style="color: rgba(247,235,232,0.4);">Renews</span>
+                    </div>
+                    <div class="flex flex-col items-center py-2.5 rounded-xl" style="background: rgba(247,235,232,0.07);">
+                        <span class="font-sans font-medium text-[12px]" style="color: #F2D4CC;">365</span>
+                        <span class="text-[8px] font-sans font-light mt-0.5" style="color: rgba(247,235,232,0.4);">days left</span>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button class="flex-1 py-3 rounded-xl text-[11px] font-sans font-medium btn-tap min-h-[44px]" style="background: #C9897A; color: #fff;">Manage Plan</button>
+                    <button class="flex-1 py-3 rounded-xl text-[11px] font-sans font-light btn-tap min-h-[44px]" style="background: rgba(247,235,232,0.07); color: rgba(247,235,232,0.55); border: 1px solid rgba(242,212,204,0.12);">Billing</button>
+                </div>
+            </div>
+
+            <!-- What's Included -->
+            <div id="plan-features-card" class="mb-5">
+                <p class="text-[10px] font-sans font-light tracking-[0.2em] uppercase mb-3" style="color: rgba(247,235,232,0.35);">What's Included</p>
+                <div class="space-y-3">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-check text-[10px] w-4 flex-shrink-0" style="color: #C9897A;"></i>
+                        <span class="text-[12px] font-sans font-light" style="color: rgba(247,235,232,0.7);">Unlimited workout videos with Dillish</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-check text-[10px] w-4 flex-shrink-0" style="color: #C9897A;"></i>
+                        <span class="text-[12px] font-sans font-light" style="color: rgba(247,235,232,0.7);">AI-powered calorie tracking</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-check text-[10px] w-4 flex-shrink-0" style="color: #C9897A;"></i>
+                        <span class="text-[12px] font-sans font-light" style="color: rgba(247,235,232,0.7);">Hydration & progress tracking</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-check text-[10px] w-4 flex-shrink-0" style="color: #C9897A;"></i>
+                        <span class="text-[12px] font-sans font-light" style="color: rgba(247,235,232,0.7);">Private progress photo gallery</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-check text-[10px] w-4 flex-shrink-0" style="color: #C9897A;"></i>
+                        <span class="text-[12px] font-sans font-light" style="color: rgba(247,235,232,0.7);">Push notifications & streak reminders</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-check text-[10px] w-4 flex-shrink-0" style="color: #C9897A;"></i>
+                        <span class="text-[12px] font-sans font-light" style="color: rgba(247,235,232,0.7);">Priority support & new content first</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="mb-5" style="height: 1px; background: rgba(242,212,204,0.10);"></div>
+
+            <!-- Change Plan -->
+            <div id="plan-options-card" class="mb-5">
+                <p class="text-[10px] font-sans font-light tracking-[0.2em] uppercase mb-3" style="color: rgba(247,235,232,0.35);">Change Plan</p>
+                <div class="space-y-2.5">
+                    <div class="flex items-center justify-between px-4 py-3.5 rounded-2xl" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.10);">
+                        <div>
+                            <p class="text-[13px] font-sans font-medium" style="color: #F7EBE8;">Weekly</p>
+                            <p class="text-[10px] font-sans font-light mt-0.5" style="color: rgba(247,235,232,0.4);">₦1,999 / week</p>
+                        </div>
+                        <button class="px-4 py-2 rounded-xl text-[10px] font-sans font-medium btn-tap min-h-[36px]" style="background: rgba(201,137,122,0.15); color: rgba(247,235,232,0.6); border: 1px solid rgba(201,137,122,0.2);">Switch</button>
+                    </div>
+                    <div class="flex items-center justify-between px-4 py-3.5 rounded-2xl" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.10);">
+                        <div>
+                            <p class="text-[13px] font-sans font-medium" style="color: #F7EBE8;">Monthly</p>
+                            <p class="text-[10px] font-sans font-light mt-0.5" style="color: rgba(247,235,232,0.4);">₦4,999 / month</p>
+                        </div>
+                        <button class="px-4 py-2 rounded-xl text-[10px] font-sans font-medium btn-tap min-h-[36px]" style="background: rgba(201,137,122,0.15); color: rgba(247,235,232,0.6); border: 1px solid rgba(201,137,122,0.2);">Switch</button>
+                    </div>
+                    <div class="flex items-center justify-between px-4 py-3.5 rounded-2xl" style="background: rgba(201,137,122,0.15); border: 1.5px solid rgba(201,137,122,0.4);">
+                        <div>
+                            <div class="flex items-center gap-2 mb-0.5">
+                                <p class="text-[13px] font-sans font-medium" style="color: #F7EBE8;">Yearly</p>
+                                <span class="px-1.5 py-0.5 rounded-full text-[8px] font-sans font-medium" style="background: #C9897A; color: #fff;">BEST VALUE</span>
+                            </div>
+                            <p class="text-[10px] font-sans font-light" style="color: rgba(247,235,232,0.5);">₦19,999 / year · Save 67%</p>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <i class="fa-solid fa-circle-check text-[14px]" style="color: #C9897A;"></i>
+                            <span class="text-[10px] font-sans font-medium" style="color: #F2D4CC;">Current</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button id="cancel-plan-btn" class="w-full py-3.5 rounded-2xl text-[12px] font-sans font-light btn-tap min-h-[44px] mb-4" style="background: transparent; border: 1px solid rgba(242,212,204,0.12); color: rgba(247,235,232,0.3);">
+                Cancel Subscription
+            </button>
+
+        </div>
+
+        <!-- HISTORY PANEL -->
+        <div id="history-panel" class="panel-section hidden">
+
+            <!-- Month Summary -->
+            <div id="history-summary-card" class="mb-5 rounded-2xl p-4 card-glow" style="background: linear-gradient(135deg, rgba(242,212,204,0.10) 0%, rgba(201,137,122,0.06) 100%); border: 1px solid rgba(201,137,122,0.20);">
+                <p class="text-[9px] font-sans font-light tracking-[0.22em] uppercase mb-3" style="color: rgba(247,235,232,0.4);">May 2025</p>
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="flex flex-col items-center py-3 rounded-xl" style="background: rgba(247,235,232,0.07);">
+                        <span class="font-serif font-light text-[24px] leading-none" style="color: #F7EBE8;">18</span>
+                        <span class="text-[9px] font-sans font-light mt-1" style="color: rgba(247,235,232,0.4);">Workouts</span>
+                    </div>
+                    <div class="flex flex-col items-center py-3 rounded-xl" style="background: rgba(247,235,232,0.07);">
+                        <span class="font-serif font-light text-[24px] leading-none" style="color: #F2D4CC;">12</span>
+                        <span class="text-[9px] font-sans font-light mt-1" style="color: rgba(247,235,232,0.4);">Day Streak</span>
+                    </div>
+                    <div class="flex flex-col items-center py-3 rounded-xl" style="background: rgba(247,235,232,0.07);">
+                        <span class="font-serif font-light text-[24px] leading-none" style="color: #F7EBE8;">−3.2</span>
+                        <span class="text-[9px] font-sans font-light mt-1" style="color: rgba(247,235,232,0.4);">kg lost</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Workout History -->
+            <div id="workout-history-section" class="mb-5">
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-[10px] font-sans font-light tracking-[0.2em] uppercase" style="color: rgba(247,235,232,0.35);">Recent Workouts</p>
+                    <span class="text-[10px] font-sans font-medium" style="color: #C9897A;">18 sessions</span>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between px-4 py-3.5 rounded-2xl" style="background: rgba(201,137,122,0.12); border: 1px solid rgba(201,137,122,0.22);">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background: #C9897A;">
+                                <i class="fa-solid fa-dumbbell text-[11px]" style="color: #fff;"></i>
+                            </div>
+                            <div>
+                                <p class="text-[12px] font-sans font-medium" style="color: #F7EBE8;">Full Body Burn</p>
+                                <p class="text-[10px] font-sans font-light" style="color: rgba(247,235,232,0.4);">Today · 35 min</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[11px] font-sans font-medium" style="color: #F2D4CC;">312 kcal</p>
+                            <p class="text-[9px] font-sans font-light" style="color: rgba(247,235,232,0.3);">Done</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between px-4 py-3.5 rounded-2xl" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.08);">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background: rgba(201,137,122,0.15);">
+                                <i class="fa-solid fa-person-running text-[11px]" style="color: rgba(247,235,232,0.4);"></i>
+                            </div>
+                            <div>
+                                <p class="text-[12px] font-sans font-medium" style="color: #F7EBE8;">Cardio Blast</p>
+                                <p class="text-[10px] font-sans font-light" style="color: rgba(247,235,232,0.4);">May 30 · 28 min</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[11px] font-sans font-medium" style="color: #F2D4CC;">248 kcal</p>
+                            <p class="text-[9px] font-sans font-light" style="color: rgba(247,235,232,0.3);">Done</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between px-4 py-3.5 rounded-2xl" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.08);">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background: rgba(201,137,122,0.15);">
+                                <i class="fa-solid fa-spa text-[11px]" style="color: rgba(247,235,232,0.4);"></i>
+                            </div>
+                            <div>
+                                <p class="text-[12px] font-sans font-medium" style="color: #F7EBE8;">Yoga & Stretch</p>
+                                <p class="text-[10px] font-sans font-light" style="color: rgba(247,235,232,0.4);">May 29 · 22 min</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[11px] font-sans font-medium" style="color: #F2D4CC;">145 kcal</p>
+                            <p class="text-[9px] font-sans font-light" style="color: rgba(247,235,232,0.3);">Done</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between px-4 py-3.5 rounded-2xl" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.08);">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background: rgba(201,137,122,0.15);">
+                                <i class="fa-solid fa-dumbbell text-[11px]" style="color: rgba(247,235,232,0.4);"></i>
+                            </div>
+                            <div>
+                                <p class="text-[12px] font-sans font-medium" style="color: #F7EBE8;">Glutes & Core</p>
+                                <p class="text-[10px] font-sans font-light" style="color: rgba(247,235,232,0.4);">May 28 · 40 min</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[11px] font-sans font-medium" style="color: #F2D4CC;">367 kcal</p>
+                            <p class="text-[9px] font-sans font-light" style="color: rgba(247,235,232,0.3);">Done</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between px-4 py-3.5 rounded-2xl" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.08);">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background: rgba(201,137,122,0.15);">
+                                <i class="fa-solid fa-person-running text-[11px]" style="color: rgba(247,235,232,0.4);"></i>
+                            </div>
+                            <div>
+                                <p class="text-[12px] font-sans font-medium" style="color: #F7EBE8;">HIIT Cardio</p>
+                                <p class="text-[10px] font-sans font-light" style="color: rgba(247,235,232,0.4);">May 27 · 30 min</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[11px] font-sans font-medium" style="color: #F2D4CC;">290 kcal</p>
+                            <p class="text-[9px] font-sans font-light" style="color: rgba(247,235,232,0.3);">Done</p>
+                        </div>
+                    </div>
+                </div>
+                <button class="w-full mt-3 py-3 rounded-2xl text-[11px] font-sans font-light btn-tap" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.10); color: rgba(247,235,232,0.4);">
+                    Load More
+                </button>
+            </div>
+
+            <!-- Divider -->
+            <div class="mb-5" style="height: 1px; background: rgba(242,212,204,0.10);"></div>
+
+            <!-- Saved Workouts -->
+            <div id="saved-workouts-section" class="mb-5">
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-[10px] font-sans font-light tracking-[0.2em] uppercase" style="color: rgba(247,235,232,0.35);">Saved Workouts</p>
+                    <span class="text-[10px] font-sans font-medium" style="color: #C9897A;">4 saved</span>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between px-4 py-3.5 rounded-2xl" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.08);">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0">
+                                <img class="w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/d25851e928-48e7460896720916a5b8.png" alt="Booty Sculpt" />
+                            </div>
+                            <div>
+                                <p class="text-[12px] font-sans font-medium" style="color: #F7EBE8;">Booty Sculpt</p>
+                                <p class="text-[10px] font-sans font-light" style="color: rgba(247,235,232,0.4);">45 min · Intermediate</p>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-heart text-[14px]" style="color: #C9897A;"></i>
+                    </div>
+                    <div class="flex items-center justify-between px-4 py-3.5 rounded-2xl" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.08);">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0">
+                                <img class="w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/340ccf471f-160bd0260196882355e9.png" alt="Morning Flow" />
+                            </div>
+                            <div>
+                                <p class="text-[12px] font-sans font-medium" style="color: #F7EBE8;">Morning Flow</p>
+                                <p class="text-[10px] font-sans font-light" style="color: rgba(247,235,232,0.4);">20 min · Beginner</p>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-heart text-[14px]" style="color: #C9897A;"></i>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- SETTINGS PANEL -->
+        <div id="settings-panel" class="panel-section hidden">
+
+            <!-- Notifications -->
+            <div id="notifications-section" class="mb-5">
+                <p class="text-[10px] font-sans font-light tracking-[0.2em] uppercase mb-3" style="color: rgba(247,235,232,0.35);">Notifications</p>
+                <div class="rounded-2xl overflow-hidden" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.10);">
+                    <div class="flex items-center justify-between px-4 py-3.5">
+                        <div>
+                            <p class="text-[12px] font-sans font-medium" style="color: #F7EBE8;">Workout Reminders</p>
+                            <p class="text-[10px] font-sans font-light" style="color: rgba(247,235,232,0.4);">Daily at 7:00 AM</p>
+                        </div>
+                        <div id="toggle-workout" class="toggle-switch relative w-11 h-6 rounded-full cursor-pointer active-toggle" style="background: #C9897A;">
+                            <div class="toggle-knob absolute top-0.5 right-0.5 w-5 h-5 rounded-full" style="background: #fff;"></div>
+                        </div>
+                    </div>
+                    <div style="height: 1px; background: rgba(242,212,204,0.08); margin: 0 16px;"></div>
+                    <div class="flex items-center justify-between px-4 py-3.5">
+                        <div>
+                            <p class="text-[12px] font-sans font-medium" style="color: #F7EBE8;">Hydration Reminders</p>
+                            <p class="text-[10px] font-sans font-light" style="color: rgba(247,235,232,0.4);">Every 2 hours</p>
+                        </div>
+                        <div id="toggle-hydration" class="toggle-switch relative w-11 h-6 rounded-full cursor-pointer active-toggle" style="background: #C9897A;">
+                            <div class="toggle-knob absolute top-0.5 right-0.5 w-5 h-5 rounded-full" style="background: #fff;"></div>
+                        </div>
+                    </div>
+                    <div style="height: 1px; background: rgba(242,212,204,0.08); margin: 0 16px;"></div>
+                    <div class="flex items-center justify-between px-4 py-3.5">
+                        <div>
+                            <p class="text-[12px] font-sans font-medium" style="color: #F7EBE8;">Streak Alerts</p>
+                            <p class="text-[10px] font-sans font-light" style="color: rgba(247,235,232,0.4);">Don't break your streak!</p>
+                        </div>
+                        <div id="toggle-streak" class="toggle-switch relative w-11 h-6 rounded-full cursor-pointer active-toggle" style="background: #C9897A;">
+                            <div class="toggle-knob absolute top-0.5 right-0.5 w-5 h-5 rounded-full" style="background: #fff;"></div>
+                        </div>
+                    </div>
+                    <div style="height: 1px; background: rgba(242,212,204,0.08); margin: 0 16px;"></div>
+                    <div class="flex items-center justify-between px-4 py-3.5">
+                        <div>
+                            <p class="text-[12px] font-sans font-medium" style="color: #F7EBE8;">New Content Alerts</p>
+                            <p class="text-[10px] font-sans font-light" style="color: rgba(247,235,232,0.4);">New workouts from Dillish</p>
+                        </div>
+                        <div id="toggle-content" class="toggle-switch relative w-11 h-6 rounded-full cursor-pointer inactive-toggle" style="background: rgba(247,235,232,0.10);">
+                            <div class="toggle-knob absolute top-0.5 left-0.5 w-5 h-5 rounded-full" style="background: rgba(247,235,232,0.2);"></div>
+                        </div>
+                    </div>
+                    <div style="height: 1px; background: rgba(242,212,204,0.08); margin: 0 16px;"></div>
+                    <div class="flex items-center justify-between px-4 py-3.5">
+                        <div>
+                            <p class="text-[12px] font-sans font-medium" style="color: #F7EBE8;">Weekly Progress Report</p>
+                            <p class="text-[10px] font-sans font-light" style="color: rgba(247,235,232,0.4);">Every Sunday evening</p>
+                        </div>
+                        <div id="toggle-report" class="toggle-switch relative w-11 h-6 rounded-full cursor-pointer active-toggle" style="background: #C9897A;">
+                            <div class="toggle-knob absolute top-0.5 right-0.5 w-5 h-5 rounded-full" style="background: #fff;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- App Preferences -->
+            <div id="preferences-section" class="mb-5">
+                <p class="text-[10px] font-sans font-light tracking-[0.2em] uppercase mb-3" style="color: rgba(247,235,232,0.35);">Preferences</p>
+                <div class="rounded-2xl overflow-hidden" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.10);">
+                    <div class="row-tap flex items-center justify-between px-4 py-3.5 cursor-pointer">
+                        <div>
+                            <p class="text-[12px] font-sans font-medium" style="color: #F7EBE8;">Units</p>
+                            <p class="text-[10px] font-sans font-light" style="color: rgba(247,235,232,0.4);">Metric (kg, cm)</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] font-sans font-light" style="color: rgba(247,235,232,0.4);">Metric</span>
+                            <i class="fa-solid fa-chevron-right text-[9px]" style="color: rgba(247,235,232,0.2);"></i>
+                        </div>
+                    </div>
+                    <div style="height: 1px; background: rgba(242,212,204,0.08); margin: 0 16px;"></div>
+                    <div class="row-tap flex items-center justify-between px-4 py-3.5 cursor-pointer">
+                        <div>
+                            <p class="text-[12px] font-sans font-medium" style="color: #F7EBE8;">Daily Water Goal</p>
+                            <p class="text-[10px] font-sans font-light" style="color: rgba(247,235,232,0.4);">2,500 ml</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] font-sans font-light" style="color: rgba(247,235,232,0.4);">2.5 L</span>
+                            <i class="fa-solid fa-chevron-right text-[9px]" style="color: rgba(247,235,232,0.2);"></i>
+                        </div>
+                    </div>
+                    <div style="height: 1px; background: rgba(242,212,204,0.08); margin: 0 16px;"></div>
+                    <div class="row-tap flex items-center justify-between px-4 py-3.5 cursor-pointer">
+                        <div>
+                            <p class="text-[12px] font-sans font-medium" style="color: #F7EBE8;">Daily Calorie Goal</p>
+                            <p class="text-[10px] font-sans font-light" style="color: rgba(247,235,232,0.4);">1,800 kcal</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] font-sans font-light" style="color: rgba(247,235,232,0.4);">1800</span>
+                            <i class="fa-solid fa-chevron-right text-[9px]" style="color: rgba(247,235,232,0.2);"></i>
+                        </div>
+                    </div>
+                    <div style="height: 1px; background: rgba(242,212,204,0.08); margin: 0 16px;"></div>
+                    <div class="row-tap flex items-center justify-between px-4 py-3.5 cursor-pointer">
+                        <div>
+                            <p class="text-[12px] font-sans font-medium" style="color: #F7EBE8;">Language</p>
+                            <p class="text-[10px] font-sans font-light" style="color: rgba(247,235,232,0.4);">English</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] font-sans font-light" style="color: rgba(247,235,232,0.4);">EN</span>
+                            <i class="fa-solid fa-chevron-right text-[9px]" style="color: rgba(247,235,232,0.2);"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Account & Privacy -->
+            <div id="account-section" class="mb-5">
+                <p class="text-[10px] font-sans font-light tracking-[0.2em] uppercase mb-3" style="color: rgba(247,235,232,0.35);">Account & Privacy</p>
+                <div class="rounded-2xl overflow-hidden" style="background: rgba(247,235,232,0.05); border: 1px solid rgba(242,212,204,0.10);">
+                    <button class="row-tap w-full flex items-center justify-between px-4 py-3.5 btn-tap">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-lock text-[12px] w-4" style="color: rgba(247,235,232,0.3);"></i>
+                            <p class="text-[12px] font-sans font-medium" style="color: #F7EBE8;">Change Password</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-[9px]" style="color: rgba(247,235,232,0.2);"></i>
+                    </button>
+                    <div style="height: 1px; background: rgba(242,212,204,0.08); margin: 0 16px;"></div>
+                    <button class="row-tap w-full flex items-center justify-between px-4 py-3.5 btn-tap">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-file-shield text-[12px] w-4" style="color: rgba(247,235,232,0.3);"></i>
+                            <p class="text-[12px] font-sans font-medium" style="color: #F7EBE8;">Privacy Policy</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-[9px]" style="color: rgba(247,235,232,0.2);"></i>
+                    </button>
+                    <div style="height: 1px; background: rgba(242,212,204,0.08); margin: 0 16px;"></div>
+                    <button class="row-tap w-full flex items-center justify-between px-4 py-3.5 btn-tap">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-circle-info text-[12px] w-4" style="color: rgba(247,235,232,0.3);"></i>
+                            <p class="text-[12px] font-sans font-medium" style="color: #F7EBE8;">About Florish</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-[9px]" style="color: rgba(247,235,232,0.2);"></i>
+                    </button>
+                    <div style="height: 1px; background: rgba(242,212,204,0.08); margin: 0 16px;"></div>
+                    <button class="row-tap w-full flex items-center justify-between px-4 py-3.5 btn-tap">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-headset text-[12px] w-4" style="color: rgba(247,235,232,0.3);"></i>
+                            <p class="text-[12px] font-sans font-medium" style="color: #F7EBE8;">Support</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-[9px]" style="color: rgba(247,235,232,0.2);"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sign Out / Delete -->
+            <div id="logout-section" class="mb-5 space-y-2.5">
+                <button id="logout-btn" class="w-full py-3.5 rounded-2xl text-[12px] font-sans font-medium btn-tap min-h-[44px]" style="background: rgba(201,137,122,0.15); border: 1px solid rgba(201,137,122,0.3); color: #F2D4CC;">
+                    <i class="fa-solid fa-arrow-right-from-bracket mr-2 text-[11px]"></i>Sign Out
+                </button>
+                <button id="delete-account-btn" class="w-full py-3.5 rounded-2xl text-[12px] font-sans font-light btn-tap min-h-[44px]" style="background: transparent; border: 1px solid rgba(242,212,204,0.08); color: rgba(247,235,232,0.25);">
+                    <i class="fa-regular fa-trash-can mr-2 text-[11px]"></i>Delete Account
+                </button>
+            </div>
+
+            <div id="app-version-row" class="mb-4 flex items-center justify-center">
+                <p class="text-[9px] font-sans font-light tracking-wide" style="color: rgba(247,235,232,0.2);">Florish v1.0.0 &nbsp;·&nbsp; Made with <i class="fa-solid fa-heart text-[8px]" style="color: rgba(201,137,122,0.45);"></i> for women</p>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Bottom Nav -->
+    <div id="bottom-nav" class="absolute bottom-0 left-0 right-0 z-30 px-3 pb-6 pt-2" style="background: linear-gradient(to top, #1e1614 80%, transparent 100%);">
+        <div class="flex items-center justify-around rounded-2xl px-2 py-2" style="background: rgba(247,235,232,0.06); border: 1px solid rgba(242,212,204,0.10);">
+            <button id="nav-dashboard" class="nav-tab flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[52px] min-h-[48px] justify-center">
+                <i class="fa-solid fa-house text-[14px]" style="color: rgba(247,235,232,0.4);"></i>
+                <span class="text-[8px] font-sans font-light" style="color: rgba(247,235,232,0.4);">Home</span>
+            </button>
+            <button id="nav-workout" class="nav-tab flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[52px] min-h-[48px] justify-center">
+                <i class="fa-solid fa-dumbbell text-[14px]" style="color: rgba(247,235,232,0.4);"></i>
+                <span class="text-[8px] font-sans font-light" style="color: rgba(247,235,232,0.4);">Workouts</span>
+            </button>
+            <button id="nav-calorie" class="nav-tab flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[52px] min-h-[48px] justify-center">
+                <i class="fa-solid fa-brain text-[14px]" style="color: rgba(247,235,232,0.4);"></i>
+                <span class="text-[8px] font-sans font-light" style="color: rgba(247,235,232,0.4);">Calories</span>
+            </button>
+            <button id="nav-water" class="nav-tab flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[52px] min-h-[48px] justify-center">
+                <i class="fa-solid fa-droplet text-[14px]" style="color: rgba(247,235,232,0.4);"></i>
+                <span class="text-[8px] font-sans font-light" style="color: rgba(247,235,232,0.4);">Water</span>
+            </button>
+            <button id="nav-profile" class="nav-tab flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[52px] min-h-[48px] justify-center" style="background: rgba(201,137,122,0.2); border: 1px solid rgba(201,137,122,0.3);">
+                <i class="fa-regular fa-user text-[14px]" style="color: #C9897A;"></i>
+                <span class="text-[8px] font-sans font-medium" style="color: #C9897A;">Profile</span>
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // Nav tabs
+    const navButtons = ['nav-dashboard', 'nav-workout', 'nav-calorie', 'nav-water', 'nav-profile'];
+    navButtons.forEach(id => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        btn.addEventListener('click', function() {
+            navButtons.forEach(nid => {
+                const nb = document.getElementById(nid);
+                if (!nb) return;
+                nb.style.background = 'transparent';
+                nb.style.border = 'none';
+                nb.querySelectorAll('i').forEach(i => { i.style.color = 'rgba(247,235,232,0.4)'; });
+                nb.querySelectorAll('span').forEach(s => { s.style.color = 'rgba(247,235,232,0.4)'; s.style.fontWeight = '300'; });
+            });
+            this.style.background = 'rgba(201,137,122,0.2)';
+            this.style.border = '1px solid rgba(201,137,122,0.3)';
+            this.querySelectorAll('i').forEach(i => { i.style.color = '#C9897A'; });
+            this.querySelectorAll('span').forEach(s => { s.style.color = '#C9897A'; s.style.fontWeight = '500'; });
+        });
+    });
+
+    // Section tabs
+    const tabProfile = document.getElementById('tab-profile');
+    const tabSubscription = document.getElementById('tab-subscription');
+    const tabHistory = document.getElementById('tab-history');
+    const tabSettings = document.getElementById('tab-settings');
+    const profilePanel = document.getElementById('profile-panel');
+    const subscriptionPanel = document.getElementById('subscription-panel');
+    const historyPanel = document.getElementById('history-panel');
+    const settingsPanel = document.getElementById('settings-panel');
+
+    const allTabs = [tabProfile, tabSubscription, tabHistory, tabSettings];
+    const allPanels = [profilePanel, subscriptionPanel, historyPanel, settingsPanel];
+
+    function activateTab(activeTab, activePanel) {
+        allTabs.forEach(t => {
+            t.style.background = 'transparent';
+            t.style.color = 'rgba(247,235,232,0.4)';
+            t.style.fontWeight = '300';
+            t.style.borderRadius = '0';
+        });
+        allPanels.forEach(p => p.classList.add('hidden'));
+        activeTab.style.background = '#C9897A';
+        activeTab.style.color = '#fff';
+        activeTab.style.fontWeight = '500';
+        activeTab.style.borderRadius = '14px';
+        activePanel.classList.remove('hidden');
+        document.getElementById('main-scroll').scrollTop = 0;
+    }
+
+    tabProfile.addEventListener('click', () => activateTab(tabProfile, profilePanel));
+    tabSubscription.addEventListener('click', () => activateTab(tabSubscription, subscriptionPanel));
+    tabHistory.addEventListener('click', () => activateTab(tabHistory, historyPanel));
+    tabSettings.addEventListener('click', () => activateTab(tabSettings, settingsPanel));
+
+    // Toggles
+    const toggleIds = ['toggle-workout', 'toggle-hydration', 'toggle-streak', 'toggle-content', 'toggle-report'];
+    toggleIds.forEach(id => {
+        const toggle = document.getElementById(id);
+        if (!toggle) return;
+        toggle.addEventListener('click', function() {
+            const isActive = this.classList.contains('active-toggle');
+            if (isActive) {
+                this.classList.remove('active-toggle');
+                this.classList.add('inactive-toggle');
+                this.style.background = 'rgba(247,235,232,0.10)';
+                const knob = this.querySelector('.toggle-knob');
+                if (knob) { knob.style.left = '2px'; knob.style.right = 'auto'; knob.style.background = 'rgba(247,235,232,0.2)'; }
+            } else {
+                this.classList.remove('inactive-toggle');
+                this.classList.add('active-toggle');
+                this.style.background = '#C9897A';
+                const knob = this.querySelector('.toggle-knob');
+                if (knob) { knob.style.left = 'auto'; knob.style.right = '2px'; knob.style.background = '#fff'; }
+            }
+        });
+    });
+
+    // Save button
+    const saveDetailsBtn = document.getElementById('save-details-btn');
+    if (saveDetailsBtn) {
+        saveDetailsBtn.addEventListener('click', function() {
+            const orig = this.textContent;
+            this.textContent = 'Saved ✓';
+            this.style.opacity = '0.75';
+            setTimeout(() => { this.textContent = orig; this.style.opacity = '1'; }, 2000);
+        });
+    }
+
+    // Goal buttons
+    const goalBtns = document.querySelectorAll('.goal-btn');
+    goalBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            goalBtns.forEach(b => {
+                b.style.background = 'rgba(247,235,232,0.05)';
+                b.style.border = '1.5px solid rgba(242,212,204,0.08)';
+                b.querySelectorAll('i').forEach(i => { i.style.color = 'rgba(247,235,232,0.25)'; });
+                b.querySelectorAll('span').forEach(s => { s.style.color = 'rgba(247,235,232,0.4)'; s.style.fontWeight = '300'; });
+            });
+            this.style.background = 'rgba(201,137,122,0.18)';
+            this.style.border = '1.5px solid rgba(201,137,122,0.45)';
+            this.querySelectorAll('i').forEach(i => { i.style.color = '#C9897A'; });
+            this.querySelectorAll('span').forEach(s => { s.style.color = '#F7EBE8'; s.style.fontWeight = '500'; });
+        });
+    });
+</script>
+
+</body>
+</html>
