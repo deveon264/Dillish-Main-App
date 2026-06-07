@@ -207,7 +207,7 @@ export default function Progress() {
             const isActive = t.key === tab;
             return (
               <Pressable key={t.key} style={[styles.tab, isActive && styles.tabActive]} onPress={() => setTab(t.key)}>
-                <Ionicons name={t.icon} size={15} color={isActive ? colors.onPrimary : colors.muted} />
+                <Ionicons name={t.icon} size={15} color={isActive ? colors.onPrimaryStrong : colors.muted} />
                 <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{t.label}</Text>
               </Pressable>
             );
@@ -513,7 +513,7 @@ const styles = StyleSheet.create({
   },
   tabActive: { backgroundColor: colors.primary },
   tabLabel: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.muted },
-  tabLabelActive: { fontFamily: fonts.sansSemibold, color: colors.onPrimary },
+  tabLabelActive: { fontFamily: fonts.sansSemibold, color: colors.onPrimaryStrong },
 
   weightCard: { marginTop: 18, padding: 18 },
   cardHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
@@ -649,7 +649,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 5,
   },
-  baLabelAfter: { backgroundColor: colors.accentDeep },
+  baLabelAfter: { backgroundColor: colors.accentDark },
   baLabelText: { fontFamily: fonts.sansSemibold, fontSize: 12, color: colors.onPrimary },
   baOverlay: {
     position: "absolute",

@@ -192,7 +192,7 @@ export default function Dashboard() {
           </View>
           <Pressable onPress={() => router.push(`/workout/${featured.id}`)}>
           <ImageBackground source={featured.image} style={styles.hero} imageStyle={styles.heroImg}>
-            <LinearGradient colors={["rgba(16,17,17,0.1)", "rgba(16,17,17,0.88)"]} style={StyleSheet.absoluteFill} />
+            <LinearGradient colors={["rgba(16,17,17,0.15)", "rgba(16,17,17,0.92)"]} style={StyleSheet.absoluteFill} />
             <View style={styles.heroContent}>
               <Text style={styles.heroTitle}>{featured.title}</Text>
               <View style={styles.heroMeta}>
@@ -607,7 +607,7 @@ const styles = StyleSheet.create({
   heroBadge: {
     alignSelf: "flex-start",
     marginBottom: 10,
-    backgroundColor: "rgba(16,17,17,0.55)",
+    backgroundColor: "rgba(16,17,17,0.68)",
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 999,

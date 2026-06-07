@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 999,
   },
-  badgeText: { fontFamily: fonts.sansBold, fontSize: 10, color: colors.onPrimary, letterSpacing: 1 },
+  badgeText: { fontFamily: fonts.sansBold, fontSize: 10, color: colors.onPrimaryStrong, letterSpacing: 1 },
   planMain: { flexDirection: "row", alignItems: "center", gap: 14 },
   radio: {
     width: 24,

@@ -711,7 +711,7 @@ export default function WorkoutPlayer() {
                       )}
                       {done && (
                         <View style={styles.exCheck}>
-                          <Ionicons name="checkmark" size={15} color={colors.onPrimary} />
+                          <Ionicons name="checkmark" size={15} color={colors.onPrimaryStrong} />
                         </View>
                       )}
                       <Image source={e.image ?? workout.image} style={styles.exThumb} />
@@ -883,9 +883,9 @@ export default function WorkoutPlayer() {
                           ]}
                         >
                           {d.active ? (
-                            <Ionicons name="checkmark" size={16} color={colors.onPrimary} />
+                            <Ionicons name="checkmark" size={16} color={colors.onPrimaryStrong} />
                           ) : d.isToday ? (
-                            <Ionicons name="barbell" size={15} color={colors.onPrimary} />
+                            <Ionicons name="barbell" size={15} color={colors.onPrimaryStrong} />
                           ) : (
                             <Text style={styles.weekDash}>–</Text>
                           )}
@@ -945,7 +945,7 @@ export default function WorkoutPlayer() {
     <GradientBackground>
       <View style={[styles.center, { paddingHorizontal: 32 }]}>
         <View style={styles.doneIcon}>
-          <Ionicons name="checkmark" size={48} color={colors.onPrimary} />
+          <Ionicons name="checkmark" size={48} color={colors.onPrimaryStrong} />
         </View>
         <Text style={styles.doneTitle}>Beautifully done</Text>
         <Text style={styles.doneSub}>You completed {workout.title}. Take a breath and feel proud.</Text>
@@ -1029,7 +1029,7 @@ const styles = StyleSheet.create({
   info: { paddingHorizontal: 24, paddingTop: 22 },
   infoTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   catPill: { backgroundColor: colors.accent, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999 },
-  catPillText: { fontFamily: fonts.sansSemibold, fontSize: 10.5, color: colors.onPrimary, letterSpacing: 0.8 },
+  catPillText: { fontFamily: fonts.sansSemibold, fontSize: 10.5, color: colors.onPrimaryStrong, letterSpacing: 0.8 },
   levelText: { fontFamily: fonts.sansMedium, fontSize: 11.5, color: colors.muted, letterSpacing: 1 },
   shareBtn: {
     width: 38,
@@ -1074,7 +1074,7 @@ const styles = StyleSheet.create({
   tab: { flex: 1, alignItems: "center", paddingVertical: 11, borderRadius: 999 },
   tabOn: { backgroundColor: colors.accent },
   tabText: { fontFamily: fonts.sansMedium, fontSize: 13.5, color: colors.muted },
-  tabTextOn: { color: colors.onPrimary },
+  tabTextOn: { color: colors.onPrimaryStrong },
   guideCard: {
     backgroundColor: colors.card,
     borderWidth: 1,
@@ -1089,7 +1089,7 @@ const styles = StyleSheet.create({
   guideDesc: { fontFamily: fonts.sans, fontSize: 14.5, color: colors.muted, lineHeight: 22, marginTop: 8 },
   cueRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
   cueNum: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", marginTop: 1 },
-  cueNumText: { fontFamily: fonts.sansSemibold, fontSize: 12, color: colors.onPrimary },
+  cueNumText: { fontFamily: fonts.sansSemibold, fontSize: 12, color: colors.onPrimaryStrong },
   cueRowText: { flex: 1, fontFamily: fonts.sans, fontSize: 14, color: colors.foreground, lineHeight: 21 },
   progressBarBg: { height: 10, borderRadius: 5, backgroundColor: colors.track, overflow: "hidden" },
   progressBarFill: { height: 10, borderRadius: 5 },
@@ -1166,7 +1166,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 999,
   },
-  nowTagText: { fontFamily: fonts.sansSemibold, fontSize: 10, color: colors.onPrimary, letterSpacing: 0.5 },
+  nowTagText: { fontFamily: fonts.sansSemibold, fontSize: 10, color: colors.onPrimaryStrong, letterSpacing: 0.5 },
   exCheck: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
   exThumb: { width: 46, height: 46, borderRadius: 12, backgroundColor: colors.track },
   exEyebrow: { fontFamily: fonts.sansMedium, fontSize: 10, color: colors.accent, letterSpacing: 1, marginBottom: 2 },
@@ -1228,7 +1228,7 @@ const styles = StyleSheet.create({
   },
   restChipOn: { backgroundColor: colors.accent, borderColor: "transparent" },
   restChipText: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.muted },
-  restChipTextOn: { color: colors.onPrimary },
+  restChipTextOn: { color: colors.onPrimaryStrong },
   restScreen: { flex: 1, justifyContent: "space-between" },
   restTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20 },
   restBody: { alignItems: "center", paddingHorizontal: 24 },

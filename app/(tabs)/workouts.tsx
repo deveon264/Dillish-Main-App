@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
   },
   catOn: { backgroundColor: colors.accent, borderColor: colors.accent },
   catText: { fontFamily: fonts.sansMedium, fontSize: 14, color: colors.muted },
-  catTextOn: { color: colors.onPrimary },
+  catTextOn: { color: colors.onPrimaryStrong },
   filters: { gap: 10, paddingBottom: 18, paddingRight: 8 },
   filterChip: {
     flexDirection: "row",

@@ -426,8 +426,8 @@ export default function Calories() {
                   reset();
                 }}
               >
-                <Ionicons name={t.icon} size={16} color={active ? colors.onPrimary : colors.muted} />
-                <Text style={[styles.tabLabel, { color: active ? colors.onPrimary : colors.muted }]}>{t.label}</Text>
+                <Ionicons name={t.icon} size={16} color={active ? colors.onPrimaryStrong : colors.muted} />
+                <Text style={[styles.tabLabel, { color: active ? colors.onPrimaryStrong : colors.muted }]}>{t.label}</Text>
               </Pressable>
             );
           })}
@@ -465,7 +465,7 @@ export default function Calories() {
                   </View>
                 )}
                 <View style={styles.aiBadge}>
-                  <Ionicons name="sparkles" size={12} color={colors.onPrimary} />
+                  <Ionicons name="sparkles" size={12} color={colors.onPrimaryStrong} />
                   <Text style={styles.aiBadgeText}>AI Detected</Text>
                 </View>
                 <View style={styles.heroText}>
@@ -897,7 +897,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
-  aiBadgeText: { fontFamily: fonts.sansSemibold, fontSize: 11, color: colors.onPrimary },
+  aiBadgeText: { fontFamily: fonts.sansSemibold, fontSize: 11, color: colors.onPrimaryStrong },
   heroText: { position: "absolute", right: 16, left: 16, bottom: 16, alignItems: "flex-end" },
   heroTitle: { fontFamily: fonts.serifSemibold, fontSize: 24, color: "#FFFFFF", textAlign: "right" },
   heroKcalRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 6 },

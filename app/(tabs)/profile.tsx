@@ -471,7 +471,7 @@ export default function Profile() {
             <Card style={styles.planCard}>
               <View style={styles.planTopRow}>
                 <View style={styles.planIconTile}>
-                  <Ionicons name="sparkles" size={20} color={colors.onPrimary} />
+                  <Ionicons name="sparkles" size={20} color={colors.onPrimaryStrong} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.planName}>{planActive ? "Florish Premium" : "No active plan"}</Text>
@@ -1077,7 +1077,7 @@ const styles = StyleSheet.create({
   tab: { flex: 1, paddingVertical: 10, alignItems: "center", justifyContent: "center", borderRadius: colors.radiusSm },
   tabActive: { flex: 1, paddingVertical: 10, alignItems: "center", justifyContent: "center", borderRadius: colors.radiusSm },
   tabText: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.muted },
-  tabActiveText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.onPrimary },
+  tabActiveText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.onPrimaryStrong },
   notifRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 16, paddingHorizontal: 14 },
   notifTextWrap: { flex: 1, paddingRight: 12 },
   notifTitle: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
