@@ -14,13 +14,13 @@ export function Logo({
   showText?: boolean;
   tagline?: string;
 }) {
-  const mark = size === "lg" ? 54 : size === "sm" ? 40 : 52;
-  const icon = size === "lg" ? 29 : size === "sm" ? 21 : 28;
+  const mark = size === "lg" ? 64 : size === "sm" ? 40 : 52;
+  const icon = size === "lg" ? 34 : size === "sm" ? 21 : 28;
   const fontSize = size === "lg" ? 46 : size === "sm" ? 20 : 24;
   const taglineSize = size === "lg" ? 11 : size === "sm" ? 9 : 10;
   const gap = 6;
-  const textTop = size === "lg" ? -9 : size === "sm" ? 5 : 7;
-  const pillTop = size === "lg" ? -22 : size === "sm" ? -11 : -16;
+  const textTop = size === "lg" ? -6 : size === "sm" ? 5 : 7;
+  const pillTop = size === "lg" ? -21 : size === "sm" ? -11 : -16;
 
   return (
     <View>
