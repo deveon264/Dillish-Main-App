@@ -32,6 +32,7 @@ export default function Calories() {
   const insets = useInsets();
   const { profile, calorieLogs, addCalorie, deleteCalorie } = useData();
   const [image, setImage] = useState<string | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [base64, setBase64] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -96,6 +97,7 @@ export default function Calories() {
   const pickImage = async (fromCamera: boolean) => {
     setError(null);
     setResult(null);
+    setPhotoUrl(null);
     try {
       const perm = fromCamera
         ? await ImagePicker.requestCameraPermissionsAsync()
@@ -176,8 +178,24 @@ export default function Calories() {
     }
   };
 
+  const fetchFoodPhoto = async (name: string) => {
+    try {
+      const resp = await fetch(`${getApiUrl()}/api/food-photo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      if (!resp.ok) return;
+      const { photoUrl: url } = (await resp.json()) as { photoUrl: string | null };
+      if (url) setPhotoUrl(url);
+    } catch {
+      // Silent: the hero keeps its fork-and-knife fallback.
+    }
+  };
+
   const reset = () => {
     setImage(null);
+    setPhotoUrl(null);
     setBase64(null);
     setResult(null);
     setError(null);
@@ -193,7 +211,7 @@ export default function Calories() {
       protein: result.protein * qty,
       carbs: result.carbs * qty,
       fats: result.fats * qty,
-      photoUri: image ?? undefined,
+      photoUri: image ?? photoUrl ?? undefined,
       mealType,
     });
     if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -208,6 +226,7 @@ export default function Calories() {
     }
     setMealText(trimmed);
     setImage(null);
+    setPhotoUrl(null);
     setBase64(null);
     setResult(null);
     setAnalyzing(true);
@@ -225,6 +244,10 @@ export default function Calories() {
       }
       const data = (await resp.json()) as AnalysisResult;
       setResult(data);
+      // Fetch a matching stock photo in the background so it never blocks the
+      // nutrition result. On no result or any error the hero falls back to the
+      // fork-and-knife icon.
+      fetchFoodPhoto(data.name);
       if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e: any) {
       setError(e?.message?.includes("API") ? "AI service is not configured yet." : "Could not analyze that meal. Please try again.");
@@ -321,9 +344,9 @@ export default function Calories() {
           <Card style={{ marginTop: 14 }}>
             <View style={styles.resultBox}>
               <View style={styles.heroWrap}>
-                {image ? (
+                {image || photoUrl ? (
                   <>
-                    <Image source={{ uri: image }} style={styles.heroImg} />
+                    <Image source={{ uri: (image ?? photoUrl)! }} style={styles.heroImg} />
                     <LinearGradient
                       colors={["transparent", "rgba(16,17,17,0.82)"]}
                       start={{ x: 0, y: 0 }}
