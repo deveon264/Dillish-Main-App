@@ -14,11 +14,12 @@ export function Logo({
   showText?: boolean;
   tagline?: string;
 }) {
-  const mark = size === "lg" ? 56 : size === "sm" ? 34 : 44;
-  const icon = size === "lg" ? 28 : size === "sm" ? 17 : 22;
+  const mark = size === "lg" ? 64 : size === "sm" ? 40 : 52;
+  const icon = size === "lg" ? 34 : size === "sm" ? 21 : 28;
   const fontSize = size === "lg" ? 48 : size === "sm" ? 20 : 24;
   const taglineSize = size === "lg" ? 10 : size === "sm" ? 8 : 9;
-  const gap = 4;
+  const gap = 6;
+  const baselineNudge = size === "lg" ? -12 : size === "sm" ? -5 : -7;
 
   return (
     <View>
@@ -32,13 +33,28 @@ export function Logo({
           <Ionicons name="flower-outline" size={icon} color={colors.onPrimary} />
         </LinearGradient>
         {showText ? (
-          <Text style={[styles.text, { fontSize, lineHeight: fontSize, marginLeft: gap }]}>
+          <Text
+            style={[
+              styles.text,
+              {
+                fontSize,
+                lineHeight: fontSize,
+                marginLeft: gap,
+                transform: [{ translateY: baselineNudge }],
+              },
+            ]}
+          >
             Florish
           </Text>
         ) : null}
       </View>
       {showText && tagline ? (
-        <View style={[styles.pill, { marginLeft: mark + gap }]}>
+        <View
+          style={[
+            styles.pill,
+            { marginLeft: mark + gap, marginTop: baselineNudge - 2 },
+          ]}
+        >
           <Text style={[styles.tagline, { fontSize: taglineSize }]}>
             {tagline.toUpperCase()}
           </Text>
@@ -58,7 +74,6 @@ const styles = StyleSheet.create({
   },
   pill: {
     alignSelf: "flex-start",
-    marginTop: -2,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 999,
