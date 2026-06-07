@@ -218,7 +218,10 @@ export default function Progress() {
           <>
             <Card style={styles.weightCard}>
               <View style={styles.cardHead}>
-                <Text style={styles.cardEyebrow}>WEIGHT PROGRESS</Text>
+                <View style={styles.eyebrowRow}>
+                  <Ionicons name="body-outline" size={14} color={colors.accent} />
+                  <Text style={styles.cardEyebrow}>WEIGHT PROGRESS</Text>
+                </View>
                 {trend != null && Math.abs(trend) >= 0.05 ? (
                   <View style={styles.trendPill}>
                     <Ionicons
@@ -276,7 +279,10 @@ export default function Progress() {
 
             <Card style={{ marginTop: 20 }}>
               <View style={styles.cardHead}>
-                <Text style={styles.cardEyebrow}>WEIGHT OVER TIME</Text>
+                <View style={styles.eyebrowRow}>
+                  <Ionicons name="analytics-outline" size={14} color={colors.accent} />
+                  <Text style={styles.cardEyebrow}>WEIGHT OVER TIME</Text>
+                </View>
                 <Text style={styles.weekRange}>Last 4 weeks</Text>
               </View>
               {chartData.length >= 2 ? (
@@ -515,6 +521,7 @@ const styles = StyleSheet.create({
 
   weightCard: { marginTop: 18, padding: 18 },
   cardHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  eyebrowRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   cardEyebrow: { fontFamily: fonts.sansSemibold, fontSize: 12, letterSpacing: 1.2, color: colors.muted },
   trendPill: {
     flexDirection: "row",

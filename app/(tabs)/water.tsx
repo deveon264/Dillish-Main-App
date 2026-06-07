@@ -124,7 +124,10 @@ export default function Water() {
 
         <Card style={styles.hydrationCard}>
               <View style={styles.hydrationHead}>
-                <Text style={styles.hydrationEyebrow}>TODAY'S HYDRATION</Text>
+                <View style={styles.eyebrowRow}>
+                  <Ionicons name="water-outline" size={14} color={colors.accent} />
+                  <Text style={styles.hydrationEyebrow}>TODAY'S HYDRATION</Text>
+                </View>
                 <View style={styles.dateChip}>
                   <Ionicons name="calendar-outline" size={13} color={colors.muted} />
                   <Text style={styles.dateText}>{dateStr}</Text>
@@ -249,6 +252,7 @@ const styles = StyleSheet.create({
   titleItalic: { fontFamily: fonts.serifItalic, fontStyle: "italic", color: colors.foreground },
   hydrationCard: { marginTop: 18, padding: 18 },
   hydrationHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  eyebrowRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   hydrationEyebrow: { fontFamily: fonts.sansSemibold, fontSize: 12, letterSpacing: 1.2, color: colors.muted },
   dateChip: { flexDirection: "row", alignItems: "center", gap: 5 },
   dateText: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.muted },

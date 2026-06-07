@@ -242,7 +242,10 @@ export default function Calories() {
 
         <Card style={styles.goalCard}>
           <View style={styles.goalHead}>
-            <Text style={styles.cardEyebrow}>TODAY'S GOAL</Text>
+            <View style={styles.eyebrowRow}>
+              <Ionicons name="flame-outline" size={14} color={colors.accent} />
+              <Text style={styles.cardEyebrow}>TODAY'S GOAL</Text>
+            </View>
             <View style={styles.dateChip}>
               <Ionicons name="calendar-outline" size={13} color={colors.muted} />
               <Text style={styles.dateText}>{dateStr}</Text>
@@ -622,6 +625,7 @@ const styles = StyleSheet.create({
   titleItalic: { fontFamily: fonts.serifItalic, fontStyle: "italic", color: colors.foreground },
   goalCard: { marginTop: 20, padding: 20 },
   goalHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  eyebrowRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   cardEyebrow: { fontFamily: fonts.sansSemibold, fontSize: 12, letterSpacing: 1.2, color: colors.muted },
   dateChip: { flexDirection: "row", alignItems: "center", gap: 6 },
   dateText: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.muted },
