@@ -64,8 +64,8 @@ export default function Paywall() {
   const activePlan = PLANS.find((p) => p.key === selected) ?? PLANS[0];
 
   const summaryLine = trial
-    ? `Start your ${TRIAL_DAYS}-day free trial of ${activePlan.info.fullLabel} — no card needed yet`
-    : `Activate ${activePlan.info.fullLabel} — no card needed yet`;
+    ? `Start your ${TRIAL_DAYS}-day free trial of ${activePlan.info.fullLabel}, no card needed yet`
+    : `Activate ${activePlan.info.fullLabel}, no card needed yet`;
 
   // Every exit from the paywall — the primary CTA AND the top Skip link — routes
   // through the thank-you video, which auto-plays once and then continues to the
@@ -209,7 +209,7 @@ export default function Paywall() {
           </View>
         </View>
         <Text style={styles.terms}>
-          By continuing you agree to our Terms of Service and Privacy Policy. Billing isn't live yet — you won't be charged, and your coach handles payments for now.
+          By continuing you agree to our Terms of Service and Privacy Policy. Billing isn't live yet, so you won't be charged, and your coach handles payments for now.
         </Text>
       </View>
     </GradientBackground>

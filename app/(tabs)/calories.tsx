@@ -373,7 +373,7 @@ export default function Calories() {
               title="Calorie Tracker"
               intro="Log what you eat and stay on top of your daily goal."
               points={[
-                "Snap a photo, scan a barcode, or type a meal — AI does the math.",
+                "Snap a photo, scan a barcode, or type a meal, and AI does the math.",
                 "See your calories and protein, carbs, and fats against your goal.",
                 "Review everything you've logged today in one place.",
               ]}
@@ -659,7 +659,7 @@ export default function Calories() {
             </Text>
           ) : (
             <Text style={styles.insightText}>
-              Excellent work — you've hit your{" "}
+              Excellent work, you've hit your{" "}
               <Text style={styles.insightStrong}>protein goal</Text> for today. Keep your meals
               balanced to stay on track.
             </Text>

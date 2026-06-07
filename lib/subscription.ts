@@ -219,17 +219,17 @@ export function sanitizeSubscription(input: unknown): Subscription {
 
 // Formats a renewal date like "Jun 1" for the compact Plan-tab stat tile.
 export function formatRenewalShort(ms: number): string {
-  if (!ms) return "—";
+  if (!ms) return "-";
   try {
     return new Date(ms).toLocaleDateString("en-US", { month: "short", day: "numeric" });
   } catch {
-    return "—";
+    return "-";
   }
 }
 
 // Formats a renewal date like "Jun 1, 2026" for the billing sheet.
 export function formatRenewalLong(ms: number): string {
-  if (!ms) return "—";
+  if (!ms) return "-";
   try {
     return new Date(ms).toLocaleDateString("en-US", {
       month: "short",
@@ -237,6 +237,6 @@ export function formatRenewalLong(ms: number): string {
       year: "numeric",
     });
   } catch {
-    return "—";
+    return "-";
   }
 }

@@ -161,7 +161,7 @@ export default function EditExercise() {
         </View>
 
         <Text style={styles.hint}>
-          The video and poster stay as they are — only these details change for all members.
+          The video and poster stay as they are. Only these details change for all members.
         </Text>
 
         <Pressable style={[styles.submit, busy && { opacity: 0.7 }]} onPress={save} disabled={busy}>

@@ -143,7 +143,7 @@ export default function Progress() {
       try {
         await addPhoto(uri, current);
       } catch {
-        setPhotoError("Couldn't save the photo — storage may be full. Try removing older photos.");
+        setPhotoError("Couldn't save the photo. Storage may be full. Try removing older photos.");
       }
     } catch {
       setPhotoError("Unable to open the camera or library on this device.");

@@ -46,4 +46,6 @@ In development the script falls back to `REPLIT_DEV_DOMAIN`, so you can test wit
 
 # User preferences
 
-(none recorded yet)
+- Never use em dashes ("—") in any user-facing text. Rephrase sentences (comma,
+  colon, or shorter sentences) and use a plain hyphen for empty-value
+  placeholders.

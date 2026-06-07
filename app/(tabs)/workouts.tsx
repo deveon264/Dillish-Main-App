@@ -154,7 +154,7 @@ export default function Workouts() {
           <View style={styles.empty}>
             <Ionicons name="leaf-outline" size={40} color={colors.blush} />
             <Text style={styles.emptyText}>
-              {savedOnly ? "No saved workouts yet — tap the heart on a workout" : "No workouts match your search"}
+              {savedOnly ? "No saved workouts yet. Tap the heart on a workout" : "No workouts match your search"}
             </Text>
           </View>
         ) : (

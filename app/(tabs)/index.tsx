@@ -126,7 +126,7 @@ export default function Dashboard() {
         {/* Hero banner with header on top */}
         <ImageBackground
           source={require("@/assets/images/photos/homehero.png")}
-          style={[styles.heroBanner, { paddingTop: insets.top + 56 }]}
+          style={[styles.heroBanner, { paddingTop: insets.top + 12 }]}
           resizeMode="cover"
         >
           <LinearGradient

@@ -142,7 +142,7 @@ export default function Profile() {
   }, [currentWeight, profile.height, profile.weightUnit, profile.heightUnit]);
 
   const fmtStat = (n: number | null, digits = 0) =>
-    n == null ? "—" : Number.isInteger(n) ? String(n) : n.toFixed(digits);
+    n == null ? "-" : Number.isInteger(n) ? String(n) : n.toFixed(digits);
 
   const kgToGo = useMemo(() => {
     if (currentWeight == null || profile.goalWeight == null) return null;
@@ -551,7 +551,7 @@ export default function Profile() {
                     style={styles.planManageInner}
                   >
                     <Text style={styles.planManageText}>
-                      {planBusy ? "Activating…" : `Subscribe — ${currentPlan.fullLabel}`}
+                      {planBusy ? "Activating…" : `Subscribe to ${currentPlan.fullLabel}`}
                     </Text>
                   </LinearGradient>
                 </Pressable>
@@ -796,7 +796,7 @@ export default function Profile() {
                 if (goalWeightError) setGoalWeightError(null);
               }}
               keyboardType="decimal-pad"
-              placeholder="—"
+              placeholder="-"
               placeholderTextColor={colors.mutedForeground}
               style={styles.goalWeightInput}
             />
@@ -844,7 +844,7 @@ export default function Profile() {
                 if (waterGoalError) setWaterGoalError(null);
               }}
               keyboardType="decimal-pad"
-              placeholder="—"
+              placeholder="-"
               placeholderTextColor={colors.mutedForeground}
               style={styles.goalWeightInput}
             />
