@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, ImageBackground } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, ImageBackground, Image } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -12,6 +12,7 @@ import { useData } from "@/contexts/DataContext";
 import { useInsets } from "@/hooks/useInsets";
 import { WORKOUTS } from "@/constants/workouts";
 import { todayKey } from "@/lib/storage";
+import { avatarUri } from "@/lib/avatar";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
@@ -41,6 +42,8 @@ export default function Dashboard() {
 
   const tk = todayKey();
   const firstName = (user?.name ?? "there").split(" ")[0];
+  const avatar = avatarUri(user);
+  const initial = (firstName[0] ?? "?").toUpperCase();
 
   const todayWaterMl = useMemo(
     () => waterLogs.filter((l) => todayKey(new Date(l.ts)) === tk).reduce((s, l) => s + l.amountMl, 0),
@@ -126,6 +129,15 @@ export default function Dashboard() {
             <Ionicons name="notifications-outline" size={20} color={colors.foreground} />
             <View style={styles.notifDot} />
           </Pressable>
+          <Pressable style={styles.avatarBtn} hitSlop={6} onPress={() => router.navigate("/(tabs)/profile")}>
+            {avatar ? (
+              <Image source={{ uri: avatar }} style={styles.avatarImg} />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarInitial}>{initial}</Text>
+              </View>
+            )}
+          </Pressable>
         </View>
 
         {/* Weekly Streak */}
@@ -182,6 +194,82 @@ export default function Dashboard() {
             </View>
           </ImageBackground>
         </Pressable>
+
+        {/* Today's stats — compact tiles */}
+        <View style={styles.statRow}>
+          <StatTile
+            icon="flame-outline"
+            value={consumed.toLocaleString()}
+            unit="kcal"
+            label="Calories"
+            goal={`of ${calorieGoal.toLocaleString()}`}
+            progress={consumedPct}
+            color={colors.accent}
+            onPress={() => router.navigate("/(tabs)/calories")}
+          />
+          <StatTile
+            icon="nutrition-outline"
+            value={String(Math.round(protein))}
+            unit="g"
+            label="Protein"
+            goal={`of ${proteinGoal}g`}
+            progress={proteinGoal > 0 ? protein / proteinGoal : 0}
+            color={colors.protein}
+            onPress={() => router.navigate("/(tabs)/calories")}
+          />
+          <StatTile
+            icon="water-outline"
+            value={(todayWaterMl / 1000).toFixed(1)}
+            unit="L"
+            label="Water"
+            goal={`of ${(waterGoalMl / 1000).toFixed(1)}L`}
+            progress={waterPct}
+            color={colors.highlight}
+            onPress={() => router.navigate("/(tabs)/water")}
+          />
+        </View>
+
+        {/* Hydration */}
+        <Card style={styles.hydrationCard}>
+          <View style={styles.calHead}>
+            <View style={styles.rowCenter}>
+              <Ionicons name="water-outline" size={17} color={colors.accent} />
+              <Text style={styles.calTitle}>Hydration</Text>
+            </View>
+            <Pressable style={styles.logMealBtn} onPress={() => router.navigate("/(tabs)/water")}>
+              <Ionicons name="add" size={16} color={colors.onPrimary} />
+              <Text style={styles.logMealText}>Add water</Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.calBody}>
+            <ProgressRing size={108} strokeWidth={10} progress={waterPct} gradientId="waterRing">
+              <Text style={styles.calRingPct}>{Math.round(waterPct * 100)}%</Text>
+            </ProgressRing>
+            <View style={styles.calStats}>
+              <View style={styles.calStatRow}>
+                <Text style={styles.calStatLabel}>Consumed</Text>
+                <Text style={styles.calStatValue}>{(todayWaterMl / 1000).toFixed(1)} L</Text>
+              </View>
+              <View style={styles.calStatRow}>
+                <Text style={styles.calStatLabel}>Remaining</Text>
+                <Text style={styles.calStatValue}>{waterRemainingL.toFixed(1)} L</Text>
+              </View>
+              <View style={styles.calStatRow}>
+                <Text style={styles.calStatLabel}>Daily Goal</Text>
+                <Text style={styles.calStatValue}>{(waterGoalMl / 1000).toFixed(1)} L</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.waterBtnRow}>
+            {WATER_QUICK.map((ml) => (
+              <Pressable key={ml} style={styles.waterBtn} onPress={() => addWater(ml)}>
+                <Text style={styles.waterBtnText}>+ {ml}ml</Text>
+              </Pressable>
+            ))}
+          </View>
+        </Card>
 
         {/* Calorie Summary */}
         <Card style={styles.calCard}>
@@ -240,48 +328,6 @@ export default function Dashboard() {
           ))}
         </View>
 
-        {/* Hydration */}
-        <Card style={styles.hydrationCard}>
-          <View style={styles.calHead}>
-            <View style={styles.rowCenter}>
-              <Ionicons name="water-outline" size={17} color={colors.accent} />
-              <Text style={styles.calTitle}>Hydration</Text>
-            </View>
-            <Pressable style={styles.logMealBtn} onPress={() => router.navigate("/(tabs)/water")}>
-              <Ionicons name="add" size={16} color={colors.onPrimary} />
-              <Text style={styles.logMealText}>Add water</Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.calBody}>
-            <ProgressRing size={108} strokeWidth={10} progress={waterPct} gradientId="waterRing">
-              <Text style={styles.calRingPct}>{Math.round(waterPct * 100)}%</Text>
-            </ProgressRing>
-            <View style={styles.calStats}>
-              <View style={styles.calStatRow}>
-                <Text style={styles.calStatLabel}>Consumed</Text>
-                <Text style={styles.calStatValue}>{(todayWaterMl / 1000).toFixed(1)} L</Text>
-              </View>
-              <View style={styles.calStatRow}>
-                <Text style={styles.calStatLabel}>Remaining</Text>
-                <Text style={styles.calStatValue}>{waterRemainingL.toFixed(1)} L</Text>
-              </View>
-              <View style={styles.calStatRow}>
-                <Text style={styles.calStatLabel}>Daily Goal</Text>
-                <Text style={styles.calStatValue}>{(profile.waterGoalMl / 1000).toFixed(1)} L</Text>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.waterBtnRow}>
-            {WATER_QUICK.map((ml) => (
-              <Pressable key={ml} style={styles.waterBtn} onPress={() => addWater(ml)}>
-                <Text style={styles.waterBtnText}>+ {ml}ml</Text>
-              </Pressable>
-            ))}
-          </View>
-        </Card>
-
         {/* Saved Workouts */}
         <View style={styles.sectionHead}>
           <Text style={styles.sectionTitleSm}>SAVED WORKOUTS</Text>
@@ -328,6 +374,41 @@ export default function Dashboard() {
   );
 }
 
+function StatTile({
+  icon,
+  value,
+  unit,
+  label,
+  goal,
+  progress,
+  color,
+  onPress,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  value: string;
+  unit: string;
+  label: string;
+  goal: string;
+  progress: number;
+  color: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable style={styles.statTile} onPress={onPress}>
+      <View style={[styles.statIcon, { backgroundColor: colors.accentTint }]}>
+        <Ionicons name={icon} size={16} color={color} />
+      </View>
+      <View style={styles.statValueRow}>
+        <Text style={styles.statValue}>{value}</Text>
+        <Text style={styles.statUnit}>{unit}</Text>
+      </View>
+      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={styles.statGoal}>{goal}</Text>
+      <ProgressBar progress={progress} height={4} color={color} style={{ marginTop: 10 }} />
+    </Pressable>
+  );
+}
+
 function MacroPill({ label, value, goal, color }: { label: string; value: number; goal: number; color: string }) {
   return (
     <View style={styles.macroPill}>
@@ -365,6 +446,23 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.background,
   },
+  avatarBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: colors.accentBorder,
+  },
+  avatarImg: { width: "100%", height: "100%" },
+  avatarFallback: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: colors.accentTintLg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarInitial: { fontFamily: fonts.serifSemibold, fontSize: 20, color: colors.accentDark },
   rowCenter: { flexDirection: "row", alignItems: "center", gap: 8 },
 
   streakCard: { paddingVertical: 18 },
@@ -415,6 +513,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
+  statRow: { flexDirection: "row", gap: 10, marginTop: 16 },
+  statTile: {
+    flex: 1,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: colors.radius,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+  },
+  statIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  statValueRow: { flexDirection: "row", alignItems: "baseline", gap: 3 },
+  statValue: { fontFamily: fonts.sansBold, fontSize: 20, color: colors.foreground },
+  statUnit: { fontFamily: fonts.sans, fontSize: 11, color: colors.muted },
+  statLabel: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.foreground, marginTop: 2 },
+  statGoal: { fontFamily: fonts.sans, fontSize: 11, color: colors.muted, marginTop: 1 },
 
   calCard: { marginTop: 28, paddingVertical: 20 },
   calHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
