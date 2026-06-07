@@ -19,8 +19,8 @@ export function Logo({
   const fontSize = size === "lg" ? 40 : size === "sm" ? 20 : 24;
   const taglineSize = size === "lg" ? 11 : size === "sm" ? 9 : 10;
   const gap = 6;
-  const textTop = size === "lg" ? 8 : size === "sm" ? 5 : 7;
-  const pillTop = size === "lg" ? -21 : size === "sm" ? -11 : -16;
+  const textTop = size === "lg" ? 3 : size === "sm" ? 5 : 7;
+  const pillTop = size === "lg" ? -26 : size === "sm" ? -11 : -16;
 
   return (
     <View>

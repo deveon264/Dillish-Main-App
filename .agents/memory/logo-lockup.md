@@ -46,6 +46,10 @@ pillTop`. Because the icon is taller than the word, row height == `mark`, so the
 pill's position is independent of `fontSize`. Shrinking `fontSize` lifts the word's
 baseline and opens the word→pill gap WITHOUT moving the pill (stays contained).
 lg values that worked: `mark 64`, glyph `icon 34`, `fontSize 40`, `lineHeight 40`,
-`taglineSize 11`, `gap 6`, `textTop +8`, `pillTop -21`, pill `paddingVertical 3`.
-(`textTop` was `-8` which floated the word above the icon on device; `+8` drops the
-cap-top ~8 CSS inside the icon top with a ~12 CSS gap to the pill.)
+`taglineSize 11`, `gap 6`, `textTop +3`, `pillTop -26`, pill `paddingVertical 3`.
+(History: `textTop -8` floated the word above the icon on device; `+8` dropped the
+cap-top ~8 CSS inside the icon top, pill bottom flush with icon bottom; then user
+asked to slide the whole group up, so both moved up ~5 CSS — `textTop +3`,
+`pillTop -26` — keeping the word→pill gap. Guardrails: keep lg `textTop` >= ~+2
+(else word pokes above icon on device) and lg `pillTop` >= ~-30 (else pill bottom
+rises too far). To nudge the group, move both by the SAME delta to keep the gap.)
