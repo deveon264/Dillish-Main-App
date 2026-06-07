@@ -31,6 +31,101 @@ export type WorkoutCompletion = {
   durationMin: number;
 };
 
+export type NotifTone = "accent" | "highlight" | "water" | "coach";
+export type AppNotification = {
+  id: string;
+  icon: string;
+  tone: NotifTone;
+  title: string;
+  body: string;
+  ts: number;
+  read: boolean;
+};
+
+function streakFromCompletions(completions: WorkoutCompletion[]): number {
+  const days = new Set<string>();
+  completions.forEach((c) => days.add(todayKey(new Date(c.ts))));
+  let count = 0;
+  const d = new Date();
+  if (!days.has(todayKey(d))) d.setDate(d.getDate() - 1);
+  while (days.has(todayKey(d))) {
+    count += 1;
+    d.setDate(d.getDate() - 1);
+  }
+  return count;
+}
+
+// Notifications are derived from the member's real activity rather than being a
+// static feed: hydration gaps, an unfinished workout, unlogged meals, and streak
+// milestones. Each has a date-stable id so its read state persists for the day.
+function buildNotifications(args: {
+  waterLogs: WaterLog[];
+  calorieLogs: CalorieLog[];
+  completions: WorkoutCompletion[];
+  profile: Profile;
+}): Omit<AppNotification, "read">[] {
+  const { waterLogs, calorieLogs, completions, profile } = args;
+  const tk = todayKey();
+  const now = Date.now();
+  const out: Omit<AppNotification, "read">[] = [];
+
+  const workoutToday = completions.some((c) => todayKey(new Date(c.ts)) === tk);
+  const streak = streakFromCompletions(completions);
+
+  if (!workoutToday) {
+    out.push({
+      id: `workout:${tk}`,
+      icon: "barbell-outline",
+      tone: "accent",
+      title: "Today's workout is waiting",
+      body:
+        streak > 0
+          ? `Keep your ${streak}-day streak alive — finish today's session.`
+          : "Move your body today and start a new streak.",
+      ts: now,
+    });
+  } else if ([3, 7, 14, 21, 30, 50, 100].includes(streak)) {
+    out.push({
+      id: `streak:${tk}`,
+      icon: "flame-outline",
+      tone: "highlight",
+      title: `${streak}-day streak! 🔥`,
+      body: "You showed up again today. Amazing consistency — keep it going.",
+      ts: now,
+    });
+  }
+
+  const todayWaterMl = waterLogs
+    .filter((l) => todayKey(new Date(l.ts)) === tk)
+    .reduce((s, l) => s + l.amountMl, 0);
+  const waterGoalMl = profile.waterGoalMl > 0 ? profile.waterGoalMl : 2500;
+  if (todayWaterMl < waterGoalMl) {
+    const remL = ((waterGoalMl - todayWaterMl) / 1000).toFixed(1);
+    out.push({
+      id: `hydration:${tk}`,
+      icon: "water-outline",
+      tone: "water",
+      title: "Time to hydrate",
+      body: `You're ${remL} L away from today's water goal.`,
+      ts: now - 1,
+    });
+  }
+
+  const mealsToday = calorieLogs.filter((l) => todayKey(new Date(l.ts)) === tk).length;
+  if (mealsToday === 0) {
+    out.push({
+      id: `meals:${tk}`,
+      icon: "restaurant-outline",
+      tone: "coach",
+      title: "Log your meals",
+      body: "Snap a photo of your food to keep your nutrition on track.",
+      ts: now - 2,
+    });
+  }
+
+  return out;
+}
+
 type DataContextType = {
   ready: boolean;
   profile: Profile;
@@ -52,6 +147,9 @@ type DataContextType = {
   addCalorie: (entry: Omit<CalorieLog, "id" | "ts">) => Promise<void>;
   deleteCalorie: (id: string) => Promise<void>;
   completeWorkout: (c: Omit<WorkoutCompletion, "id" | "ts">) => Promise<void>;
+  notifications: AppNotification[];
+  unreadCount: number;
+  markNotificationsRead: () => Promise<void>;
 };
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -84,6 +182,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [calorieLogs, setCalorieLogs] = useState<CalorieLog[]>([]);
   const [completions, setCompletions] = useState<WorkoutCompletion[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [notifReadIds, setNotifReadIds] = useState<string[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -96,11 +195,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         setCalorieLogs([]);
         setCompletions([]);
         setFavorites([]);
+        setNotifReadIds([]);
         setReady(false);
         return;
       }
       setReady(false);
-      const [p, w, wt, ph, c, wk, fav] = await Promise.all([
+      const [p, w, wt, ph, c, wk, fav, nr] = await Promise.all([
         getJSON<Profile>(keyFor(uid, "profile"), DEFAULT_PROFILE),
         getJSON<WaterLog[]>(keyFor(uid, "water"), []),
         getJSON<WeightLog[]>(keyFor(uid, "weight"), []),
@@ -108,6 +208,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         getJSON<CalorieLog[]>(keyFor(uid, "calories"), []),
         getJSON<WorkoutCompletion[]>(keyFor(uid, "workouts"), []),
         getJSON<string[]>(keyFor(uid, "favorites"), []),
+        getJSON<string[]>(keyFor(uid, "notifs_read"), []),
       ]);
       if (!active) return;
       let mergedProfile = { ...DEFAULT_PROFILE, ...p };
@@ -167,6 +268,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setCalorieLogs(c);
       setCompletions(wk);
       setFavorites(fav);
+      setNotifReadIds(nr);
       setReady(true);
     })();
     return () => {
@@ -327,6 +429,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const isFavorite = useCallback((workoutId: string) => favorites.includes(workoutId), [favorites]);
 
+  const notifications = useMemo<AppNotification[]>(() => {
+    const base = buildNotifications({ waterLogs, calorieLogs, completions, profile });
+    return base.map((n) => ({ ...n, read: notifReadIds.includes(n.id) }));
+  }, [waterLogs, calorieLogs, completions, profile, notifReadIds]);
+
+  const unreadCount = useMemo(() => notifications.filter((n) => !n.read).length, [notifications]);
+
+  const markNotificationsRead = useCallback(async () => {
+    if (!uid) return;
+    const ids = notifications.map((n) => n.id);
+    setNotifReadIds(ids);
+    setJSON(keyFor(uid, "notifs_read"), ids);
+  }, [uid, notifications]);
+
   const completeWorkout = useCallback(
     async (c: Omit<WorkoutCompletion, "id" | "ts">) => {
       if (!uid) return;
@@ -361,8 +477,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       addCalorie,
       deleteCalorie,
       completeWorkout,
+      notifications,
+      unreadCount,
+      markNotificationsRead,
     }),
-    [ready, profile, waterLogs, weightLogs, progressPhotos, calorieLogs, completions, favorites, toggleFavorite, isFavorite, updateProfile, addWater, removeWater, addWeight, removeWeight, addPhoto, removePhoto, addCalorie, deleteCalorie, completeWorkout]
+    [ready, profile, waterLogs, weightLogs, progressPhotos, calorieLogs, completions, favorites, toggleFavorite, isFavorite, updateProfile, addWater, removeWater, addWeight, removeWeight, addPhoto, removePhoto, addCalorie, deleteCalorie, completeWorkout, notifications, unreadCount, markNotificationsRead]
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

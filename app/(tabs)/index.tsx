@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, ImageBackground, Image } from "react-native";
+import React, { useMemo, useState } from "react";
+import { View, Text, StyleSheet, ScrollView, Pressable, ImageBackground, Image, Modal } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -39,7 +39,13 @@ export default function Dashboard() {
   const router = useRouter();
   const insets = useInsets();
   const { user } = useAuth();
-  const { profile, waterLogs, calorieLogs, completions, addWater, favorites, toggleFavorite } = useData();
+  const { profile, waterLogs, calorieLogs, completions, addWater, favorites, toggleFavorite, notifications, unreadCount, markNotificationsRead } = useData();
+  const [notifOpen, setNotifOpen] = useState(false);
+
+  const openNotifs = () => {
+    setNotifOpen(true);
+    if (unreadCount > 0) markNotificationsRead();
+  };
 
   const tk = todayKey();
   const firstName = (user?.name ?? "there").split(" ")[0];
@@ -126,9 +132,9 @@ export default function Dashboard() {
               <Text style={{ fontSize: 18, marginLeft: 8 }}>🌸</Text>
             </View>
           </View>
-          <Pressable style={styles.iconBtn} hitSlop={6}>
+          <Pressable style={styles.iconBtn} hitSlop={6} onPress={openNotifs}>
             <Ionicons name="notifications-outline" size={20} color={colors.foreground} />
-            <View style={styles.notifDot} />
+            {unreadCount > 0 ? <View style={styles.notifDot} /> : null}
           </Pressable>
           <Pressable style={styles.avatarBtn} hitSlop={6} onPress={() => router.navigate("/(tabs)/profile")}>
             {avatar ? (
@@ -371,7 +377,97 @@ export default function Dashboard() {
           </ScrollView>
         )}
       </ScrollView>
+
+      <NotificationsSheet
+        visible={notifOpen}
+        notifications={notifications}
+        onClose={() => setNotifOpen(false)}
+        insets={insets}
+      />
     </GradientBackground>
+  );
+}
+
+const TONE_ICON: Record<string, { color: string; tint: string }> = {
+  accent: { color: colors.accent, tint: colors.accentTint },
+  highlight: { color: colors.highlight, tint: colors.highlightTint },
+  water: { color: colors.accent, tint: colors.accentTintFaint },
+  coach: { color: colors.highlight, tint: colors.highlightTintMd },
+};
+
+function timeAgo(ts: number) {
+  const diff = Math.max(0, Date.now() - ts);
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "Just now";
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.floor(hr / 24);
+  return `${day}d ago`;
+}
+
+function NotificationsSheet({
+  visible,
+  notifications,
+  onClose,
+  insets,
+}: {
+  visible: boolean;
+  notifications: import("@/contexts/DataContext").AppNotification[];
+  onClose: () => void;
+  insets: { bottom: number };
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.notifBackdrop} onPress={onClose}>
+        <Pressable style={[styles.notifSheet, { paddingBottom: insets.bottom + 16 }]} onPress={(e) => e.stopPropagation()}>
+          <View style={styles.notifHandle} />
+          <View style={styles.notifHead}>
+            <Text style={styles.notifHeadTitle}>Notifications</Text>
+            <Pressable style={styles.notifClose} hitSlop={8} onPress={onClose}>
+              <Ionicons name="close" size={18} color={colors.foreground} />
+            </Pressable>
+          </View>
+
+          {notifications.length === 0 ? (
+            <View style={styles.notifEmpty}>
+              <View style={styles.notifEmptyIcon}>
+                <Ionicons name="checkmark-done-outline" size={28} color={colors.accent} />
+              </View>
+              <Text style={styles.notifEmptyTitle}>You're all caught up</Text>
+              <Text style={styles.notifEmptySub}>
+                No reminders right now. We'll nudge you about your streaks, hydration, and meals.
+              </Text>
+            </View>
+          ) : (
+            <ScrollView
+              style={{ maxHeight: 440 }}
+              contentContainerStyle={styles.notifList}
+              showsVerticalScrollIndicator={false}
+            >
+              {notifications.map((n) => {
+                const tone = TONE_ICON[n.tone] ?? TONE_ICON.accent;
+                return (
+                  <View key={n.id} style={styles.notifItem}>
+                    <View style={[styles.notifIcon, { backgroundColor: tone.tint }]}>
+                      <Ionicons name={n.icon as React.ComponentProps<typeof Ionicons>["name"]} size={18} color={tone.color} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.notifItemHead}>
+                        <Text style={styles.notifItemTitle}>{n.title}</Text>
+                        {!n.read ? <View style={styles.notifItemDot} /> : null}
+                      </View>
+                      <Text style={styles.notifItemBody}>{n.body}</Text>
+                      <Text style={styles.notifItemTime}>{timeAgo(n.ts)}</Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </ScrollView>
+          )}
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -634,4 +730,68 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   savedEmptyBtnText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.onPrimary },
+
+  notifBackdrop: { flex: 1, backgroundColor: "rgba(16,17,17,0.45)", justifyContent: "flex-end" },
+  notifSheet: {
+    backgroundColor: colors.background,
+    borderTopLeftRadius: colors.radiusLg,
+    borderTopRightRadius: colors.radiusLg,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  notifHandle: {
+    alignSelf: "center",
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.track,
+    marginBottom: 14,
+  },
+  notifHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
+  notifHeadTitle: { fontFamily: fonts.serifSemibold, fontSize: 24, color: colors.foreground },
+  notifClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  notifList: { gap: 10, paddingBottom: 4 },
+  notifItem: {
+    flexDirection: "row",
+    gap: 12,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: colors.radius,
+    padding: 14,
+  },
+  notifIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  notifItemHead: { flexDirection: "row", alignItems: "center", gap: 8 },
+  notifItemTitle: { flex: 1, fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
+  notifItemDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },
+  notifItemBody: { fontFamily: fonts.sans, fontSize: 13, color: colors.mutedForeground, marginTop: 3, lineHeight: 19 },
+  notifItemTime: { fontFamily: fonts.sansMedium, fontSize: 11, color: colors.muted, marginTop: 6 },
+
+  notifEmpty: { alignItems: "center", paddingVertical: 36, paddingHorizontal: 16, gap: 8 },
+  notifEmptyIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.accentTint,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 6,
+  },
+  notifEmptyTitle: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.foreground },
+  notifEmptySub: { fontFamily: fonts.sans, fontSize: 13, color: colors.muted, textAlign: "center", lineHeight: 19 },
 });
