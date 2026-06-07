@@ -378,6 +378,18 @@ uri = "file://attached_assets/generated_images/home_opt4_floral_calm.png"
 type = "image"
 title = "floral calm banner"
 
+[[generated]]
+id = "6S8-MD99Fjtxssxr7V5jH"
+uri = "file://attached_assets/studio_options/studio1.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "IUEcB6q6sY9O-zFLiRzU3"
+uri = "file://attached_assets/studio_options/studio2.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "KmpG-YsopX8HoAwCw5oyy"
 uri = "file://attached_assets/stock_images/pilates.jpg"
@@ -605,3 +617,15 @@ id = "epASd0lt0P0FDieJeFJJR"
 uri = "file://attached_assets/stock_images/blush_flowers_3.jpg"
 type = "image"
 title = "white and soft blush pink flowers minimal on cream background, calm pastel, lots of space"
+
+[[outputs]]
+id = "Gg2SiTNWKhhwYckwzzmJH"
+uri = "file://attached_assets/studio_options/studio1.png"
+type = "image"
+title = "Studio 1 — Bright minimal studio, single blush mat (closest to your reference)"
+
+[[outputs]]
+id = "mUINzb-FhSaV7xRDYWfoi"
+uri = "file://attached_assets/studio_options/studio2.png"
+type = "image"
+title = "Studio 2 — Warmer golden light with sheer curtains & plants"
