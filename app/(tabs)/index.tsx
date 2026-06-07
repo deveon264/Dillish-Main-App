@@ -131,7 +131,7 @@ export default function Dashboard() {
         >
           <LinearGradient
             colors={colors.heroFade}
-            locations={[0, 0.55, 1]}
+            locations={[0, 0.45, 0.72, 1]}
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
           />
