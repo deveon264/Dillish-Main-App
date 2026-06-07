@@ -87,7 +87,7 @@ export default function Login() {
 
           <Pressable style={styles.footer} onPress={() => router.replace("/(auth)/signup")}>
             <Text style={styles.footerText}>
-              New to Florish? <Text style={styles.footerLink}>Create an account</Text>
+              New to Shape? <Text style={styles.footerLink}>Create an account</Text>
             </Text>
           </Pressable>
         </ScrollView>

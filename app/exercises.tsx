@@ -84,7 +84,7 @@ export default function ExerciseLibrary() {
       >
         <PageHeader
           variant="compact"
-          eyebrow="FLORISH"
+          eyebrow="SHAPE"
           title="Exercise"
           accent="Videos"
           leading={

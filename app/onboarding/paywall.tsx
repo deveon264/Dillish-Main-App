@@ -101,7 +101,7 @@ export default function Paywall() {
 
         <Text style={[pageHeaderStyles.title, styles.title]}>
           Start your{"\n"}
-          <Text style={pageHeaderStyles.titleAccent}>florish journey</Text>
+          <Text style={pageHeaderStyles.titleAccent}>shape journey</Text>
         </Text>
         <Text style={styles.subtitle}>
           Unlock personalized workouts, calorie tracking, and full wellness features.

@@ -328,7 +328,7 @@ export default function Profile() {
     { key: "workout", title: "Workout Reminders", sub: "Daily at 7:00 AM" },
     { key: "hydration", title: "Hydration Reminders", sub: "Every 2 hours" },
     { key: "streak", title: "Streak Alerts", sub: "Don't break your streak!" },
-    { key: "content", title: "New Content Alerts", sub: "New workouts from Dillish" },
+    { key: "content", title: "New Content Alerts", sub: "New workouts from Sendry" },
     { key: "weekly", title: "Weekly Progress Report", sub: "Every Sunday evening" },
   ];
 
@@ -344,12 +344,12 @@ export default function Profile() {
     { key: "email", icon: "mail-outline", label: "Change Email", onPress: openEmailModal },
     { key: "password", icon: "lock-closed-outline", label: "Change Password" },
     { key: "privacy", icon: "document-text-outline", label: "Privacy Policy" },
-    { key: "about", icon: "information-circle-outline", label: "About Florish" },
+    { key: "about", icon: "information-circle-outline", label: "About Shape" },
     { key: "support", icon: "headset-outline", label: "Support" },
   ];
 
   const PLAN_FEATURES = [
-    "Unlimited workout videos with Dillish",
+    "Unlimited workout videos with Sendry",
     "AI-powered calorie tracking",
     "Hydration & progress tracking",
     "Private progress photo gallery",
@@ -363,7 +363,7 @@ export default function Profile() {
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 110 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.brand}>FLORISH</Text>
+        <Text style={styles.brand}>SHAPE</Text>
         <Text style={styles.title}>
           My <Text style={styles.titleItalic}>Profile</Text>
         </Text>
@@ -474,7 +474,7 @@ export default function Profile() {
                   <Ionicons name="sparkles" size={20} color={colors.onPrimaryStrong} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.planName}>{planActive ? "Florish Premium" : "No active plan"}</Text>
+                  <Text style={styles.planName}>{planActive ? "Shape Premium" : "No active plan"}</Text>
                   <Text style={styles.planCadence}>
                     {planActive ? `${currentPlan.name} Plan` : "Choose a plan to get started"}
                   </Text>
@@ -881,7 +881,7 @@ export default function Profile() {
           }}
           style={{ marginTop: 24 }}
         />
-        <Text style={styles.version}>Florish · v1.0</Text>
+        <Text style={styles.version}>Shape · v1.0</Text>
         </>
         )}
       </ScrollView>
