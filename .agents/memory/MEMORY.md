@@ -1,1 +1,1 @@
-- [Mockup preview screenshots](mockup-preview-screenshots.md) — external_url screenshots of mockup-sandbox `/preview/*` can capture blank/stale; add a unique `?v=N` to force a fresh render.
+- [Logo lockup tuning](logo-lockup.md) — welcome `Logo size="lg"` (components/Logo.tsx) wordmark+pill geometry: device-vs-web pitfalls, never set wordmark lineHeight < fontSize on native.
