@@ -19,46 +19,40 @@ export function Logo({
   const fontSize = size === "lg" ? 46 : size === "sm" ? 20 : 24;
   const taglineSize = size === "lg" ? 11 : size === "sm" ? 9 : 10;
   const gap = 6;
-  const textTop = size === "lg" ? -6 : size === "sm" ? 5 : 7;
-  const pillTop = size === "lg" ? -21 : size === "sm" ? -11 : -16;
+  const hasTagline = showText && !!tagline;
+  // When a tagline is present, the word + pill must both fit inside the icon's
+  // height with a visible gap. "Florish" has no descenders, so a tighter line
+  // box is safe and reclaims the leading space needed for the gap.
+  const wordLineHeight = hasTagline ? Math.round(fontSize * 0.8) : fontSize;
 
   return (
-    <View>
-      <View style={styles.row}>
-        <LinearGradient
-          colors={colors.gradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.mark, { width: mark, height: mark, borderRadius: mark / 3 }]}
+    <View style={styles.row}>
+      <LinearGradient
+        colors={colors.gradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.mark, { width: mark, height: mark, borderRadius: mark / 3 }]}
+      >
+        <Ionicons name="flower-outline" size={icon} color={colors.onPrimary} />
+      </LinearGradient>
+      {showText ? (
+        <View
+          style={{
+            height: mark,
+            marginLeft: gap,
+            justifyContent: hasTagline ? "space-between" : "center",
+          }}
         >
-          <Ionicons name="flower-outline" size={icon} color={colors.onPrimary} />
-        </LinearGradient>
-        {showText ? (
-          <Text
-            style={[
-              styles.text,
-              {
-                fontSize,
-                lineHeight: fontSize,
-                marginLeft: gap,
-                marginTop: textTop,
-              },
-            ]}
-          >
+          <Text style={[styles.text, { fontSize, lineHeight: wordLineHeight }]}>
             Florish
           </Text>
-        ) : null}
-      </View>
-      {showText && tagline ? (
-        <View
-          style={[
-            styles.pill,
-            { marginLeft: mark + gap, marginTop: pillTop },
-          ]}
-        >
-          <Text style={[styles.tagline, { fontSize: taglineSize }]}>
-            {tagline.toUpperCase()}
-          </Text>
+          {hasTagline ? (
+            <View style={styles.pill}>
+              <Text style={[styles.tagline, { fontSize: taglineSize }]}>
+                {tagline.toUpperCase()}
+              </Text>
+            </View>
+          ) : null}
         </View>
       ) : null}
     </View>
@@ -76,7 +70,7 @@ const styles = StyleSheet.create({
   pill: {
     alignSelf: "flex-start",
     paddingHorizontal: 10,
-    paddingVertical: 3,
+    paddingVertical: 2,
     borderRadius: 999,
     backgroundColor: colors.accentTint,
     borderWidth: 1,
