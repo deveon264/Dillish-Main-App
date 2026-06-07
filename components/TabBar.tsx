@@ -15,7 +15,7 @@ type IconConf =
 const CONF: Record<string, { label: string; icon: IconConf }> = {
   index: { label: "Home", icon: { lib: "ion", name: "home-outline", nameFocused: "home" } },
   workouts: { label: "Workouts", icon: { lib: "mci", name: "dumbbell", nameFocused: "dumbbell" } },
-  calories: { label: "Calories", icon: { lib: "mci", name: "brain", nameFocused: "brain" } },
+  calories: { label: "Calories", icon: { lib: "ion", name: "flame-outline", nameFocused: "flame" } },
   water: { label: "Water", icon: { lib: "ion", name: "water-outline", nameFocused: "water" } },
   progress: { label: "Progress", icon: { lib: "ion", name: "stats-chart-outline", nameFocused: "stats-chart" } },
   profile: { label: "Profile", icon: { lib: "ion", name: "person-outline", nameFocused: "person" } },
