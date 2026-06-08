@@ -1,7 +1,33 @@
 ---
 name: Object storage after repl import
-description: Why storage (avatars, videos, meal photos) 401s after importing a repl, and the exact two-part fix.
+description: Why storage (avatars, videos, meal photos) 401s after importing a repl, and the exact two-part fix, plus other account-tied secrets that don't carry over.
 ---
+
+# Account-tied secrets that don't survive a repl import
+
+Beyond object storage, an imported/copied repl loses several account-scoped
+secrets that must be re-provisioned in the NEW account:
+- `ADMIN_PASSCODE` (coach passcode; signup/login of the admin email 500s with
+  "ADMIN_PASSCODE is not set" until set). User picks the value; request via
+  `requestEnvVar` in Build mode.
+- `PEXELS_API_KEY` (meal-log stock photos). Portable: paste the same key from
+  the source account.
+- `AI_INTEGRATIONS_OPENAI_API_KEY` / `AI_INTEGRATIONS_OPENAI_BASE_URL` (Replit
+  AI gateway). These are Replit-managed, do NOT copy from the old account;
+  reconnect the OpenAI integration to provision fresh ones.
+
+**Replit AI phone-verification trap:** reconnecting the AI integration gates on
+a one-time Replit phone verification tied to the *current account*. A number
+already verified on the source account is rejected ("invalid or might be in
+use"); it does not transfer. The user must verify with a different number or go
+through Replit support. No code/env workaround exists; the AI gateway creds will
+not provision until it passes.
+
+Quick verify after setting the two portable secrets (Build mode, localhost:5000,
+not $REPLIT_DEV_DOMAIN which 000s here): `POST /api/food-photo {"name":"..."}`
+returns a real `photoUrl`; `POST /api/signup` with the admin email + a wrong
+passcode returns 403 "Coach passcode required" (proves passcode loaded, no user
+created).
 
 # Object storage breaks after importing a repl
 
