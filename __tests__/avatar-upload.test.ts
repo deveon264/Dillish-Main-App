@@ -86,7 +86,9 @@ function bufferPost(token: string, contentType: string, bytes: Uint8Array): Requ
   return new Request("http://t/api/avatar", {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": contentType },
-    body: bytes,
+    // A Uint8Array is a valid BodyInit at runtime (undici accepts ArrayBufferView),
+    // but the DOM lib's BodyInit type omits it, so narrow the cast here.
+    body: bytes as unknown as BodyInit,
   });
 }
 
