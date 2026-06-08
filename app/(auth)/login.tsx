@@ -8,12 +8,14 @@ import { Button } from "@/components/Button";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInsets } from "@/hooks/useInsets";
+import { useScale } from "@/hooks/useScale";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
 export default function Login() {
   const router = useRouter();
   const insets = useInsets();
+  const { ms } = useScale();
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -46,8 +48,8 @@ export default function Login() {
 
           <View style={styles.header}>
             <Logo size="md" showText={false} />
-            <Text style={styles.title}>Welcome back</Text>
-            <Text style={styles.subtitle}>Sign in to continue your journey</Text>
+            <Text style={[styles.title, { fontSize: ms(40) }]}>Welcome back</Text>
+            <Text style={[styles.subtitle, { fontSize: ms(15) }]}>Sign in to continue your journey</Text>
           </View>
 
           <View style={styles.form}>
@@ -86,7 +88,7 @@ export default function Login() {
           </View>
 
           <Pressable style={styles.footer} onPress={() => router.replace("/(auth)/signup")}>
-            <Text style={styles.footerText}>
+            <Text style={[styles.footerText, { fontSize: ms(14) }]} numberOfLines={1}>
               New to Shape? <Text style={styles.footerLink}>Create an account</Text>
             </Text>
           </Pressable>

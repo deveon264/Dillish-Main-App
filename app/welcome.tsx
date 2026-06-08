@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { View, Text, StyleSheet, Image, Pressable, Animated, Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -6,6 +6,7 @@ import { useRouter } from "expo-router";
 import { Button } from "@/components/Button";
 import { Logo } from "@/components/Logo";
 import { useInsets } from "@/hooks/useInsets";
+import { useScale } from "@/hooks/useScale";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
@@ -19,10 +20,16 @@ function TrustItem({
   icon,
   label,
   delay,
+  iconBox,
+  iconSize,
+  labelSize,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   delay: number;
+  iconBox: number;
+  iconSize: number;
+  labelSize: number;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
 
@@ -42,12 +49,19 @@ function TrustItem({
 
   return (
     <View style={styles.trustItem}>
-      <View style={styles.trustIcon}>
+      <View
+        style={[
+          styles.trustIcon,
+          { width: iconBox, height: iconBox, borderRadius: iconBox / 2.8 },
+        ]}
+      >
         <Animated.View style={{ transform: [{ scale }] }}>
-          <Ionicons name={icon} size={18} color={colors.accent} />
+          <Ionicons name={icon} size={iconSize} color={colors.accent} />
         </Animated.View>
       </View>
-      <Text style={styles.trustLabel}>{label}</Text>
+      <Text style={[styles.trustLabel, { fontSize: labelSize }]} numberOfLines={1}>
+        {label}
+      </Text>
     </View>
   );
 }
@@ -60,6 +74,18 @@ const webFill = Platform.OS === "web" ? ({ minHeight: "100vh" } as object) : nul
 export default function Welcome() {
   const router = useRouter();
   const insets = useInsets();
+  const { ms } = useScale();
+
+  const dynamic = useMemo(
+    () => ({
+      content: { paddingHorizontal: ms(24) },
+      title: { fontSize: ms(44), lineHeight: ms(48) },
+      subtitle: { fontSize: ms(16), lineHeight: ms(24), maxWidth: ms(320), marginTop: ms(8) },
+      trustRow: { marginTop: ms(18) },
+      signinText: { fontSize: ms(14) },
+    }),
+    [ms],
+  );
 
   return (
     <View style={[styles.bg, webFill]}>
@@ -73,22 +99,36 @@ export default function Welcome() {
         locations={[0, 0.5, 0.92]}
         style={StyleSheet.absoluteFill}
       />
-      <View style={[styles.content, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 28 }]}>
+      <View
+        style={[
+          styles.content,
+          dynamic.content,
+          { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 28 },
+        ]}
+      >
         <View style={styles.top}>
           <Logo size="lg" tagline="by ajay" />
         </View>
 
         <View style={styles.center}>
-          <Text style={styles.title}>
+          <Text style={[styles.title, dynamic.title]}>
             Bloom into{"\n"}your <Text style={styles.titleItalic}>best self</Text>
           </Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.subtitle, dynamic.subtitle]}>
             A beautiful space for women to feel stronger, calmer and more confident.
           </Text>
 
-          <View style={styles.trustRow}>
+          <View style={[styles.trustRow, dynamic.trustRow]}>
             {TRUST.map((t, i) => (
-              <TrustItem key={t.label} icon={t.icon} label={t.label} delay={i * 350} />
+              <TrustItem
+                key={t.label}
+                icon={t.icon}
+                label={t.label}
+                delay={i * 350}
+                iconBox={ms(34)}
+                iconSize={ms(18)}
+                labelSize={ms(12)}
+              />
             ))}
           </View>
         </View>
@@ -96,7 +136,7 @@ export default function Welcome() {
         <View style={styles.actions}>
           <Button label="Begin Your Journey" iconRight="arrow-forward" onPress={() => router.push("/(auth)/signup")} />
           <Pressable style={styles.signin} onPress={() => router.push("/(auth)/login")}>
-            <Text style={styles.signinText}>
+            <Text style={[styles.signinText, dynamic.signinText]} numberOfLines={1}>
               Already have an account? <Text style={styles.signinLink}>Sign in</Text>
             </Text>
           </Pressable>

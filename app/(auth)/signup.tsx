@@ -8,6 +8,7 @@ import { Button } from "@/components/Button";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInsets } from "@/hooks/useInsets";
+import { useScale } from "@/hooks/useScale";
 import { isAdminEmail } from "@/constants/admin";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
@@ -25,6 +26,7 @@ const STRENGTH_LABEL = ["", "Weak", "Fair", "Good", "Strong"];
 export default function Signup() {
   const router = useRouter();
   const insets = useInsets();
+  const { ms } = useScale();
   const { signup } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -68,8 +70,8 @@ export default function Signup() {
 
           <View style={styles.header}>
             <Logo size="md" showText={false} />
-            <Text style={styles.title}>Create account</Text>
-            <Text style={styles.subtitle}>Begin your wellness journey today</Text>
+            <Text style={[styles.title, { fontSize: ms(40) }]}>Create account</Text>
+            <Text style={[styles.subtitle, { fontSize: ms(15) }]}>Begin your wellness journey today</Text>
           </View>
 
           <View style={styles.form}>
@@ -136,7 +138,7 @@ export default function Signup() {
           </View>
 
           <Pressable style={styles.footer} onPress={() => router.replace("/(auth)/login")}>
-            <Text style={styles.footerText}>
+            <Text style={[styles.footerText, { fontSize: ms(14) }]} numberOfLines={1}>
               Already have an account? <Text style={styles.footerLink}>Sign in</Text>
             </Text>
           </Pressable>
