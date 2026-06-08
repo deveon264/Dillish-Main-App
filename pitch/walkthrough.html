@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Shape by Ajay - App Walkthrough</title>
 <meta property="og:title" content="Shape by Ajay - App Walkthrough" />
-<meta property="og:description" content="A 16:9 animated tour of the Shape by Ajay app: guided workouts, AI calorie tracking, water goals, and progress." />
+<meta property="og:description" content="A vertical animated tour of the Shape by Ajay app: guided workouts, AI calorie tracking, water goals, and progress." />
 <meta name="twitter:title" content="Shape by Ajay - App Walkthrough" />
-<meta name="twitter:description" content="A 16:9 animated tour of the Shape by Ajay app: guided workouts, AI calorie tracking, water goals, and progress." />
+<meta name="twitter:description" content="A vertical animated tour of the Shape by Ajay app: guided workouts, AI calorie tracking, water goals, and progress." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -40,10 +40,11 @@
 
   .viewport { position: fixed; inset: 0; overflow: hidden; }
 
+  /* 9:16 portrait stage */
   .stage {
     position: absolute;
     top: 50%; left: 50%;
-    width: 1280px; height: 720px;
+    width: 720px; height: 1280px;
     transform-origin: center center;
     background: var(--cream);
     overflow: hidden;
@@ -52,59 +53,59 @@
   /* ===== persistent ambient background ===== */
   .amb { position: absolute; border-radius: 50%; pointer-events: none; filter: blur(8px); }
   .amb.a1 {
-    top: -260px; right: -180px; width: 680px; height: 680px;
+    top: -220px; right: -200px; width: 620px; height: 620px;
     background: radial-gradient(circle, rgba(243,199,194,0.62), rgba(243,199,194,0) 68%);
     animation: drift1 17s ease-in-out infinite;
   }
   .amb.a2 {
-    bottom: -320px; left: -220px; width: 640px; height: 640px;
+    bottom: -260px; left: -220px; width: 600px; height: 600px;
     background: radial-gradient(circle, rgba(221,141,160,0.30), rgba(221,141,160,0) 70%);
     animation: drift2 21s ease-in-out infinite;
   }
   .amb.a3 {
-    top: 40%; left: 44%; width: 420px; height: 420px;
+    top: 44%; left: 36%; width: 420px; height: 420px;
     background: radial-gradient(circle, rgba(194,146,94,0.18), rgba(194,146,94,0) 72%);
     animation: drift3 19s ease-in-out infinite;
   }
-  @keyframes drift1 { 0%,100%{ transform: translate(0,0) scale(1);} 50%{ transform: translate(-60px,50px) scale(1.12);} }
-  @keyframes drift2 { 0%,100%{ transform: translate(0,0) scale(1);} 50%{ transform: translate(70px,-40px) scale(1.1);} }
-  @keyframes drift3 { 0%,100%{ transform: translate(0,0) scale(1);} 50%{ transform: translate(50px,40px) scale(0.88);} }
+  @keyframes drift1 { 0%,100%{ transform: translate(0,0) scale(1);} 50%{ transform: translate(-50px,50px) scale(1.12);} }
+  @keyframes drift2 { 0%,100%{ transform: translate(0,0) scale(1);} 50%{ transform: translate(60px,-40px) scale(1.1);} }
+  @keyframes drift3 { 0%,100%{ transform: translate(0,0) scale(1);} 50%{ transform: translate(40px,40px) scale(0.88);} }
 
   /* faint drifting petals for life */
   .petal { position: absolute; color: rgba(158,78,97,0.16); pointer-events: none; }
   .petal svg { width: 100%; height: 100%; display: block; }
-  .pt1 { top: 12%; left: 30%; width: 30px; height: 30px; animation: float1 14s ease-in-out infinite; }
-  .pt2 { top: 70%; left: 22%; width: 22px; height: 22px; animation: float2 16s ease-in-out infinite; }
-  .pt3 { top: 26%; right: 16%; width: 26px; height: 26px; animation: float1 18s ease-in-out infinite reverse; }
-  .pt4 { bottom: 18%; right: 30%; width: 18px; height: 18px; animation: float2 13s ease-in-out infinite; }
+  .pt1 { top: 10%; left: 16%; width: 28px; height: 28px; animation: float1 14s ease-in-out infinite; }
+  .pt2 { top: 78%; left: 18%; width: 22px; height: 22px; animation: float2 16s ease-in-out infinite; }
+  .pt3 { top: 20%; right: 14%; width: 26px; height: 26px; animation: float1 18s ease-in-out infinite reverse; }
+  .pt4 { bottom: 12%; right: 22%; width: 18px; height: 18px; animation: float2 13s ease-in-out infinite; }
   @keyframes float1 { 0%,100%{ transform: translate(0,0) rotate(0deg);} 50%{ transform: translate(18px,-26px) rotate(40deg);} }
   @keyframes float2 { 0%,100%{ transform: translate(0,0) rotate(0deg);} 50%{ transform: translate(-16px,-22px) rotate(-35deg);} }
 
   /* ===== persistent corner lockup ===== */
   .anchor {
-    position: absolute; top: 40px; z-index: 40;
+    position: absolute; top: 44px; z-index: 40;
     display: flex; align-items: center; gap: 12px;
     opacity: 0; transform: translateY(-12px);
     transition: opacity .7s ease, transform .7s ease;
   }
-  .anchor.pos-left { left: 56px; right: auto; }
-  .anchor.pos-right { right: 56px; left: auto; flex-direction: row-reverse; }
+  .anchor.pos-left { left: 48px; right: auto; }
+  .anchor.pos-right { right: 48px; left: auto; flex-direction: row-reverse; }
   .anchor.show { opacity: 1; transform: translateY(0); }
   .mark {
-    border-radius: 16px;
+    border-radius: 15px;
     background: linear-gradient(155deg, #E69DAE, #C76C82);
     display: flex; align-items: center; justify-content: center;
     box-shadow: 0 10px 22px rgba(158,78,97,0.30);
     flex: none;
   }
   .mark svg { stroke: #fff; }
-  .anchor .mark { width: 42px; height: 42px; }
-  .anchor .mark svg { width: 24px; height: 24px; }
-  .anchor .wm { font-family: "Cormorant Garamond", serif; font-weight: 600; font-size: 24px; color: var(--ink); line-height: 1; }
+  .anchor .mark { width: 40px; height: 40px; }
+  .anchor .mark svg { width: 23px; height: 23px; }
+  .anchor .wm { font-family: "Cormorant Garamond", serif; font-weight: 600; font-size: 23px; color: var(--ink); line-height: 1; }
   .anchor .wm b { color: var(--rose-deep); font-weight: 600; font-style: italic; }
 
   /* ===== bottom timeline ===== */
-  .timeline { position: absolute; left: 0; bottom: 0; height: 4px; width: 100%; background: rgba(158,78,97,0.10); z-index: 40; }
+  .timeline { position: absolute; left: 0; bottom: 0; height: 5px; width: 100%; background: rgba(158,78,97,0.10); z-index: 40; }
   .timeline i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--rose-soft), var(--rose-deep)); }
 
   /* ===== scenes ===== */
@@ -116,16 +117,23 @@
   }
   .scene.s-active { opacity: 1; transform: scale(1); }
 
-  .pad { position: absolute; inset: 0; padding: 76px 92px; display: flex; }
+  .pad { position: absolute; inset: 0; padding: 124px 58px 100px; display: flex; }
+  /* vertical content layout for portrait */
+  .pad.col { flex-direction: column; align-items: center; justify-content: center; gap: 46px; text-align: center; }
+
+  /* centered copy block under the phone */
+  .copy { display: flex; flex-direction: column; align-items: center; gap: 20px; text-align: center; }
+  .copy .lead { max-width: 540px; }
+  .copy .chips { justify-content: center; }
 
   /* phone frame */
   .phone {
-    border-radius: 40px; padding: 7px;
+    border-radius: 38px; padding: 7px;
     background: linear-gradient(160deg, #fff, #efd9d9 55%, #d99fae);
     box-shadow: 0 36px 70px rgba(74,46,51,0.30), 0 6px 16px rgba(74,46,51,0.16);
     flex: none; overflow: hidden;
   }
-  .phone .screen { position: relative; width: 100%; height: 100%; border-radius: 33px; overflow: hidden; }
+  .phone .screen { position: relative; width: 100%; height: 100%; border-radius: 31px; overflow: hidden; }
   .phone img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
   /* ken-burns: always gently moving */
   .scene.s-active .phone img { animation: kb 13s ease-in-out infinite alternate; }
@@ -137,16 +145,16 @@
   .scene.s-active .phone .sheen { animation: sheen 6.5s ease-in-out infinite; }
   @keyframes sheen { 0%,72%{ left:-60%; } 88%,100%{ left:130%; } }
 
-  /* typography */
-  .eyebrow { font-size: 14px; letter-spacing: 0.26em; text-transform: uppercase; color: var(--rose-deep); font-weight: 700; }
+  /* typography (portrait scale) */
+  .eyebrow { font-size: 13px; letter-spacing: 0.26em; text-transform: uppercase; color: var(--rose-deep); font-weight: 700; }
   .eyebrow .n { color: var(--rose); }
-  h1 { font-family: "Cormorant Garamond", serif; font-weight: 500; color: var(--ink); line-height: 1.02; letter-spacing: 0.005em; }
-  .display { font-size: 110px; }
-  .h-xl { font-size: 84px; }
-  .h-lg { font-size: 66px; }
+  h1 { font-family: "Cormorant Garamond", serif; font-weight: 500; color: var(--ink); line-height: 1.04; letter-spacing: 0.005em; }
+  .display { font-size: 76px; }
+  .h-xl { font-size: 56px; }
+  .h-lg { font-size: 46px; }
   h1 em { font-style: italic; color: var(--rose-deep); }
-  .lead { color: var(--body); font-size: 23px; line-height: 1.55; font-weight: 400; max-width: 460px; }
-  .rule { width: 70px; height: 3px; border-radius: 3px; background: var(--rose); }
+  .lead { color: var(--body); font-size: 20px; line-height: 1.55; font-weight: 400; max-width: 540px; }
+  .rule { width: 64px; height: 3px; border-radius: 3px; background: var(--rose); }
 
   /* line reveal helper */
   .rline { overflow: hidden; display: block; }
@@ -160,20 +168,15 @@
   @keyframes riseIn { to { opacity: 1; transform: translateY(0); } }
 
   /* phone entrance: mask + lift */
-  .dev-rise { opacity: 0; transform: translateY(70px) scale(.96); clip-path: inset(8% 0 0 0 round 40px); }
+  .dev-rise { opacity: 0; transform: translateY(64px) scale(.96); clip-path: inset(8% 0 0 0 round 38px); }
   .scene.s-active .dev-rise { animation: devRise 1.05s cubic-bezier(.16,1,.3,1) forwards; animation-delay: var(--d, .1s); }
-  @keyframes devRise { to { opacity: 1; transform: translateY(0) scale(1); clip-path: inset(0 0 0 0 round 40px); } }
-
-  .dev-side { opacity: 0; transform: translateX(60px) scale(.96); }
-  .scene.s-active .dev-side { animation: devSide 1.05s cubic-bezier(.16,1,.3,1) forwards; animation-delay: var(--d, .1s); }
-  @keyframes devSide { to { opacity: 1; transform: translateX(0) scale(1); } }
-  .dev-side.left { transform: translateX(-60px) scale(.96); }
+  @keyframes devRise { to { opacity: 1; transform: translateY(0) scale(1); clip-path: inset(0 0 0 0 round 38px); } }
 
   /* chips */
-  .chips { display: flex; flex-wrap: wrap; gap: 12px; max-width: 440px; }
-  .chip { display: inline-flex; align-items: center; gap: 9px; padding: 11px 18px; border-radius: 999px;
+  .chips { display: flex; flex-wrap: wrap; gap: 11px; max-width: 520px; }
+  .chip { display: inline-flex; align-items: center; gap: 9px; padding: 10px 17px; border-radius: 999px;
     background: var(--card); border: 1px solid rgba(221,141,160,0.26); color: var(--rose-deep);
-    font-size: 16px; font-weight: 600; box-shadow: 0 10px 22px rgba(74,46,51,0.07);
+    font-size: 15px; font-weight: 600; box-shadow: 0 10px 22px rgba(74,46,51,0.07);
     opacity: 0; transform: translateY(18px) scale(.96); }
   .scene.s-active .chip { animation: chipIn .6s cubic-bezier(.16,1,.3,1) forwards; animation-delay: var(--d, 0s); }
   @keyframes chipIn { to { opacity: 1; transform: translateY(0) scale(1); } }
@@ -187,16 +190,16 @@
     position: absolute; z-index: 6;
     display: flex; align-items: center; gap: 12px;
     background: var(--card); border: 1px solid rgba(221,141,160,0.22);
-    border-radius: 18px; padding: 13px 18px;
+    border-radius: 18px; padding: 12px 17px;
     box-shadow: 0 18px 36px rgba(74,46,51,0.14);
     opacity: 0; transform: translateY(20px) scale(.92);
   }
   .scene.s-active .badge { animation: riseIn .7s cubic-bezier(.16,1,.3,1) forwards; animation-delay: var(--d, .8s); }
-  .badge .bi { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex: none;
+  .badge .bi { width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex: none;
     background: linear-gradient(155deg, var(--rose-soft), var(--rose-deep)); }
-  .badge .bi svg { width: 21px; height: 21px; stroke: #fff; }
-  .badge .bt b { display: block; font-family: "Cormorant Garamond", serif; font-size: 21px; color: var(--ink); line-height: 1.05; }
-  .badge .bt span { display: block; font-size: 12.5px; color: var(--muted); letter-spacing: 0.02em; }
+  .badge .bi svg { width: 20px; height: 20px; stroke: #fff; }
+  .badge .bt b { display: block; font-family: "Cormorant Garamond", serif; font-size: 20px; color: var(--ink); line-height: 1.05; }
+  .badge .bt span { display: block; font-size: 12px; color: var(--muted); letter-spacing: 0.02em; }
   .badge.bob { animation-name: riseIn; }
   .scene.s-active .badge.bob { animation: riseIn .7s cubic-bezier(.16,1,.3,1) forwards, bob 5s ease-in-out 1.4s infinite; }
   @keyframes bob { 0%,100%{ transform: translateY(0);} 50%{ transform: translateY(-9px);} }
@@ -204,7 +207,7 @@
   /* ===== intro / outro ===== */
   .center { align-items: center; justify-content: center; text-align: center; flex-direction: column; }
   .bigmark {
-    width: 132px; height: 132px; border-radius: 36px;
+    width: 118px; height: 118px; border-radius: 32px;
     background: linear-gradient(155deg, #E69DAE, #C76C82);
     display: flex; align-items: center; justify-content: center;
     box-shadow: 0 28px 58px rgba(158,78,97,0.34);
@@ -212,15 +215,14 @@
   }
   .scene.s-active .bigmark { animation: markPop 1s cubic-bezier(.34,1.56,.64,1) forwards; }
   @keyframes markPop { to { opacity: 1; transform: scale(1) rotate(0deg); } }
-  .scene.s-active .bigmark { animation: markPop 1s cubic-bezier(.34,1.56,.64,1) forwards; }
-  .bigmark svg { width: 76px; height: 76px; stroke: #fff; }
+  .bigmark svg { width: 68px; height: 68px; stroke: #fff; }
   .scene.s-active .bigmark svg path { animation: draw 1.4s ease forwards; stroke-dasharray: 60; stroke-dashoffset: 60; animation-delay: .35s; }
   @keyframes draw { to { stroke-dashoffset: 0; } }
 
-  .wordmark-xl { font-family: "Cormorant Garamond", serif; font-weight: 500; color: var(--ink); font-size: 104px; line-height: 1; }
+  .wordmark-xl { font-family: "Cormorant Garamond", serif; font-weight: 500; color: var(--ink); font-size: 74px; line-height: 1.02; }
   .wordmark-xl em { font-style: italic; color: var(--rose-deep); }
-  .tagline { font-size: 25px; color: var(--body); letter-spacing: 0.01em; }
-  .subline { font-size: 13px; letter-spacing: 0.42em; text-transform: uppercase; color: var(--rose-deep); font-weight: 700; }
+  .tagline { font-size: 22px; color: var(--body); letter-spacing: 0.01em; }
+  .subline { font-size: 13px; letter-spacing: 0.40em; text-transform: uppercase; color: var(--rose-deep); font-weight: 700; }
 </style>
 </head>
 <body>
@@ -245,7 +247,7 @@
     <!-- ===== SCENE 0: brand intro ===== -->
     <div class="scene" data-scene="0">
       <div class="pad center">
-        <div class="bigmark" style="margin-bottom:34px;">MARK</div>
+        <div class="bigmark" style="margin-bottom:32px;">MARK</div>
         <div class="subline ri" style="--d:.9s; margin-bottom:18px;">A walkthrough</div>
         <div class="wordmark-xl"><span class="rline"><span>Shape <em>by Ajay</em></span></span></div>
         <div class="rule ri" style="--d:1.2s; margin:26px 0;"></div>
@@ -255,11 +257,11 @@
 
     <!-- ===== SCENE 1: welcome ===== -->
     <div class="scene" data-scene="1">
-      <div class="pad" style="align-items:center; gap:84px;">
-        <div class="phone dev-rise" style="width:300px; height:642px;">
+      <div class="pad col">
+        <div class="phone dev-rise" style="width:250px; height:535px;">
           <div class="screen"><img src="assets/welcome.png" alt="Welcome screen" /><div class="sheen"></div></div>
         </div>
-        <div style="display:flex; flex-direction:column; gap:22px;">
+        <div class="copy">
           <div class="eyebrow ri" style="--d:.5s;"><span class="n">01</span> &nbsp;/&nbsp; Welcome</div>
           <h1 class="h-xl"><span class="rline"><span>Your studio,</span></span><span class="rline"><span><em>in your pocket.</em></span></span></h1>
           <div class="rule ri" style="--d:.9s;"></div>
@@ -270,38 +272,38 @@
 
     <!-- ===== SCENE 2: home dashboard ===== -->
     <div class="scene" data-scene="2">
-      <div class="pad" style="align-items:center; justify-content:space-between;">
-        <div style="display:flex; flex-direction:column; gap:24px; max-width:520px;">
+      <div class="pad col">
+        <div class="phone dev-rise" style="--d:.12s; width:250px; height:535px;">
+          <div class="screen"><img src="assets/home.png" alt="Home dashboard" /><div class="sheen"></div></div>
+        </div>
+        <div class="copy">
           <div class="eyebrow ri" style="--d:.4s;"><span class="n">02</span> &nbsp;/&nbsp; Your home base</div>
           <h1 class="h-xl"><span class="rline"><span>Everything in</span></span><span class="rline"><span><em>one place.</em></span></span></h1>
           <p class="lead ri" style="--d:.85s;">Workouts, nutrition, hydration, and progress, all on a single calm dashboard.</p>
-          <div class="chips" style="margin-top:6px;">
+          <div class="chips" style="margin-top:4px;">
             <span class="chip c1" style="--d:1.05s;"><i class="dot"></i>Workouts</span>
             <span class="chip c2" style="--d:1.18s;"><i class="dot"></i>Calories</span>
             <span class="chip c3" style="--d:1.31s;"><i class="dot"></i>Water</span>
             <span class="chip c4" style="--d:1.44s;"><i class="dot"></i>Progress</span>
           </div>
         </div>
-        <div class="phone dev-side" style="--d:.15s; width:312px; height:646px;">
-          <div class="screen"><img src="assets/home.png" alt="Home dashboard" /><div class="sheen"></div></div>
-        </div>
       </div>
     </div>
 
     <!-- ===== SCENE 3: workouts ===== -->
     <div class="scene" data-scene="3">
-      <div class="pad" style="align-items:center; gap:80px;">
-        <div class="phone dev-side left" style="--d:.15s; width:296px; height:642px; position:relative;">
+      <div class="pad col">
+        <div class="phone dev-rise" style="--d:.12s; width:250px; height:535px;">
           <div class="screen"><img src="assets/workouts.png" alt="Workout library" /><div class="sheen"></div></div>
         </div>
-        <div style="display:flex; flex-direction:column; gap:22px;">
+        <div class="copy">
           <div class="eyebrow ri" style="--d:.45s;"><span class="n">03</span> &nbsp;/&nbsp; Guided workouts</div>
           <h1 class="display"><span class="rline"><span><em>Workouts</em></span></span></h1>
           <div class="rule ri" style="--d:.9s;"></div>
           <p class="lead ri" style="--d:1.05s;">Follow along with video sessions led by Ajay. New routines, ready whenever you are.</p>
         </div>
       </div>
-      <div class="badge bob" style="--d:.95s; top:120px; left:300px;">
+      <div class="badge bob" style="--d:.95s; top:208px; right:54px;">
         <div class="bi"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9v6M18 9v6M6 12h12M3 10v4M21 10v4"/></svg></div>
         <div class="bt"><b>Press play</b><span>Video led sessions</span></div>
       </div>
@@ -309,18 +311,18 @@
 
     <!-- ===== SCENE 4: calories ===== -->
     <div class="scene" data-scene="4">
-      <div class="pad" style="align-items:center; justify-content:space-between;">
-        <div style="display:flex; flex-direction:column; gap:22px; max-width:520px;">
+      <div class="pad col">
+        <div class="phone dev-rise" style="--d:.12s; width:250px; height:535px;">
+          <div class="screen"><img src="assets/calories.png" alt="AI calorie tracker" /><div class="sheen"></div></div>
+        </div>
+        <div class="copy">
           <div class="eyebrow ri" style="--d:.45s;"><span class="n">04</span> &nbsp;/&nbsp; AI calorie tracking</div>
           <h1 class="h-xl"><span class="rline"><span>Snap a photo.</span></span><span class="rline"><span><em>We do the math.</em></span></span></h1>
           <div class="rule ri" style="--d:.9s;"></div>
           <p class="lead ri" style="--d:1.05s;">Log a meal in seconds. Smart estimates keep healthy eating effortless, never tedious.</p>
         </div>
-        <div class="phone dev-side" style="--d:.15s; width:300px; height:642px; position:relative;">
-          <div class="screen"><img src="assets/calories.png" alt="AI calorie tracker" /><div class="sheen"></div></div>
-        </div>
       </div>
-      <div class="badge bob" style="--d:.95s; right:300px; bottom:130px;">
+      <div class="badge bob" style="--d:.95s; top:300px; left:54px;">
         <div class="bi" style="background:linear-gradient(155deg,#D9B07A,#B07C44);"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
         <div class="bt"><b>Auto totals</b><span>Calories counted for you</span></div>
       </div>
@@ -328,29 +330,27 @@
 
     <!-- ===== SCENE 5: water ===== -->
     <div class="scene" data-scene="5">
-      <div class="pad center" style="gap:48px;">
-        <div style="display:flex; align-items:center; gap:74px;">
-          <div class="orb">
-            <div class="fill"><span class="wave w1"></span><span class="wave w2"></span></div>
-            <div class="orb-label"><b>6 / 8</b><span>glasses</span></div>
-          </div>
-          <div style="display:flex; flex-direction:column; gap:22px; text-align:left;">
-            <div class="eyebrow ri" style="--d:.45s;"><span class="n">05</span> &nbsp;/&nbsp; Hydration</div>
-            <h1 class="h-xl" style="text-align:left;"><span class="rline"><span>Stay</span></span><span class="rline"><span><em>hydrated.</em></span></span></h1>
-            <div class="rule ri" style="--d:.9s;"></div>
-            <p class="lead ri" style="--d:1.05s;">Set a daily water goal and watch it fill, one glass at a time. Gentle reminders, real habits.</p>
-          </div>
+      <div class="pad col" style="gap:40px;">
+        <div class="orb">
+          <div class="fill"><span class="wave w1"></span><span class="wave w2"></span></div>
+          <div class="orb-label"><b>6 / 8</b><span>glasses</span></div>
+        </div>
+        <div class="copy">
+          <div class="eyebrow ri" style="--d:.45s;"><span class="n">05</span> &nbsp;/&nbsp; Hydration</div>
+          <h1 class="h-xl"><span class="rline"><span>Stay</span></span><span class="rline"><span><em>hydrated.</em></span></span></h1>
+          <div class="rule ri" style="--d:.9s;"></div>
+          <p class="lead ri" style="--d:1.05s;">Set a daily water goal and watch it fill, one glass at a time. Gentle reminders, real habits.</p>
         </div>
       </div>
     </div>
 
     <!-- ===== SCENE 6: progress ===== -->
     <div class="scene" data-scene="6">
-      <div class="pad" style="align-items:center; gap:80px;">
-        <div class="phone dev-side left" style="--d:.15s; width:296px; height:642px;">
+      <div class="pad col">
+        <div class="phone dev-rise" style="--d:.12s; width:250px; height:535px;">
           <div class="screen"><img src="assets/progress.png" alt="Progress tracking" /><div class="sheen"></div></div>
         </div>
-        <div style="display:flex; flex-direction:column; gap:22px;">
+        <div class="copy">
           <div class="eyebrow ri" style="--d:.45s;"><span class="n">06</span> &nbsp;/&nbsp; Progress</div>
           <h1 class="h-xl"><span class="rline"><span>See how far</span></span><span class="rline"><span><em>you have come.</em></span></span></h1>
           <div class="rule ri" style="--d:.9s;"></div>
@@ -378,7 +378,7 @@
 
 <style>
   /* water orb */
-  .orb { position: relative; width: 280px; height: 280px; border-radius: 50%; overflow: hidden;
+  .orb { position: relative; width: 256px; height: 256px; border-radius: 50%; overflow: hidden;
     background: radial-gradient(circle at 36% 30%, #fff, #f4e2e4 60%, #ecd2d6);
     box-shadow: inset 0 6px 18px rgba(255,255,255,0.7), 0 28px 56px rgba(74,46,51,0.18), 0 0 0 8px rgba(255,255,255,0.5);
     flex: none; }
@@ -386,14 +386,14 @@
     background: linear-gradient(180deg, var(--rose-soft), var(--rose-deep)); }
   .scene.s-active .orb .fill { animation: fillUp 2.4s cubic-bezier(.32,.9,.4,1) .35s forwards; }
   @keyframes fillUp { to { height: 70%; } }
-  .orb .wave { position: absolute; top: -22px; left: 50%; width: 560px; height: 560px; margin-left: -280px;
+  .orb .wave { position: absolute; top: -22px; left: 50%; width: 520px; height: 520px; margin-left: -260px;
     border-radius: 42%; background: rgba(255,255,255,0.18); }
   .orb .wave.w1 { animation: spin 7s linear infinite; }
   .orb .wave.w2 { top: -18px; background: rgba(255,255,255,0.12); animation: spin 11s linear infinite reverse; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .orb .orb-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 4; }
-  .orb .orb-label b { font-family: "Cormorant Garamond", serif; font-size: 56px; color: var(--ink); line-height: 1; }
-  .orb .orb-label span { font-size: 14px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--rose-deep); font-weight: 700; margin-top: 4px; }
+  .orb .orb-label b { font-family: "Cormorant Garamond", serif; font-size: 52px; color: var(--ink); line-height: 1; }
+  .orb .orb-label span { font-size: 13px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--rose-deep); font-weight: 700; margin-top: 4px; }
 </style>
 
 <script>
@@ -403,10 +403,10 @@
   document.querySelectorAll('.petal').forEach(function(p){ p.innerHTML = PETAL; });
   document.querySelectorAll('.mark, .bigmark').forEach(function(m){ m.innerHTML = MARK; });
 
-  // ---- responsive fit ----
+  // ---- responsive fit (9:16 portrait stage) ----
   var stage = document.getElementById('stage');
   function fit(){
-    var s = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
+    var s = Math.min(window.innerWidth / 720, window.innerHeight / 1280);
     stage.style.transform = 'translate(-50%,-50%) scale(' + s + ')';
   }
   window.addEventListener('resize', fit); fit();
@@ -423,7 +423,7 @@
 
   var tlBar = document.querySelector('.timeline i');
 
-  // anchor sits on the clear side: right when phone is on the left, else left
+  // anchor sits in a top corner, alternating sides per scene for a little life
   var ANCHOR_SIDE = { 1: 'right', 2: 'left', 3: 'right', 4: 'left', 5: 'left', 6: 'right' };
 
   var current = -1;
