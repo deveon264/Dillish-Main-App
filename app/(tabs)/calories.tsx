@@ -28,6 +28,32 @@ type AnalysisResult = {
 
 type LogTab = "photo" | "text" | "scan";
 
+// Pull the specific message the analyze endpoint returned (it answers with
+// {"error": "..."}) so the user sees what actually went wrong instead of a
+// generic line. Falls back to a passed-in default if the body has no message.
+async function extractAnalyzeError(resp: Response, fallback: string): Promise<string> {
+  try {
+    const data = (await resp.json()) as { error?: string };
+    if (data && typeof data.error === "string" && data.error.trim()) {
+      return data.error.trim();
+    }
+  } catch {
+    // Non-JSON body: fall through to the default message.
+  }
+  return fallback;
+}
+
+// Turns a thrown error into a user-facing line. A failed fetch (no network)
+// surfaces a connection message; a server-provided message is shown as-is.
+function toAnalyzeMessage(e: any, fallback: string): string {
+  const msg = typeof e?.message === "string" ? e.message.trim() : "";
+  if (!msg) return fallback;
+  if (/network|failed to fetch|load failed|timeout/i.test(msg)) {
+    return "Couldn't reach the server. Check your connection and try again.";
+  }
+  return msg;
+}
+
 // Gentle placeholder shown in the meal hero while a stock photo is being
 // fetched (text-logged meals). A soft opacity pulse plus a spinner makes the
 // wait feel intentional rather than broken. On failure the hero falls back to
@@ -217,14 +243,13 @@ export default function Calories() {
         body: JSON.stringify({ image: b64 }),
       });
       if (!resp.ok) {
-        const txt = await resp.text();
-        throw new Error(txt || "Analysis failed");
+        throw new Error(await extractAnalyzeError(resp, "Could not analyze the image. Please try again."));
       }
       const data = (await resp.json()) as AnalysisResult;
       setResult(data);
       if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e: any) {
-      setError(e?.message?.includes("API") ? "AI service is not configured yet." : "Could not analyze the image. Please try again.");
+      setError(toAnalyzeMessage(e, "Could not analyze the image. Please try again."));
     } finally {
       setAnalyzing(false);
     }
@@ -332,8 +357,7 @@ export default function Calories() {
         body: JSON.stringify({ text: trimmed }),
       });
       if (!resp.ok) {
-        const txt = await resp.text();
-        throw new Error(txt || "Analysis failed");
+        throw new Error(await extractAnalyzeError(resp, "Could not analyze that meal. Please try again."));
       }
       const data = (await resp.json()) as AnalysisResult;
       setResult(data);
@@ -343,7 +367,7 @@ export default function Calories() {
       fetchFoodPhoto(data.name);
       if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e: any) {
-      setError(e?.message?.includes("API") ? "AI service is not configured yet." : "Could not analyze that meal. Please try again.");
+      setError(toAnalyzeMessage(e, "Could not analyze that meal. Please try again."));
     } finally {
       setAnalyzing(false);
     }
