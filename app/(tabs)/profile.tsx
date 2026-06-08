@@ -61,6 +61,10 @@ export default function Profile() {
   const [name, setName] = useState(user?.name ?? "");
   const [avatarModal, setAvatarModal] = useState(false);
   const [avatarError, setAvatarError] = useState("");
+  // Local URI of the just-picked image. Shown instantly after a successful
+  // upload so the new photo appears with no round-trip, until the canonical
+  // (object-storage) image has been warmed and we swap back to it.
+  const [localAvatar, setLocalAvatar] = useState<string | null>(null);
   const pickingRef = useRef(false);
   const pendingPickRef = useRef<"camera" | "library" | null>(null);
   const [emailModal, setEmailModal] = useState(false);
@@ -286,7 +290,13 @@ export default function Profile() {
       if (res.canceled || !res.assets?.length) return;
       const asset = res.assets[0];
       const result = await uploadAvatar(asset.uri, asset.mimeType ?? "image/jpeg");
-      if (!result.ok) setAvatarError(result.error ?? "Couldn't add the photo. Please try again.");
+      if (!result.ok) {
+        setAvatarError(result.error ?? "Couldn't add the photo. Please try again.");
+        return;
+      }
+      // Upload succeeded: show the picked image instantly. A background effect
+      // warms the canonical object-storage URL and then swaps to it.
+      setLocalAvatar(asset.uri);
     } catch (e: any) {
       setAvatarError(e?.message ?? "Couldn't add the photo. Please try again.");
     } finally {
@@ -297,6 +307,8 @@ export default function Profile() {
   const removeAvatar = async () => {
     setAvatarModal(false);
     setAvatarError("");
+    // Drop any optimistic preview so the avatar falls back to initials at once.
+    setLocalAvatar(null);
     const result = await removeAvatarFn();
     if (!result.ok) setAvatarError(result.error ?? "Couldn't remove the photo. Please try again.");
   };
@@ -320,7 +332,35 @@ export default function Profile() {
   };
 
   const firstName = (user?.name ?? "F").charAt(0).toUpperCase();
-  const avatarSource = avatarUri(user);
+  const canonicalAvatar = avatarUri(user);
+  // Prefer the just-picked local image right after an upload, then fall back to
+  // the canonical object-storage URL once it has been warmed.
+  const avatarSource = localAvatar ?? canonicalAvatar;
+
+  // Never carry an optimistic preview across accounts: clear it whenever the
+  // signed-in user changes.
+  useEffect(() => {
+    setLocalAvatar(null);
+  }, [user?.id]);
+
+  // Warm the canonical image in the background, then drop the local preview so
+  // every render (and other screens) reads from the canonical URL.
+  useEffect(() => {
+    if (!localAvatar || !canonicalAvatar) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        await Image.prefetch(canonicalAvatar);
+      } catch {
+        // Even if warming fails, swap to the canonical URL so the displayed
+        // image stays consistent with what other screens load.
+      }
+      if (!cancelled) setLocalAvatar(null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [localAvatar, canonicalAvatar]);
 
   const PROFILE_TABS = ["Profile", "Plan", "History", "Settings"];
 
