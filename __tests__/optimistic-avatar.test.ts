@@ -75,13 +75,14 @@ async function flush() {
 }
 
 const CANON = "https://app.example/api/avatar?id=u1&v=obj-1";
+const NEW_CANON = "https://app.example/api/avatar?id=u1&v=obj-2";
 const PICKED = "file:///tmp/picked.jpg";
 
 // =========================================================================
-// Instant preview after a successful upload
+// Instant preview the moment the image is picked (before the upload finishes)
 // =========================================================================
 
-test("shows the locally-picked URI immediately after a successful upload", async () => {
+test("shows the locally-picked URI immediately when picked, before the upload finishes", async () => {
   // prefetch stays pending so the preview is NOT swapped away yet.
   const gate = deferred();
   const prefetch: PrefetchFn = () => gate.promise;
@@ -95,7 +96,7 @@ test("shows the locally-picked URI immediately after a successful upload", async
   // Before any pick, the canonical URL is shown.
   assert.equal(result.current.avatarSource, CANON);
 
-  // Picking shows the local image instantly (no await on the canonical URL).
+  // Picking shows the local image instantly (no await on the upload).
   act(() => result.current.showPicked(PICKED));
   assert.equal(result.current.avatarSource, PICKED);
 
@@ -104,15 +105,15 @@ test("shows the locally-picked URI immediately after a successful upload", async
 });
 
 // =========================================================================
-// Warm-and-swap: canonical is prefetched, then the preview is cleared
+// While the upload is in flight (canonical unchanged) the preview is held and
+// the previous canonical photo is NOT prefetched/flashed back.
 // =========================================================================
 
-test("prefetches the canonical URL and clears the preview once warm", async () => {
+test("holds the preview while the upload is in flight (canonical unchanged)", async () => {
   const prefetched: string[] = [];
-  const gate = deferred();
   const prefetch: PrefetchFn = (url) => {
     prefetched.push(url);
-    return gate.promise;
+    return Promise.resolve();
   };
 
   const { result } = renderHook({
@@ -121,11 +122,45 @@ test("prefetches the canonical URL and clears the preview once warm", async () =
     prefetch,
   });
 
+  // Picked before the upload completes: canonical is still the previous URL.
+  act(() => result.current.showPicked(PICKED));
+  await flush();
+
+  // The previous canonical URL must NOT be warmed, and the preview is kept so
+  // the new photo doesn't flash back to the old one mid-upload.
+  assert.deepEqual(prefetched, []);
+  assert.equal(result.current.avatarSource, PICKED);
+});
+
+// =========================================================================
+// Warm-and-swap: once the upload yields a new canonical URL it is prefetched,
+// then the preview is cleared.
+// =========================================================================
+
+test("prefetches the new canonical URL and clears the preview once warm", async () => {
+  const prefetched: string[] = [];
+  const gate = deferred();
+  const prefetch: PrefetchFn = (url) => {
+    prefetched.push(url);
+    return gate.promise;
+  };
+
+  const { result, setProps } = renderHook({
+    canonicalAvatar: CANON,
+    userId: "u1",
+    prefetch,
+  });
+
   act(() => result.current.showPicked(PICKED));
   assert.equal(result.current.avatarSource, PICKED);
+  // Nothing is warmed yet: the canonical URL is still the previous one.
+  assert.deepEqual(prefetched, []);
 
-  // The canonical URL is warmed in the background...
-  assert.deepEqual(prefetched, [CANON]);
+  // The upload completes and the canonical URL updates to the new object.
+  setProps({ canonicalAvatar: NEW_CANON, userId: "u1", prefetch });
+
+  // The new canonical URL is warmed in the background...
+  assert.deepEqual(prefetched, [NEW_CANON]);
   // ...and while it is still warming the preview is retained.
   assert.equal(result.current.avatarSource, PICKED);
 
@@ -133,12 +168,37 @@ test("prefetches the canonical URL and clears the preview once warm", async () =
   // takes over.
   gate.resolve();
   await flush();
-  assert.equal(result.current.avatarSource, CANON);
+  assert.equal(result.current.avatarSource, NEW_CANON);
 });
 
-test("still swaps to the canonical URL even if prefetch rejects", async () => {
+test("still swaps to the new canonical URL even if prefetch rejects", async () => {
   const gate = deferred();
   const prefetch: PrefetchFn = () => gate.promise;
+
+  const { result, setProps } = renderHook({
+    canonicalAvatar: CANON,
+    userId: "u1",
+    prefetch,
+  });
+
+  act(() => result.current.showPicked(PICKED));
+  assert.equal(result.current.avatarSource, PICKED);
+
+  setProps({ canonicalAvatar: NEW_CANON, userId: "u1", prefetch });
+
+  gate.reject(new Error("network down"));
+  await flush();
+  // Warming failed but the displayed image still becomes the new canonical URL
+  // so it stays consistent with other screens.
+  assert.equal(result.current.avatarSource, NEW_CANON);
+});
+
+// =========================================================================
+// Failed upload: clearPicked reverts the preview to the previous canonical photo
+// =========================================================================
+
+test("clearPicked on a failed upload reverts to the previous canonical photo", async () => {
+  const prefetch: PrefetchFn = () => Promise.resolve();
 
   const { result } = renderHook({
     canonicalAvatar: CANON,
@@ -149,10 +209,9 @@ test("still swaps to the canonical URL even if prefetch rejects", async () => {
   act(() => result.current.showPicked(PICKED));
   assert.equal(result.current.avatarSource, PICKED);
 
-  gate.reject(new Error("network down"));
-  await flush();
-  // Warming failed but the displayed image still becomes the canonical URL so
-  // it stays consistent with other screens.
+  // Upload failed: the preview is dropped and the previous canonical photo
+  // (still unchanged) is shown again.
+  act(() => result.current.clearPicked());
   assert.equal(result.current.avatarSource, CANON);
 });
 

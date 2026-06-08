@@ -286,15 +286,20 @@ export default function Profile() {
           : await ImagePicker.launchImageLibraryAsync(opts);
       if (res.canceled || !res.assets?.length) return;
       const asset = res.assets[0];
+      // Show the picked image instantly, before the upload round-trip. A
+      // background effect warms the new canonical object-storage URL once the
+      // upload finishes and then swaps to it.
+      showPicked(asset.uri);
       const result = await uploadAvatar(asset.uri, asset.mimeType ?? "image/jpeg");
       if (!result.ok) {
+        // Upload failed: drop the optimistic preview so we don't keep showing a
+        // photo that didn't save, then surface the error.
+        clearPicked();
         setAvatarError(result.error ?? "Couldn't add the photo. Please try again.");
         return;
       }
-      // Upload succeeded: show the picked image instantly. A background effect
-      // warms the canonical object-storage URL and then swaps to it.
-      showPicked(asset.uri);
     } catch (e: any) {
+      clearPicked();
       setAvatarError(e?.message ?? "Couldn't add the photo. Please try again.");
     } finally {
       pickingRef.current = false;
