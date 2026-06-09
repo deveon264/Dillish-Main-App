@@ -9,6 +9,9 @@
       "outputs": [
         { "html": "public/walkthrough/index.html", "assetsDir": "public/walkthrough/assets" },
         { "html": "pitch/walkthrough.html", "assetsDir": "pitch/assets" }
+      ],
+      "outputs16x9": [
+        { "html": "pitch/walkthrough-ajay-16x9/index.html", "assetsDir": "pitch/walkthrough-ajay-16x9/assets" }
       ]
     },
     {
@@ -18,6 +21,9 @@
       "outputs": [
         { "html": "public/walkthrough-sendry/index.html", "assetsDir": "public/walkthrough-sendry/assets" },
         { "html": "pitch/walkthrough-sendry/index.html", "assetsDir": "pitch/walkthrough-sendry/assets" }
+      ],
+      "outputs16x9": [
+        { "html": "pitch/walkthrough-sendry-16x9/index.html", "assetsDir": "pitch/walkthrough-sendry-16x9/assets" }
       ]
     },
     {
@@ -27,6 +33,9 @@
       "outputs": [
         { "html": "public/walkthrough-jloss/index.html", "assetsDir": "public/walkthrough-jloss/assets" },
         { "html": "pitch/walkthrough-jloss/index.html", "assetsDir": "pitch/walkthrough-jloss/assets" }
+      ],
+      "outputs16x9": [
+        { "html": "pitch/walkthrough-jloss-16x9/index.html", "assetsDir": "pitch/walkthrough-jloss-16x9/assets" }
       ]
     },
     {

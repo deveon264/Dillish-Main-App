@@ -39,7 +39,8 @@ for (const amb of config.ambassadors) {
   const expected = brandOf(amb);
   const forbidden = allBrands.filter((b) => b !== expected);
 
-  for (const out of amb.outputs) {
+  const allOutputs = amb.outputs.concat(amb.outputs16x9 || []);
+  for (const out of allOutputs) {
     const htmlPath = path.join(ROOT, out.html);
     if (!fs.existsSync(htmlPath)) {
       failures.push(

@@ -20,13 +20,21 @@ const OUT = path.resolve(__dirname, process.argv[3] || "../walkthrough.mp4");
 const LOOPS = Math.max(1, parseInt(process.argv[4] || "1", 10));
 const CHROMIUM = process.env.CHROMIUM_BIN;
 
-const FPS = 30;
-const STAGE_W = 720;
-const STAGE_H = 1280;
-const SCALE = 1.5; // native capture 1080x1920
-const OUT_W = 1080;
-const OUT_H = 1920;
-const LOOP_MS = 35000; // one full loop (DUR array sums to 35000)
+// Dimensions default to the 9:16 portrait reel but can be overridden via env
+// vars so the same recorder produces 16:9 landscape clips:
+//   STAGE_W=1280 STAGE_H=720 SCALE=1.5 OUT_W=1920 OUT_H=1080 node record.cjs ...
+const numEnv = (name, fallback) => {
+  const v = parseFloat(process.env[name]);
+  return Number.isFinite(v) && v > 0 ? v : fallback;
+};
+
+const FPS = numEnv("FPS", 30);
+const STAGE_W = numEnv("STAGE_W", 720);
+const STAGE_H = numEnv("STAGE_H", 1280);
+const SCALE = numEnv("SCALE", 1.5); // native capture (default 1080x1920)
+const OUT_W = numEnv("OUT_W", 1080);
+const OUT_H = numEnv("OUT_H", 1920);
+const LOOP_MS = numEnv("LOOP_MS", 35000); // one full loop (DUR array sums to 35000)
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 

@@ -42,3 +42,15 @@ recordings. Keep them on one clock if you edit `DUR`.
 The `.anchor` lockup is placed on whichever side is clear: `ANCHOR_SIDE` maps
 phone-on-left scenes to the right and phone-on-right/centered scenes to the left
 (`.pos-left` / `.pos-right`). A fixed corner collides with the phone mockups.
+
+## True 16:9 landscape is a SEPARATE template, not a wide crop of portrait
+The portrait reel (`template.html`, 720x1280, `.pad.col` stacked) and the
+landscape reel (`template-16x9.html`, 1280x720, `.pad.row` phone-left/copy-right)
+are two distinct source templates sharing the same 8-scene rAF playback + DUR
+timing. `build.cjs` renders both; `ambassadors.json` gates landscape via an
+`outputs16x9` array (only ajay/sendry/jloss have it, Dillish is portrait-only);
+`verify-brand.cjs` checks both. `record.cjs` dims are env-overridable
+(STAGE_W/STAGE_H/SCALE/OUT_W/OUT_H/LOOP_MS/FPS), defaulting to portrait; landscape
+capture passes STAGE_W=1280 STAGE_H=720 OUT_W=1920 OUT_H=1080.
+**Why:** a "landscape" made by padding/cropping a 9:16 reel looks like letterboxed
+vertical video; the layout (stacked vs side-by-side) must genuinely change.

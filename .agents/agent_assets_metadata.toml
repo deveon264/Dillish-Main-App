@@ -647,3 +647,21 @@ id = "mM630W2CR6yeOww6DRbRP"
 uri = "file://pitch/Florish-by-Dillish-Walkthrough.mp4"
 type = "video"
 title = "Florish by Dillish - Walkthrough Reel (1080x1920, 35s)"
+
+[[outputs]]
+id = "MpIEm-2HlF1m9CQ_yZmr3"
+uri = "file://pitch/Ajay-Walkthrough-16x9.mp4"
+type = "video"
+title = "Shape by Ajay - Walkthrough (16:9 landscape)"
+
+[[outputs]]
+id = "e8v-MsD0JYScymP458uS-"
+uri = "file://pitch/Sendry-Walkthrough-16x9.mp4"
+type = "video"
+title = "Shape by Sendry - Walkthrough (16:9 landscape)"
+
+[[outputs]]
+id = "1p15gvUzjolXC7qc4q3ZD"
+uri = "file://pitch/Jloss-Walkthrough-16x9.mp4"
+type = "video"
+title = "Shape by J.loss - Walkthrough (16:9 landscape)"
