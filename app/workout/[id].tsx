@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, ImageBackground, Image, Animated } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, ImageBackground, Image, Animated, Share } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -65,6 +65,10 @@ export default function WorkoutPlayer() {
   const savedRef = useRef(false);
   // Drives the "new personal best" celebration banner on the completion screen.
   const pbAnim = useRef(new Animated.Value(0)).current;
+  // Transient confirmation shown after a personal-best share (mainly the web
+  // clipboard fallback, where there is no native share sheet to confirm it).
+  const [shareNote, setShareNote] = useState<string | null>(null);
+  const shareNoteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Each exercise in this workout can have its OWN uploaded video, keyed by the
   // exercise id. We load them up front and play the matching one in the header.
@@ -158,6 +162,41 @@ export default function WorkoutPlayer() {
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     toggleFavorite(workout.id);
     showToast(fav ? "Removed from saved" : "Saved to favorites", fav ? "heart-dislike" : "heart");
+  };
+
+  // Show a brief confirmation note (used by the web clipboard fallback, where
+  // there is no native share sheet to confirm the action).
+  const flashShareNote = (msg: string) => {
+    setShareNote(msg);
+    if (shareNoteTimer.current) clearTimeout(shareNoteTimer.current);
+    shareNoteTimer.current = setTimeout(() => setShareNote(null), 2500);
+  };
+
+  // Share the new personal-best streak. Uses the native share sheet on device;
+  // on web it falls back to the Web Share API, then the clipboard, so the win
+  // is still shareable wherever the app runs.
+  const sharePersonalBest = async () => {
+    if (newBestToday == null) return;
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const days = newBestToday;
+    const message = `New personal best on Florish: a ${days}-day workout streak! Showing up for myself, one session at a time.`;
+    try {
+      if (Platform.OS === "web") {
+        const nav: any = typeof navigator !== "undefined" ? navigator : undefined;
+        if (nav?.share) {
+          await nav.share({ title: "My Florish streak", text: message });
+        } else if (nav?.clipboard?.writeText) {
+          await nav.clipboard.writeText(message);
+          flashShareNote("Copied to clipboard");
+        } else {
+          flashShareNote("Sharing is not available here");
+        }
+        return;
+      }
+      await Share.share({ message });
+    } catch {
+      // The member dismissed the share sheet, or sharing is unavailable: ignore.
+    }
   };
 
   const current = workout?.exercises[index];
@@ -292,6 +331,7 @@ export default function WorkoutPlayer() {
       if (timer.current) clearInterval(timer.current);
       if (toastTimer.current) clearTimeout(toastTimer.current);
       if (hideTimer.current) clearTimeout(hideTimer.current);
+      if (shareNoteTimer.current) clearTimeout(shareNoteTimer.current);
     };
   }, []);
 
@@ -977,7 +1017,14 @@ export default function WorkoutPlayer() {
               <Text style={styles.pbEyebrow}>NEW PERSONAL BEST</Text>
               <Text style={styles.pbValue}>{newBestToday} day streak!</Text>
             </View>
+            <Pressable style={styles.pbShareBtn} onPress={sharePersonalBest} hitSlop={8}>
+              <Ionicons name="share-social" size={16} color={colors.onPrimaryStrong} />
+              <Text style={styles.pbShareText}>Share</Text>
+            </Pressable>
           </Animated.View>
+        )}
+        {newBestToday != null && shareNote != null && (
+          <Text style={styles.shareNote}>{shareNote}</Text>
         )}
         <View style={styles.doneStats}>
           <View style={styles.doneStat}>
@@ -1254,6 +1301,17 @@ const styles = StyleSheet.create({
   pbIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
   pbEyebrow: { fontFamily: fonts.sansSemibold, fontSize: 10.5, color: colors.accent, letterSpacing: 1.2 },
   pbValue: { fontFamily: fonts.serifSemibold, fontSize: 20, color: colors.foreground, marginTop: 2 },
+  pbShareBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: colors.accent,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+  },
+  pbShareText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.onPrimaryStrong },
+  shareNote: { fontFamily: fonts.sansMedium, fontSize: 12.5, color: colors.muted, textAlign: "center", marginTop: 10 },
   doneStats: { flexDirection: "row", alignItems: "center", marginTop: 32, backgroundColor: colors.card, borderRadius: colors.radiusLg, borderWidth: 1, borderColor: colors.cardBorder, paddingVertical: 20, paddingHorizontal: 10, alignSelf: "stretch", justifyContent: "space-around" },
   doneStat: { alignItems: "center", flex: 1 },
   doneStatNum: { fontFamily: fonts.serifSemibold, fontSize: 26, color: colors.accent },
