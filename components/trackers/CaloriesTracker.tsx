@@ -7,8 +7,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
-import { HelpButton } from "@/components/HelpButton";
-import { PageHeader, SectionLabel } from "@/components/PageHeader";
+import { SectionLabel } from "@/components/PageHeader";
 import { ProgressRing } from "@/components/ProgressRing";
 import { ProgressBar } from "@/components/ProgressBar";
 import { useData } from "@/contexts/DataContext";
@@ -89,7 +88,7 @@ function PhotoShimmer() {
   );
 }
 
-export default function Calories() {
+export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
   const insets = useInsets();
   const { profile, calorieLogs, addCalorie, deleteCalorie } = useData();
   const [image, setImage] = useState<string | null>(null);
@@ -388,22 +387,7 @@ export default function Calories() {
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 110 }]}
         showsVerticalScrollIndicator={false}
       >
-        <PageHeader
-          eyebrow="AI POWERED"
-          title="Calorie"
-          accent="Tracker"
-          action={
-            <HelpButton
-              title="Calorie Tracker"
-              intro="Log what you eat and stay on top of your daily goal."
-              points={[
-                "Snap a photo, scan a barcode, or type a meal, and AI does the math.",
-                "See your calories and protein, carbs, and fats against your goal.",
-                "Review everything you've logged today in one place.",
-              ]}
-            />
-          }
-        />
+        {header}
 
         <Card style={styles.goalCard}>
           <View style={styles.goalHead}>

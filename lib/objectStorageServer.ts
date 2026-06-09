@@ -158,6 +158,24 @@ export async function uploadMealPhotoStream(
   );
 }
 
+// Streams a community post photo to its OWN private folder, kept separate from
+// the other prefixes so each feature's cleanup sweep only ever reconciles its
+// own files. Returns the full object path; the last segment is an unguessable
+// uuid the client uses as the lookup key for the GET endpoint.
+export async function uploadCommunityPhotoStream(
+  body: ReadableStream<Uint8Array>,
+  contentType: string,
+  contentLength: number
+): Promise<string> {
+  return putObjectStream(
+    `${getPrivateDir()}/community-photos/${uuid()}`,
+    body,
+    contentType,
+    contentLength,
+    "image/jpeg"
+  );
+}
+
 // Streams a poster image to the private exercise-posters folder.
 export async function uploadExercisePosterStream(
   body: ReadableStream<Uint8Array>,

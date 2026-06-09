@@ -243,3 +243,13 @@ export async function requireAdmin(request: Request): Promise<string | null> {
   if (!m) return null;
   return verifyAdminToken(m[1]);
 }
+
+// Reads the Bearer token from the request and verifies it as a member/admin
+// session, returning the session payload (sub/email/role) or null. The same
+// helper every account-scoped route uses to identify the signed-in member.
+export async function requireSession(request: Request): Promise<SessionPayload | null> {
+  const auth = request.headers.get("authorization") || "";
+  const m = /^Bearer\s+(.+)$/i.exec(auth.trim());
+  if (!m) return null;
+  return verifySessionToken(m[1]);
+}

@@ -4,8 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Card } from "@/components/Card";
-import { HelpButton } from "@/components/HelpButton";
-import { PageHeader, SectionLabel } from "@/components/PageHeader";
+import { SectionLabel } from "@/components/PageHeader";
 import { WaterCircle } from "@/components/WaterCircle";
 import { ProgressBar } from "@/components/ProgressBar";
 import { BarChart, BarDatum } from "@/components/BarChart";
@@ -42,7 +41,7 @@ const amountLabel = (ml: number) => {
   return "Big refill";
 };
 
-export default function Water() {
+export function WaterTracker({ header }: { header?: React.ReactNode }) {
   const insets = useInsets();
   const { profile, waterLogs, addWater, removeWater } = useData();
 
@@ -105,22 +104,7 @@ export default function Water() {
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 110 }]}
         showsVerticalScrollIndicator={false}
       >
-        <PageHeader
-          eyebrow="WELLNESS"
-          title="Stay"
-          accent="Hydrated"
-          action={
-            <HelpButton
-              title="Stay Hydrated"
-              intro="Keep your water intake on track every day."
-              points={[
-                "Log each glass with a tap as you drink through the day.",
-                "Watch your progress fill toward your daily hydration goal.",
-                "Switch days to review how well you stayed hydrated before.",
-              ]}
-            />
-          }
-        />
+        {header}
 
         <Card style={styles.hydrationCard}>
               <View style={styles.hydrationHead}>

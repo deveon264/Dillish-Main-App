@@ -106,6 +106,11 @@ export default function RootLayout() {
                     name="workout/[id]"
                     options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }}
                   />
+                  <Stack.Screen
+                    name="community/compose"
+                    options={{ presentation: "modal", animation: "slide_from_bottom" }}
+                  />
+                  <Stack.Screen name="community/[id]" />
                 </Stack>
                 </SubscriptionProvider>
               </DataProvider>

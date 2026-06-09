@@ -28,8 +28,8 @@ const WEEK_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 
 const QUICK_ACCESS = [
   { icon: "barbell-outline" as const, title: "Workout Library", sub: "200+ videos", route: "/(tabs)/workouts" as const },
-  { icon: "scan-outline" as const, title: "AI Food Log", sub: "Snap & track", route: "/(tabs)/calories" as const },
-  { icon: "water-outline" as const, title: "Hydration", sub: "Track your intake", route: "/(tabs)/water" as const },
+  { icon: "scan-outline" as const, title: "AI Food Log", sub: "Snap & track", route: "/(tabs)/tracker?mode=calories" as const },
+  { icon: "water-outline" as const, title: "Hydration", sub: "Track your intake", route: "/(tabs)/tracker?mode=water" as const },
   { icon: "stats-chart-outline" as const, title: "My Progress", sub: "Photos & stats", route: "/(tabs)/progress" as const },
 ];
 
@@ -227,7 +227,7 @@ export default function Dashboard() {
             goal={`of ${calorieGoal.toLocaleString()}`}
             progress={consumedPct}
             color={colors.accent}
-            onPress={() => router.navigate("/(tabs)/calories")}
+            onPress={() => router.navigate("/(tabs)/tracker?mode=calories")}
           />
           <StatTile
             icon="nutrition-outline"
@@ -237,7 +237,7 @@ export default function Dashboard() {
             goal={`of ${proteinGoal}g`}
             progress={proteinGoal > 0 ? protein / proteinGoal : 0}
             color={colors.protein}
-            onPress={() => router.navigate("/(tabs)/calories")}
+            onPress={() => router.navigate("/(tabs)/tracker?mode=calories")}
           />
           <StatTile
             icon="water-outline"
@@ -247,7 +247,7 @@ export default function Dashboard() {
             goal={`of ${(waterGoalMl / 1000).toFixed(1)}L`}
             progress={waterPct}
             color={colors.highlight}
-            onPress={() => router.navigate("/(tabs)/water")}
+            onPress={() => router.navigate("/(tabs)/tracker?mode=water")}
           />
         </View>
 
@@ -258,7 +258,7 @@ export default function Dashboard() {
               <Ionicons name="water-outline" size={17} color={colors.accent} />
               <Text style={styles.calTitle}>Hydration</Text>
             </View>
-            <Pressable style={styles.logMealBtn} onPress={() => router.navigate("/(tabs)/water")}>
+            <Pressable style={styles.logMealBtn} onPress={() => router.navigate("/(tabs)/tracker?mode=water")}>
               <Ionicons name="add" size={16} color={colors.onPrimary} />
               <Text style={styles.logMealText}>Add water</Text>
             </Pressable>
@@ -300,7 +300,7 @@ export default function Dashboard() {
               <Ionicons name="restaurant-outline" size={17} color={colors.accent} />
               <Text style={styles.calTitle}>Calorie Summary</Text>
             </View>
-            <Pressable style={styles.logMealBtn} onPress={() => router.navigate("/(tabs)/calories")}>
+            <Pressable style={styles.logMealBtn} onPress={() => router.navigate("/(tabs)/tracker?mode=calories")}>
               <Ionicons name="camera-outline" size={14} color={colors.onPrimary} />
               <Text style={styles.logMealText}>Log meal</Text>
             </Pressable>

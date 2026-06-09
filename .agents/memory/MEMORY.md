@@ -12,3 +12,4 @@
 - [Reel/deck app screenshots](reel-deck-screenshots.md) — auto-generate welcome/home via pitch/tooling/capture.cjs (puppeteer+seeded session); headless chromium has no emoji font so inject Noto Color Emoji for the greeting flower.
 - [OpenAI integration model + empty-output guard](openai-integration-models.md) — use `gpt-5.4` (model the integration serves, not gpt-5-mini); reasoning models return "" so guard before JSON.parse; creds only in app runtime, not sandbox.
 - [Testing RN hooks/effects](testing-rn-hooks.md) — node:test+tsx has no RN renderer; extract effect logic into a deps-injectable hook and test with react-test-renderer act(); set IS_REACT_ACT_ENVIRONMENT.
+- [Object-storage media cleanup](object-storage-media-cleanup.md) — each uploaded media type leaks orphans unless it gets its own sweep in cleanup-cron.mjs; community-photos shipped without one (known gap).

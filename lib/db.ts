@@ -117,6 +117,86 @@ export function ensureSchema(): Promise<void> {
       .then(() =>
         pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription JSONB`)
       )
+      // Community feed: the app's first shared, multi-user data. Unlike the
+      // device-local activity logs, posts/comments/likes/reports/blocks live
+      // server-side so every member sees the same feed. Post photos live in
+      // object storage; only the object path is kept here. The schema uses no FK
+      // constraints (consistent with the rest of this file); a post's related
+      // rows are removed explicitly in one transaction by communityStore.
+      .then(() =>
+        pool.query(
+          `CREATE TABLE IF NOT EXISTS community_posts (
+            id TEXT PRIMARY KEY,
+            author_id TEXT NOT NULL,
+            type TEXT NOT NULL,
+            body TEXT NOT NULL DEFAULT '',
+            photo_object_path TEXT,
+            created_at BIGINT NOT NULL
+          )`
+        )
+      )
+      .then(() =>
+        pool.query(
+          `CREATE TABLE IF NOT EXISTS community_comments (
+            id TEXT PRIMARY KEY,
+            post_id TEXT NOT NULL,
+            author_id TEXT NOT NULL,
+            body TEXT NOT NULL,
+            created_at BIGINT NOT NULL
+          )`
+        )
+      )
+      .then(() =>
+        pool.query(
+          `CREATE TABLE IF NOT EXISTS community_likes (
+            post_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            created_at BIGINT NOT NULL,
+            PRIMARY KEY (post_id, user_id)
+          )`
+        )
+      )
+      .then(() =>
+        pool.query(
+          `CREATE TABLE IF NOT EXISTS community_reports (
+            id TEXT PRIMARY KEY,
+            post_id TEXT NOT NULL,
+            reporter_id TEXT NOT NULL,
+            reason TEXT NOT NULL DEFAULT '',
+            created_at BIGINT NOT NULL
+          )`
+        )
+      )
+      .then(() =>
+        pool.query(
+          `CREATE TABLE IF NOT EXISTS community_blocks (
+            blocker_id TEXT NOT NULL,
+            blocked_id TEXT NOT NULL,
+            created_at BIGINT NOT NULL,
+            PRIMARY KEY (blocker_id, blocked_id)
+          )`
+        )
+      )
+      // Feed reads order by (created_at DESC, id DESC) with a keyset cursor;
+      // comment/like reads are scoped to a post. These indexes back those paths.
+      .then(() =>
+        pool.query(
+          `CREATE INDEX IF NOT EXISTS idx_community_posts_feed
+             ON community_posts (created_at DESC, id DESC)`
+        )
+      )
+      .then(() =>
+        pool.query(
+          `CREATE INDEX IF NOT EXISTS idx_community_comments_post
+             ON community_comments (post_id, created_at)`
+        )
+      )
+      .then(() =>
+        pool.query(
+          `CREATE INDEX IF NOT EXISTS idx_community_likes_post
+             ON community_likes (post_id)`
+        )
+      )
       .then(() => undefined)
       .catch((e) => {
         schemaReady = null;

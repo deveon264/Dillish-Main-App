@@ -15,13 +15,13 @@ type IconConf =
 const CONF: Record<string, { label: string; icon: IconConf }> = {
   index: { label: "Home", icon: { lib: "ion", name: "home-outline", nameFocused: "home" } },
   workouts: { label: "Workouts", icon: { lib: "mci", name: "dumbbell", nameFocused: "dumbbell" } },
-  calories: { label: "Calories", icon: { lib: "ion", name: "flame-outline", nameFocused: "flame" } },
-  water: { label: "Water", icon: { lib: "ion", name: "water-outline", nameFocused: "water" } },
+  tracker: { label: "Tracker", icon: { lib: "ion", name: "flame-outline", nameFocused: "flame" } },
   progress: { label: "Progress", icon: { lib: "ion", name: "stats-chart-outline", nameFocused: "stats-chart" } },
+  community: { label: "Community", icon: { lib: "ion", name: "people-outline", nameFocused: "people" } },
   profile: { label: "Profile", icon: { lib: "ion", name: "person-outline", nameFocused: "person" } },
 };
 
-const ORDER = ["index", "workouts", "calories", "water", "progress", "profile"];
+const ORDER = ["index", "workouts", "tracker", "progress", "community", "profile"];
 
 type TabBarProps = Pick<BottomTabBarProps, "state" | "navigation">;
 
