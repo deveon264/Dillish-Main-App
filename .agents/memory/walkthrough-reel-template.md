@@ -39,6 +39,12 @@ Per-ambassador brand override (mirrors the pitch deck's `brand`/`{{BRAND}}`):
   `pitch/pitch-src/assets/dillish/welcome.png`). Changing the HTML brand without
   swapping the welcome image leaves a mismatched screenshot.
 
+Verification:
+- `verify-brand.cjs` (validation step `reel-brand`, run after `build.cjs`) asserts
+  each ambassador's HTML outputs contain their expected brand (`amb.brand ||
+  "Shape"`) and zero of any other roster brand. Expectations derive from
+  `ambassadors.json`, so a new ambassador/brand is covered automatically.
+
 Gotchas:
 - Only the name + brand vary in the HTML (8 brand slots: title, og/twitter meta,
   anchor wordmark, intro + outro wordmark-xl; plus name in those + "led by <name>").

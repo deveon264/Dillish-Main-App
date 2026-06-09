@@ -23,6 +23,10 @@ args = "Start application"
 task = "workflow.run"
 args = "Pitch deck preview"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "reel-brand"
+
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
@@ -47,6 +51,17 @@ waitForPort = 3001
 [workflows.workflow.metadata]
 outputType = "console"
 isCanvasWorkflow = true
+
+[[workflows.workflow]]
+name = "reel-brand"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node pitch/walkthrough-src/verify-brand.cjs"
+
+[workflows.workflow.metadata]
+isValidation = true
 
 [[ports]]
 localPort = 3001
