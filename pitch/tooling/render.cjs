@@ -1,8 +1,8 @@
 const path = require("path");
 const puppeteer = require("puppeteer");
 
-const HTML = "file://" + path.resolve(__dirname, "../index.html");
-const OUT = path.resolve(__dirname, "../Shape-by-Ajay-Pitch.pdf");
+const HTML = "file://" + path.resolve(__dirname, process.argv[2] || "../index.html");
+const OUT = path.resolve(__dirname, process.argv[3] || "../Shape-by-Ajay-Pitch.pdf");
 const CHROMIUM = process.env.CHROMIUM_BIN;
 
 (async () => {
