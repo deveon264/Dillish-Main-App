@@ -366,7 +366,7 @@ export default function Profile() {
     { key: "email", icon: "mail-outline", label: "Change Email", onPress: openEmailModal },
     { key: "password", icon: "lock-closed-outline", label: "Change Password" },
     { key: "privacy", icon: "document-text-outline", label: "Privacy Policy" },
-    { key: "about", icon: "information-circle-outline", label: "About Shape" },
+    { key: "about", icon: "information-circle-outline", label: "About Florish" },
     { key: "support", icon: "headset-outline", label: "Support" },
   ];
 
@@ -496,7 +496,7 @@ export default function Profile() {
                   <Ionicons name="sparkles" size={20} color={colors.onPrimaryStrong} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.planName}>{planActive ? "Shape Premium" : "No active plan"}</Text>
+                  <Text style={styles.planName}>{planActive ? "Florish Premium" : "No active plan"}</Text>
                   <Text style={styles.planCadence}>
                     {planActive ? `${currentPlan.name} Plan` : "Choose a plan to get started"}
                   </Text>
@@ -903,7 +903,7 @@ export default function Profile() {
           }}
           style={{ marginTop: 24 }}
         />
-        <Text style={styles.version}>Shape · v1.0</Text>
+        <Text style={styles.version}>Florish · v1.0</Text>
         </>
         )}
       </ScrollView>
