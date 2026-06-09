@@ -551,10 +551,11 @@ export default function WorkoutPlayer() {
     const overallPct = `${Math.round(overall * 100)}%` as const;
     // When this exercise has an uploaded video, the bar always tracks the clip:
     // 0:00 / empty while it loads, then the real clip time. Exercises with no
-    // video keep the whole-workout simulated timeline.
+    // video show the current exercise's own configured duration and the time
+    // elapsed within that single exercise, resetting as the workout advances.
     const hasMappedVideo = !!currentVideo;
-    const barElapsed = hasMappedVideo ? Math.min(videoTime, videoDuration) : elapsed;
-    const barTotal = hasMappedVideo ? videoDuration : totalSeconds;
+    const barElapsed = hasMappedVideo ? Math.min(videoTime, videoDuration) : current.seconds - remaining;
+    const barTotal = hasMappedVideo ? videoDuration : current.seconds;
     const barPct = `${Math.round((barTotal > 0 ? barElapsed / barTotal : 0) * 100)}%` as const;
     // While a mapped clip loads, show its poster (the video's own frame) instead
     // of the generic stock thumbnail. No poster → neutral dark background.
