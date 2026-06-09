@@ -472,7 +472,7 @@ export default function Profile() {
 
             {isAdmin ? (
               <>
-                <Text style={styles.label}>COACH TOOLS</Text>
+                <Text style={styles.label}>ADMIN TOOLS</Text>
                 <Card style={styles.settingsCard}>
                   <Pressable
                     style={styles.acctRow}
@@ -1016,7 +1016,7 @@ export default function Profile() {
             </View>
 
             <Text style={styles.billingNote}>
-              Payments are handled by your coach for now. Plan changes apply immediately in the app.
+              Payments are handled by your admin for now. Plan changes apply immediately in the app.
             </Text>
 
             {planError ? <Text style={styles.planErrorText}>{planError}</Text> : null}

@@ -3,7 +3,7 @@
 A fitness/coaching mobile + web app (Expo Router, React Native, `react-native-web`)
 with a small server-side API layer (Expo Router `+api.ts` routes running in
 Metro's Node runtime). Exercise videos are stored as bytes in Replit Object
-Storage; Postgres holds only metadata. Coaches authenticate with a server-only
+Storage; Postgres holds only metadata. Admins authenticate with a server-only
 passcode that mints a short-lived HMAC admin token.
 
 # Scheduled storage cleanup
@@ -40,7 +40,7 @@ How it works:
   (`exercise-cleanup by ...: scanned=… deleted=…`,
   `meal-photo-cleanup by ...: scanned=… deleted=… maxAgeDays=90`, and
   `community-photo-cleanup by ...: scanned=… referenced=… deleted=…`), visible
-  in the deployment logs so a coach can confirm it ran.
+  in the deployment logs so an admin can confirm it ran.
 - `CLEANUP_DRY_RUN=1` previews without deleting (applies to all sweeps).
 
 To enable the recurring trigger in production:
@@ -59,3 +59,7 @@ In development the script falls back to `REPLIT_DEV_DOMAIN`, so you can test wit
 - Never use em dashes ("—") in any user-facing text. Rephrase sentences (comma,
   colon, or shorter sentences) and use a plain hyphen for empty-value
   placeholders.
+- Always refer to the privileged account role as "admin" (or "admins") in
+  user-facing text, never "coach". The only exception is the exercise-screen
+  "coaching cues" label, which is a fitness term for the form tips of a move,
+  not the person.

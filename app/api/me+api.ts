@@ -59,7 +59,7 @@ export async function PATCH(request: Request): Promise<Response> {
         return Response.json({ error: "This email is reserved" }, { status: 403 });
       }
       if (session.role === "admin" && em !== ADMIN_EMAIL) {
-        return Response.json({ error: "The coach account email can't be changed" }, { status: 403 });
+        return Response.json({ error: "The admin account email can't be changed" }, { status: 403 });
       }
       if (await emailTaken(em, session.sub)) {
         return Response.json({ error: "An account with this email already exists" }, { status: 409 });

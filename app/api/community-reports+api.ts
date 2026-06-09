@@ -11,7 +11,7 @@ export async function GET(request: Request): Promise<Response> {
     const session = await requireSession(request);
     if (!session) return Response.json({ error: "Not authorized" }, { status: 401 });
     if (session.role !== "admin") {
-      return Response.json({ error: "Coaches only" }, { status: 403 });
+      return Response.json({ error: "Admins only" }, { status: 403 });
     }
 
     const reports = await listReports({ viewerId: session.sub, limit: PAGE_SIZE });
@@ -29,7 +29,7 @@ export async function DELETE(request: Request): Promise<Response> {
     const session = await requireSession(request);
     if (!session) return Response.json({ error: "Not authorized" }, { status: 401 });
     if (session.role !== "admin") {
-      return Response.json({ error: "Coaches only" }, { status: 403 });
+      return Response.json({ error: "Admins only" }, { status: 403 });
     }
 
     const id = new URL(request.url).searchParams.get("id");

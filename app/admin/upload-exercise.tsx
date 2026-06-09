@@ -71,8 +71,8 @@ export default function UploadExercise() {
       <GradientBackground>
         <View style={styles.guard}>
           <Ionicons name="lock-closed-outline" size={40} color={colors.mutedForeground} />
-          <Text style={styles.guardTitle}>Coaches only</Text>
-          <Text style={styles.guardText}>This area is reserved for the Florish coach account.</Text>
+          <Text style={styles.guardTitle}>Admins only</Text>
+          <Text style={styles.guardText}>This area is reserved for the Florish admin account.</Text>
           <Button label="Go Back" variant="outline" onPress={() => router.back()} style={{ marginTop: 20, width: 200 }} />
         </View>
       </GradientBackground>
@@ -184,7 +184,7 @@ export default function UploadExercise() {
       >
         <PageHeader
           variant="compact"
-          eyebrow="COACH"
+          eyebrow="ADMIN"
           title="Upload"
           accent="Exercise"
           style={styles.header}

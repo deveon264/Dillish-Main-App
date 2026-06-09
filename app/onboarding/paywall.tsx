@@ -209,7 +209,7 @@ export default function Paywall() {
           </View>
         </View>
         <Text style={styles.terms}>
-          By continuing you agree to our Terms of Service and Privacy Policy. Billing isn't live yet, so you won't be charged, and your coach handles payments for now.
+          By continuing you agree to our Terms of Service and Privacy Policy. Billing isn't live yet, so you won't be charged, and your admin handles payments for now.
         </Text>
       </View>
     </GradientBackground>

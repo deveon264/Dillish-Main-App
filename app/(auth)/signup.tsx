@@ -89,13 +89,13 @@ export default function Signup() {
               <View style={styles.passcodeBlock}>
                 <Input
                   icon="key-outline"
-                  placeholder="Coach passcode"
+                  placeholder="Admin passcode"
                   password
                   value={passcode}
                   onChangeText={setPasscode}
                 />
                 <Text style={styles.passcodeHint}>
-                  This email is reserved for the coach. Enter the coach passcode to verify.
+                  This email is reserved for the admin. Enter the admin passcode to verify.
                 </Text>
               </View>
             ) : null}

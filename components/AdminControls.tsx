@@ -16,7 +16,7 @@ export function AdminControls() {
       <View style={styles.note}>
         <Ionicons name="shield-checkmark" size={15} color={colors.accent} />
         <Text style={styles.noteText}>
-          You're verified as the coach. Anything you upload here is visible to every member.
+          You're verified as the admin. Anything you upload here is visible to every member.
         </Text>
       </View>
 

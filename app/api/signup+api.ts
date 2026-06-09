@@ -36,7 +36,7 @@ export async function POST(request: Request): Promise<Response> {
     const admin = isAdminEmail(email);
     if (admin && !(await verifyPasscode(passcode))) {
       return Response.json(
-        { error: "Coach passcode required to use this email" },
+        { error: "Admin passcode required to use this email" },
         { status: 403 }
       );
     }
