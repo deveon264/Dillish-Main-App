@@ -14,8 +14,11 @@ const ROOT = path.resolve(SRC, "../..");
 const template = fs.readFileSync(path.join(SRC, "template.html"), "utf8");
 const config = JSON.parse(fs.readFileSync(path.join(SRC, "ambassadors.json"), "utf8"));
 
-function render(name) {
-  return template.split("{{NAME}}").join(name);
+function render(amb) {
+  const brand = amb.brand || "Shape";
+  return template
+    .split("{{NAME}}").join(amb.name)
+    .split("{{BRAND}}").join(brand);
 }
 
 function copyAsset(srcPath, destDir, file) {
@@ -27,7 +30,7 @@ let htmlCount = 0;
 let assetCount = 0;
 
 for (const amb of config.ambassadors) {
-  const html = render(amb.name);
+  const html = render(amb);
   const ambAssetsDir = path.join(SRC, "assets", amb.assets);
 
   for (const out of amb.outputs) {

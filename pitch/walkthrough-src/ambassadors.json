@@ -32,6 +32,7 @@
     {
       "id": "dillish",
       "name": "Dillish",
+      "brand": "Florish",
       "assets": "dillish",
       "outputs": [
         { "html": "public/walkthrough-dillish/index.html", "assetsDir": "public/walkthrough-dillish/assets" },
