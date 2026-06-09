@@ -6,8 +6,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { DEFAULT_PROFILE, isDefaultProfile, type Profile } from "@/lib/profile";
 import {
   type StreakState,
+  type PbCelebration,
   DEFAULT_STREAK_STATE,
+  DEFAULT_PB_CELEBRATION,
   sanitizeStreakState,
+  sanitizePbCelebration,
+  advancePbCelebration,
+  isCelebratingToday,
   recordActiveDay,
   combineDays,
   displayStreak,
@@ -63,11 +68,28 @@ function buildNotifications(args: {
   completions: WorkoutCompletion[];
   profile: Profile;
   streak: number;
+  // The record value to celebrate when the member has just beaten their
+  // personal best today, or null when there is nothing new to celebrate.
+  newBest: number | null;
 }): Omit<AppNotification, "read">[] {
-  const { waterLogs, calorieLogs, completions, profile, streak } = args;
+  const { waterLogs, calorieLogs, completions, profile, streak, newBest } = args;
   const tk = todayKey();
   const now = Date.now();
   const out: Omit<AppNotification, "read">[] = [];
+
+  // A genuinely new all-time record beats a plain milestone, so when both would
+  // fire on the same day we show only the personal-best celebration.
+  const celebratingBest = newBest != null && newBest > 0;
+  if (celebratingBest) {
+    out.push({
+      id: `pb:${tk}`,
+      icon: "trophy-outline",
+      tone: "highlight",
+      title: `New personal best: ${newBest} ${newBest === 1 ? "day" : "days"}! 🎉`,
+      body: "You just beat your longest streak. Keep the momentum going.",
+      ts: now + 1,
+    });
+  }
 
   const workoutToday = completions.some((c) => todayKey(new Date(c.ts)) === tk);
 
@@ -83,7 +105,7 @@ function buildNotifications(args: {
           : "Move your body today and start a new streak.",
       ts: now,
     });
-  } else if ([3, 7, 14, 21, 30, 50, 100].includes(streak)) {
+  } else if (!celebratingBest && [3, 7, 14, 21, 30, 50, 100].includes(streak)) {
     out.push({
       id: `streak:${tk}`,
       icon: "flame-outline",
@@ -190,6 +212,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [notifReadIds, setNotifReadIds] = useState<string[]>([]);
   const [streakState, setStreakState] = useState<StreakState>(DEFAULT_STREAK_STATE);
+  const [pbCelebration, setPbCelebration] = useState<PbCelebration>(DEFAULT_PB_CELEBRATION);
 
   useEffect(() => {
     let active = true;
@@ -204,11 +227,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         setFavorites([]);
         setNotifReadIds([]);
         setStreakState(DEFAULT_STREAK_STATE);
+        setPbCelebration(DEFAULT_PB_CELEBRATION);
         setReady(false);
         return;
       }
       setReady(false);
-      const [p, w, wt, ph, c, wk, fav, nr, sk] = await Promise.all([
+      const [p, w, wt, ph, c, wk, fav, nr, sk, pb] = await Promise.all([
         getJSON<Profile>(keyFor(uid, "profile"), DEFAULT_PROFILE),
         getJSON<WaterLog[]>(keyFor(uid, "water"), []),
         getJSON<WeightLog[]>(keyFor(uid, "weight"), []),
@@ -218,6 +242,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         getJSON<string[]>(keyFor(uid, "favorites"), []),
         getJSON<string[]>(keyFor(uid, "notifs_read"), []),
         getJSON<StreakState>(keyFor(uid, "streak"), DEFAULT_STREAK_STATE),
+        getJSON<PbCelebration>(keyFor(uid, "streak_pb"), DEFAULT_PB_CELEBRATION),
       ]);
       if (!active) return;
 
@@ -231,7 +256,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setCompletions(wk);
       setFavorites(fav);
       setNotifReadIds(nr);
-      setStreakState(sanitizeStreakState(sk));
+      let finalStreak = sanitizeStreakState(sk);
+      setStreakState(finalStreak);
 
       let mergedProfile = { ...DEFAULT_PROFILE, ...p };
 
@@ -285,6 +311,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             if (!active) return;
             if (serverStreak) {
               const sane = sanitizeStreakState(serverStreak);
+              finalStreak = sane;
               setStreakState(sane);
               setJSON(keyFor(uid, "streak"), sane);
             }
@@ -311,6 +338,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }
       }
       setWeightLogs(weightArr);
+
+      // Seed the personal-best celebration baseline once, after the streak has
+      // been reconciled but before today's active day is recorded (that runs in
+      // a separate effect once `ready` is true). Baselining at the pre-today
+      // best means an already-established record is never celebrated
+      // retroactively, while a record genuinely beaten today still fires.
+      const loadedPb = sanitizePbCelebration(pb);
+      const seededPb =
+        loadedPb.value < 0 ? { value: Math.max(0, finalStreak.longest), day: "" } : loadedPb;
+      if (seededPb !== loadedPb) setJSON(keyFor(uid, "streak_pb"), seededPb);
+      setPbCelebration(seededPb);
+
       setReady(true);
     })();
     return () => {
@@ -559,10 +598,30 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     [streakState, streak]
   );
 
+  // Stamp a new personal best the moment the displayed best climbs past the last
+  // value we baselined/celebrated. The baseline itself is seeded once in the
+  // hydrate effect above (so an existing record is never congratulated); this
+  // only advances it afterwards, de-duped to one stamp per record value.
+  useEffect(() => {
+    if (!uid || !ready) return;
+    setPbCelebration((prev) => {
+      if (prev.value < 0) return prev;
+      const next = advancePbCelebration(prev, streakBest, todayKey());
+      if (next === prev) return prev;
+      setJSON(keyFor(uid, "streak_pb"), next);
+      return next;
+    });
+  }, [uid, ready, streakBest]);
+
+  const newBestToday = useMemo(
+    () => (isCelebratingToday(pbCelebration, todayKey()) ? pbCelebration.value : null),
+    [pbCelebration]
+  );
+
   const notifications = useMemo<AppNotification[]>(() => {
-    const base = buildNotifications({ waterLogs, calorieLogs, completions, profile, streak });
+    const base = buildNotifications({ waterLogs, calorieLogs, completions, profile, streak, newBest: newBestToday });
     return base.map((n) => ({ ...n, read: notifReadIds.includes(n.id) }));
-  }, [waterLogs, calorieLogs, completions, profile, streak, notifReadIds]);
+  }, [waterLogs, calorieLogs, completions, profile, streak, newBestToday, notifReadIds]);
 
   const unreadCount = useMemo(() => notifications.filter((n) => !n.read).length, [notifications]);
 

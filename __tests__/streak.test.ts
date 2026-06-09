@@ -13,6 +13,12 @@ import {
   computeStreak,
   combineDays,
   displayStreak,
+  MIN_PERSONAL_BEST,
+  DEFAULT_PB_CELEBRATION,
+  type PbCelebration,
+  sanitizePbCelebration,
+  advancePbCelebration,
+  isCelebratingToday,
 } from "@/lib/streak";
 
 // --- dayKeyOf / isDayKey ---------------------------------------------------
@@ -196,4 +202,66 @@ test("displayStreak drops a stale server streak (last day older than yesterday)"
   const state: StreakState = { count: 99, lastActiveDay: "2026-06-01", recentDays: ["2026-06-01"], updatedAt: 1 };
   const combined = combineDays([], []);
   assert.equal(displayStreak(state, combined, "2026-06-09"), 0);
+});
+
+// --- personal-best celebration --------------------------------------------
+
+test("sanitizePbCelebration coerces garbage to the never-seeded default", () => {
+  assert.deepEqual(sanitizePbCelebration(null), DEFAULT_PB_CELEBRATION);
+  assert.deepEqual(sanitizePbCelebration("nope"), DEFAULT_PB_CELEBRATION);
+  assert.deepEqual(sanitizePbCelebration({ value: "x", day: 5 }), DEFAULT_PB_CELEBRATION);
+  assert.deepEqual(sanitizePbCelebration({ value: 7.9, day: "2026-06-09" }), { value: 7, day: "2026-06-09" });
+  // A non day-key string day is dropped to "".
+  assert.deepEqual(sanitizePbCelebration({ value: 7, day: "soon" }), { value: 7, day: "" });
+});
+
+test("advancePbCelebration baselines silently on first call (value < 0)", () => {
+  // Never-seeded record adopts the current best with an empty day, so no
+  // celebration fires for an already-established record.
+  assert.deepEqual(advancePbCelebration(DEFAULT_PB_CELEBRATION, 14, "2026-06-09"), { value: 14, day: "" });
+  assert.deepEqual(advancePbCelebration(DEFAULT_PB_CELEBRATION, 0, "2026-06-09"), { value: 0, day: "" });
+});
+
+test("advancePbCelebration stamps today when the best beats the stored record", () => {
+  const prev: PbCelebration = { value: 14, day: "" };
+  assert.deepEqual(advancePbCelebration(prev, 15, "2026-06-09"), { value: 15, day: "2026-06-09" });
+});
+
+test("advancePbCelebration is a no-op when the best did not improve", () => {
+  const prev: PbCelebration = { value: 14, day: "2026-06-08" };
+  // Same reference returned (no change) when best is equal or lower.
+  assert.equal(advancePbCelebration(prev, 14, "2026-06-09"), prev);
+  assert.equal(advancePbCelebration(prev, 5, "2026-06-09"), prev);
+});
+
+test("advancePbCelebration does not announce a sub-minimum best (1 day)", () => {
+  const prev: PbCelebration = { value: 0, day: "" };
+  // 1 > 0 but below MIN_PERSONAL_BEST, so no record stamp.
+  assert.equal(advancePbCelebration(prev, 1, "2026-06-09"), prev);
+  assert.equal(MIN_PERSONAL_BEST, 2);
+  // The first announceable record is the minimum.
+  assert.deepEqual(advancePbCelebration(prev, 2, "2026-06-09"), { value: 2, day: "2026-06-09" });
+});
+
+test("isCelebratingToday only fires for a record stamped today and at/above the minimum", () => {
+  assert.equal(isCelebratingToday({ value: 15, day: "2026-06-09" }, "2026-06-09"), true);
+  // Stamped a different day: stale, no celebration.
+  assert.equal(isCelebratingToday({ value: 15, day: "2026-06-08" }, "2026-06-09"), false);
+  // Silent baseline (empty day) never celebrates.
+  assert.equal(isCelebratingToday({ value: 15, day: "" }, "2026-06-09"), false);
+  // Below the announce minimum.
+  assert.equal(isCelebratingToday({ value: 1, day: "2026-06-09" }, "2026-06-09"), false);
+});
+
+test("advance + isCelebratingToday: record fires once, de-duped across same-day re-checks", () => {
+  const today = "2026-06-09";
+  let rec: PbCelebration = { value: 14, day: "" };
+  // Best climbs to a new record today.
+  rec = advancePbCelebration(rec, 15, today);
+  assert.equal(isCelebratingToday(rec, today), true);
+  // Re-running the same day with the same best does not move the record.
+  const again = advancePbCelebration(rec, 15, today);
+  assert.equal(again, rec);
+  // The next day, with no further improvement, the celebration no longer shows.
+  assert.equal(isCelebratingToday(rec, "2026-06-10"), false);
 });

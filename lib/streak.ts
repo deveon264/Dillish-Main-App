@@ -184,3 +184,58 @@ export function displayStreak(
 export function displayBest(state: StreakState, currentStreak: number): number {
   return Math.max(state.longest, currentStreak);
 }
+
+// The smallest best worth announcing as a personal record. A 1-day "best" is
+// just the first active day, not a record to celebrate, so the celebration only
+// fires from 2 days up.
+export const MIN_PERSONAL_BEST = 2;
+
+// Device-local bookkeeping for the "new personal best" celebration. It is not
+// part of the persisted StreakState (which the server owns): it only decides
+// whether THIS device should show the one-time celebration, so a member who
+// switches devices is re-baselined silently rather than re-congratulated.
+export type PbCelebration = {
+  // The best value that has already been baselined or celebrated. The next
+  // celebration only fires once the displayed best climbs above this.
+  value: number;
+  // The day ("YYYY-MM-DD") the current `value` was reached, or "" when it was
+  // seeded as a silent baseline so an already-established best is never
+  // celebrated retroactively.
+  day: string;
+};
+
+// value < 0 marks "never seeded" so the first load can baseline silently.
+export const DEFAULT_PB_CELEBRATION: PbCelebration = { value: -1, day: "" };
+
+export function sanitizePbCelebration(input: unknown): PbCelebration {
+  const src = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;
+  const rawValue = Number(src.value);
+  const value = Number.isFinite(rawValue) ? Math.floor(rawValue) : -1;
+  const day = isDayKey(src.day) ? src.day : "";
+  return { value, day };
+}
+
+// Advances the celebration record against the current displayed best. On the
+// first ever call (value < 0) it baselines silently at the current best so an
+// existing record is never celebrated retroactively. After that, when the best
+// climbs to a new, announceable record it stamps today's date (which is what
+// surfaces the celebration). Otherwise it returns the same record unchanged so
+// the caller can skip a write.
+export function advancePbCelebration(
+  prev: PbCelebration,
+  currentBest: number,
+  today: string = dayKeyOf()
+): PbCelebration {
+  if (prev.value < 0) return { value: Math.max(0, Math.floor(currentBest)), day: "" };
+  if (currentBest > prev.value && currentBest >= MIN_PERSONAL_BEST) {
+    return { value: Math.floor(currentBest), day: today };
+  }
+  return prev;
+}
+
+// Whether the record represents a brand-new best reached today that should be
+// shown to the member. Drives the celebration notification, and is de-duped to
+// the day the record was set (a silent baseline has day "", so never fires).
+export function isCelebratingToday(rec: PbCelebration, today: string = dayKeyOf()): boolean {
+  return rec.day === today && rec.value >= MIN_PERSONAL_BEST;
+}
