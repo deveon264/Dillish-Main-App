@@ -92,6 +92,9 @@ export default function WorkoutPlayer() {
   // Monotonic token so a slow video load for a previous exercise can't apply
   // (or auto-play) after the user has already moved to another exercise.
   const loadSeq = useRef(0);
+  // Imperative handle so the fullscreen control can expand the inline clip
+  // without switching the player to native controls.
+  const videoViewRef = useRef<VideoView>(null);
 
   // Keep the progress bar in sync with the real video clip.
   useEventListener(player, "timeUpdate", (e: { currentTime: number }) => {
@@ -627,10 +630,12 @@ export default function WorkoutPlayer() {
             )}
             {currentVideo && (
               <VideoView
+                ref={videoViewRef}
                 player={player}
                 style={StyleSheet.absoluteFill}
                 contentFit="cover"
                 nativeControls={false}
+                allowsFullscreen
                 pointerEvents="none"
               />
             )}
@@ -649,6 +654,15 @@ export default function WorkoutPlayer() {
                 <Pressable style={styles.roundBtn} onPress={() => router.back()} hitSlop={8}>
                   <Ionicons name="chevron-back" size={22} color={colors.onPrimary} />
                 </Pressable>
+                {currentVideo && (
+                  <Pressable
+                    style={styles.roundBtn}
+                    onPress={() => videoViewRef.current?.enterFullscreen()}
+                    hitSlop={8}
+                  >
+                    <Ionicons name="expand" size={20} color={colors.onPrimary} />
+                  </Pressable>
+                )}
               </View>
 
               <View style={[styles.playerControls, { pointerEvents: "box-none" }]}>
