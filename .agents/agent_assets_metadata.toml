@@ -641,3 +641,9 @@ id = "qsUlton2wbaUZsB_rmo37"
 uri = "file://pitch/Shape-by-Ajay-Pitch.pdf"
 type = "pdf"
 title = "Shape by Ajay - Partnership Proposal"
+
+[[outputs]]
+id = "mM630W2CR6yeOww6DRbRP"
+uri = "file://pitch/Florish-by-Dillish-Walkthrough.mp4"
+type = "video"
+title = "Florish by Dillish - Walkthrough Reel (1080x1920, 35s)"
