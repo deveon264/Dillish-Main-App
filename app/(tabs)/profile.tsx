@@ -481,6 +481,17 @@ export default function Profile() {
                     </View>
                     <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
                   </Pressable>
+                  <View style={styles.settingsDivider} />
+                  <Pressable
+                    style={styles.acctRow}
+                    onPress={() => router.push("/admin/blocked-members")}
+                  >
+                    <View style={styles.acctLeft}>
+                      <Ionicons name="remove-circle-outline" size={20} color={colors.accent} />
+                      <Text style={styles.acctLabel}>Blocked Members</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
+                  </Pressable>
                 </Card>
               </>
             ) : null}

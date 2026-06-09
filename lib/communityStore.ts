@@ -610,3 +610,30 @@ export async function acknowledgeNotice(input: {
   );
   return (rowCount ?? 0) > 0;
 }
+
+// One globally blocked member, for the admin "blocked members" screen.
+export type AdminBlockedMember = {
+  member: CommunityAuthor;
+  // When the block was applied.
+  blockedAt: number;
+};
+
+// Admin moderation: every globally blocked member, newest block first. Unlike
+// the report queue, this survives after a member's reports are dismissed or
+// their posts deleted, so a coach always has a way to restore them. The JOIN to
+// users drops any orphaned block row whose account no longer exists.
+export async function listAdminBlocked(): Promise<AdminBlockedMember[]> {
+  await ensureSchema();
+  const { rows } = await getPool().query(
+    `SELECT
+       ${AUTHOR_SELECT},
+       ab.created_at AS blocked_at
+     FROM community_admin_blocks ab
+     JOIN users u ON u.id = ab.user_id
+     ORDER BY ab.created_at DESC`
+  );
+  return rows.map((r) => ({
+    member: mapAuthor(r),
+    blockedAt: Number(r.blocked_at),
+  }));
+}

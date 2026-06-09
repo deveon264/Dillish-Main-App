@@ -349,6 +349,23 @@ export async function dismissNotice(opts: { token: string; id: string }): Promis
   });
 }
 
+// One globally blocked member, as shown on the admin "blocked members" screen.
+export type AdminBlockedMember = {
+  member: CommunityAuthor;
+  blockedAt: number;
+};
+
+// Admin-only: every globally blocked member, newest block first. Unlike the
+// report queue, this stays available after a member's reports are dismissed or
+// their posts deleted, so a coach can always restore them.
+export async function fetchBlockedMembers(opts: { token: string }): Promise<AdminBlockedMember[]> {
+  const { blocked } = await authed<{ blocked: AdminBlockedMember[] }>(`/api/community-blocked`, {
+    token: opts.token,
+    fallback: "Could not load blocked members",
+  });
+  return blocked;
+}
+
 export async function blockMember(opts: { token: string; blockedId: string }): Promise<void> {
   await authed(`/api/community-block`, {
     token: opts.token,
