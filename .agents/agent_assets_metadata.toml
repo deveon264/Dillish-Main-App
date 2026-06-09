@@ -420,6 +420,12 @@ uri = "file://attached_assets/minimal_options/silk2.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "v2iwDEz6p7pHnPSP_Wvph"
+uri = "file://attached_assets/generated_images/roll-up-new.png"
+type = "image"
+title = "pilates roll up black woman"
+
 [[outputs]]
 id = "7PHbt7FHrCvmMM8aMi6pO"
 uri = "file://attached_assets/screenshots/511858dc-4453-49e0-9028-2b93cd0060fb-00-3bc24ua5jixzj_picard_replit_dev_mockup_preview_welcome-polished_Refined.png"
