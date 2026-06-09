@@ -117,6 +117,15 @@ export function ensureSchema(): Promise<void> {
       .then(() =>
         pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription JSONB`)
       )
+      // Per-member weekly-streak state (running count, last active day, and a
+      // bounded rolling window of recent active days) persisted account-side as
+      // a JSON blob so the streak follows the member across logins and devices
+      // instead of resetting on a new phone or reinstall. Added after the
+      // initial release; backfill so existing environments pick it up without a
+      // manual migration.
+      .then(() =>
+        pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS streak JSONB`)
+      )
       // Community feed: the app's first shared, multi-user data. Unlike the
       // device-local activity logs, posts/comments/likes/reports/blocks live
       // server-side so every member sees the same feed. Post photos live in

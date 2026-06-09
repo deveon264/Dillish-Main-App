@@ -33,7 +33,7 @@ export default function WorkoutPlayer() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useInsets();
-  const { completeWorkout, completions, toggleFavorite, isFavorite } = useData();
+  const { completeWorkout, toggleFavorite, isFavorite, streak, streakDays } = useData();
   const { isAdmin } = useAuth();
   const workout = getWorkout(id);
   const fav = workout ? isFavorite(workout.id) : false;
@@ -511,7 +511,6 @@ export default function WorkoutPlayer() {
     const bpm = 96 + Math.round(overall * 44);
     const zone = bpm < 110 ? "Light" : bpm < 135 ? "Moderate" : "Intense";
     const bpmPct = `${Math.min(100, Math.round(((bpm - 60) / 120) * 100))}%` as const;
-    const completionDays = new Set(completions.map((c) => todayKey(new Date(c.ts))));
     const monday = new Date();
     monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
     const tkNow = todayKey();
@@ -519,15 +518,8 @@ export default function WorkoutPlayer() {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
       const k = todayKey(d);
-      return { label, active: completionDays.has(k), isToday: k === tkNow };
+      return { label, active: streakDays.has(k), isToday: k === tkNow };
     });
-    let streak = 0;
-    const sd = new Date();
-    if (!completionDays.has(todayKey(sd))) sd.setDate(sd.getDate() - 1);
-    while (completionDays.has(todayKey(sd))) {
-      streak += 1;
-      sd.setDate(sd.getDate() - 1);
-    }
     const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
     const parts = workout.title.split(" ");
     const titleTail = parts.length > 1 ? parts.pop()! : "";

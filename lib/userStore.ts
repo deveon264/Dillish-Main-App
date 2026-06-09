@@ -1,6 +1,13 @@
 import { getPool, ensureSchema } from "@/lib/db";
 import { type Profile, sanitizeProfile, sanitizeProfilePatch } from "@/lib/profile";
 import { type Subscription, sanitizeSubscription } from "@/lib/subscription";
+import {
+  type StreakState,
+  DEFAULT_STREAK_STATE,
+  sanitizeStreakState,
+  recordActiveDay,
+  mergeWindow,
+} from "@/lib/streak";
 
 // Server-side persistence for member/coach accounts. Identity lives here (not on
 // the device) so the server can trust who is signed in. The coach is simply the
@@ -263,6 +270,44 @@ export async function setUserSubscription(
   const raw = rows[0].subscription;
   const obj = raw == null ? {} : typeof raw === "string" ? JSON.parse(raw) : raw;
   return sanitizeSubscription(obj);
+}
+
+// Reads the account's stored streak state, or null if the account has never had
+// one (the `streak` column is still NULL). Sanitizes on read so a hand-edited or
+// legacy blob can't surface broken values.
+export async function getUserStreak(id: string): Promise<StreakState | null> {
+  await ensureSchema();
+  const { rows } = await getPool().query(`SELECT streak FROM users WHERE id = $1`, [id]);
+  if (!rows[0]) return null;
+  const raw = rows[0].streak;
+  if (raw == null) return null;
+  const obj = typeof raw === "string" ? JSON.parse(raw) : raw;
+  return sanitizeStreakState(obj);
+}
+
+// Records `day` as an active (sign-in) day for the account and returns the
+// updated streak state, or null if the account row no longer exists. `extraDays`
+// (the device's local rolling window) is merged into the stored window so days
+// recorded while offline reconcile on the next successful sync without losing
+// the streak. A read-modify-write is fine here: active-day writes are low
+// frequency and per-account, and recordActiveDay is idempotent for the same day.
+export async function recordUserActiveDay(
+  id: string,
+  day: string,
+  extraDays: string[] = []
+): Promise<StreakState | null> {
+  await ensureSchema();
+  const current = (await getUserStreak(id)) ?? DEFAULT_STREAK_STATE;
+  let next = recordActiveDay(current, day);
+  if (extraDays.length) next = mergeWindow(next, extraDays);
+  const { rows } = await getPool().query(
+    `UPDATE users SET streak = $1::jsonb WHERE id = $2 RETURNING streak`,
+    [JSON.stringify(next), id]
+  );
+  if (!rows[0]) return null;
+  const raw = rows[0].streak;
+  const obj = raw == null ? {} : typeof raw === "string" ? JSON.parse(raw) : raw;
+  return sanitizeStreakState(obj);
 }
 
 export async function emailTaken(email: string, exceptId?: string): Promise<boolean> {

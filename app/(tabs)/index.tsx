@@ -39,7 +39,7 @@ export default function Dashboard() {
   const router = useRouter();
   const insets = useInsets();
   const { user } = useAuth();
-  const { profile, waterLogs, calorieLogs, completions, addWater, favorites, toggleFavorite, notifications, unreadCount, markNotificationsRead } = useData();
+  const { profile, waterLogs, calorieLogs, completions, addWater, favorites, toggleFavorite, notifications, unreadCount, markNotificationsRead, streak, streakDays } = useData();
   const [notifOpen, setNotifOpen] = useState(false);
 
   const openNotifs = () => {
@@ -81,23 +81,6 @@ export default function Dashboard() {
   const waterPct = Math.min(1, todayWaterMl / waterGoalMl);
   const waterRemainingL = Math.max(0, (waterGoalMl - todayWaterMl) / 1000);
 
-  const completionDays = useMemo(() => {
-    const set = new Set<string>();
-    completions.forEach((c) => set.add(todayKey(new Date(c.ts))));
-    return set;
-  }, [completions]);
-
-  const streak = useMemo(() => {
-    let count = 0;
-    const d = new Date();
-    if (!completionDays.has(todayKey(d))) d.setDate(d.getDate() - 1);
-    while (completionDays.has(todayKey(d))) {
-      count += 1;
-      d.setDate(d.getDate() - 1);
-    }
-    return count;
-  }, [completionDays]);
-
   const weekMarks = useMemo(() => {
     const now = new Date();
     const monday = new Date(now);
@@ -108,11 +91,11 @@ export default function Dashboard() {
       d.setDate(monday.getDate() + i);
       return {
         label,
-        active: completionDays.has(todayKey(d)),
+        active: streakDays.has(todayKey(d)),
         isToday: todayKey(d) === tk,
       };
     });
-  }, [completionDays, tk]);
+  }, [streakDays, tk]);
 
   const featured = WORKOUTS.find((w) => w.featured) ?? WORKOUTS[0];
   const saved = useMemo(() => WORKOUTS.filter((w) => favorites.includes(w.id)), [favorites]);

@@ -47,7 +47,7 @@ export default function Profile() {
   const router = useRouter();
   const insets = useInsets();
   const { user, isAdmin, logout, updateUser, uploadAvatar, removeAvatar: removeAvatarFn } = useAuth();
-  const { profile, completions, calorieLogs, weightLogs, waterLogs, updateProfile } = useData();
+  const { profile, completions, calorieLogs, weightLogs, waterLogs, updateProfile, streak } = useData();
   const { subscription, switchPlan, cancel, resume, subscribe } = useSubscription();
 
   const [editing, setEditing] = useState(false);
@@ -89,20 +89,6 @@ export default function Profile() {
   const totalWorkouts = completions.length;
   const totalMeals = calorieLogs.length;
 
-  const streak = useMemo(() => {
-    const days = new Set(completions.map((c) => todayKey(new Date(c.ts))));
-    let count = 0;
-    const d = new Date();
-    for (;;) {
-      if (days.has(todayKey(d))) {
-        count++;
-        d.setDate(d.getDate() - 1);
-      } else {
-        break;
-      }
-    }
-    return count;
-  }, [completions]);
 
   const sortedWeights = useMemo(
     () => [...weightLogs].sort((a, b) => b.ts - a.ts),

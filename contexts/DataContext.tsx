@@ -1,8 +1,17 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { AppState } from "react-native";
 import { getJSON, setJSON, genId, todayKey } from "@/lib/storage";
 import { getApiUrl } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { DEFAULT_PROFILE, isDefaultProfile, type Profile } from "@/lib/profile";
+import {
+  type StreakState,
+  DEFAULT_STREAK_STATE,
+  sanitizeStreakState,
+  recordActiveDay,
+  combineDays,
+  displayStreak,
+} from "@/lib/streak";
 
 // Re-exported so existing importers (`@/contexts/DataContext`) keep working;
 // the canonical definition lives in `@/lib/profile` (server-safe).
@@ -42,35 +51,24 @@ export type AppNotification = {
   read: boolean;
 };
 
-function streakFromCompletions(completions: WorkoutCompletion[]): number {
-  const days = new Set<string>();
-  completions.forEach((c) => days.add(todayKey(new Date(c.ts))));
-  let count = 0;
-  const d = new Date();
-  if (!days.has(todayKey(d))) d.setDate(d.getDate() - 1);
-  while (days.has(todayKey(d))) {
-    count += 1;
-    d.setDate(d.getDate() - 1);
-  }
-  return count;
-}
-
 // Notifications are derived from the member's real activity rather than being a
 // static feed: hydration gaps, an unfinished workout, unlogged meals, and streak
 // milestones. Each has a date-stable id so its read state persists for the day.
+// The streak number is passed in (not recomputed here) so it matches the value
+// shown on the home, profile and workout-completion screens exactly.
 function buildNotifications(args: {
   waterLogs: WaterLog[];
   calorieLogs: CalorieLog[];
   completions: WorkoutCompletion[];
   profile: Profile;
+  streak: number;
 }): Omit<AppNotification, "read">[] {
-  const { waterLogs, calorieLogs, completions, profile } = args;
+  const { waterLogs, calorieLogs, completions, profile, streak } = args;
   const tk = todayKey();
   const now = Date.now();
   const out: Omit<AppNotification, "read">[] = [];
 
   const workoutToday = completions.some((c) => todayKey(new Date(c.ts)) === tk);
-  const streak = streakFromCompletions(completions);
 
   if (!workoutToday) {
     out.push({
@@ -80,7 +78,7 @@ function buildNotifications(args: {
       title: "Today's workout is waiting",
       body:
         streak > 0
-          ? `Keep your ${streak}-day streak alive — finish today's session.`
+          ? `Keep your ${streak}-day streak alive. Finish today's session.`
           : "Move your body today and start a new streak.",
       ts: now,
     });
@@ -90,7 +88,7 @@ function buildNotifications(args: {
       icon: "flame-outline",
       tone: "highlight",
       title: `${streak}-day streak! 🔥`,
-      body: "You showed up again today. Amazing consistency — keep it going.",
+      body: "You showed up again today. Amazing consistency, keep it going.",
       ts: now,
     });
   }
@@ -147,6 +145,10 @@ type DataContextType = {
   addCalorie: (entry: Omit<CalorieLog, "id" | "ts">) => Promise<void>;
   deleteCalorie: (id: string) => Promise<void>;
   completeWorkout: (c: Omit<WorkoutCompletion, "id" | "ts">) => Promise<void>;
+  // The single streak number shown everywhere, plus the combined active-OR-
+  // workout day set that drives the home / workout pill rows.
+  streak: number;
+  streakDays: Set<string>;
   notifications: AppNotification[];
   unreadCount: number;
   markNotificationsRead: () => Promise<void>;
@@ -183,6 +185,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [completions, setCompletions] = useState<WorkoutCompletion[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [notifReadIds, setNotifReadIds] = useState<string[]>([]);
+  const [streakState, setStreakState] = useState<StreakState>(DEFAULT_STREAK_STATE);
 
   useEffect(() => {
     let active = true;
@@ -196,11 +199,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         setCompletions([]);
         setFavorites([]);
         setNotifReadIds([]);
+        setStreakState(DEFAULT_STREAK_STATE);
         setReady(false);
         return;
       }
       setReady(false);
-      const [p, w, wt, ph, c, wk, fav, nr] = await Promise.all([
+      const [p, w, wt, ph, c, wk, fav, nr, sk] = await Promise.all([
         getJSON<Profile>(keyFor(uid, "profile"), DEFAULT_PROFILE),
         getJSON<WaterLog[]>(keyFor(uid, "water"), []),
         getJSON<WeightLog[]>(keyFor(uid, "weight"), []),
@@ -209,6 +213,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         getJSON<WorkoutCompletion[]>(keyFor(uid, "workouts"), []),
         getJSON<string[]>(keyFor(uid, "favorites"), []),
         getJSON<string[]>(keyFor(uid, "notifs_read"), []),
+        getJSON<StreakState>(keyFor(uid, "streak"), DEFAULT_STREAK_STATE),
       ]);
       if (!active) return;
 
@@ -222,6 +227,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setCompletions(wk);
       setFavorites(fav);
       setNotifReadIds(nr);
+      setStreakState(sanitizeStreakState(sk));
 
       let mergedProfile = { ...DEFAULT_PROFILE, ...p };
 
@@ -261,6 +267,29 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         } catch {
           // offline / transient: keep the local cache.
         }
+
+        // Streak state is reconciled separately from the profile so a profile
+        // error doesn't skip it. The server is the source of truth so the streak
+        // follows the member across devices / reinstalls; the local cache is the
+        // offline fallback.
+        try {
+          const resp = await fetch(`${getApiUrl()}/api/streak`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (resp.ok) {
+            const { streak: serverStreak } = (await resp.json()) as { streak: StreakState | null };
+            if (!active) return;
+            if (serverStreak) {
+              const sane = sanitizeStreakState(serverStreak);
+              setStreakState(sane);
+              setJSON(keyFor(uid, "streak"), sane);
+            }
+            // No server streak yet: the active-day recording effect will create
+            // it by POSTing today, so there's nothing to push up here.
+          }
+        } catch {
+          // offline / transient: keep the local cache.
+        }
       }
 
       if (!active) return;
@@ -292,6 +321,62 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setWeightLogs(seeded);
     setJSON(keyFor(uid, "weight"), seeded);
   }, [uid, ready, weightLogs.length, profile.weight, profile.startWeight]);
+
+  // Records today as an active day toward the streak. De-duped: a day already
+  // recorded is a no-op (no state change, no network call). Updates the local
+  // cache optimistically so the UI is instant and offline-tolerant, then writes
+  // through to the server (sending the local window so any days recorded offline
+  // reconcile on this sync). On a network failure the local cache holds the day
+  // and the next hydrate / foreground retries.
+  const recordActiveDayNow = useCallback(async () => {
+    if (!uid) return;
+    const todayK = todayKey();
+    let shouldSync = false;
+    setStreakState((prev) => {
+      if (prev.lastActiveDay === todayK && prev.recentDays.includes(todayK)) return prev;
+      shouldSync = true;
+      const next = recordActiveDay(prev, todayK);
+      setJSON(keyFor(uid, "streak"), next);
+      return next;
+    });
+    if (!shouldSync || !token) return;
+    try {
+      const localWindow = await getJSON<StreakState>(keyFor(uid, "streak"), DEFAULT_STREAK_STATE);
+      const resp = await fetch(`${getApiUrl()}/api/streak`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ day: todayK, recentDays: localWindow.recentDays }),
+      });
+      if (resp.ok) {
+        const { streak: saved } = (await resp.json()) as { streak: StreakState };
+        const sane = sanitizeStreakState(saved);
+        setStreakState(sane);
+        setJSON(keyFor(uid, "streak"), sane);
+      }
+    } catch {
+      // offline / transient: the local cache already holds today; the next
+      // successful sync (hydrate or foreground) reconciles it to the server.
+    }
+  }, [uid, token]);
+
+  // Record today on every hydrate (covers fresh login, signup and a restored
+  // session) and again whenever the app returns to the foreground on a NEW day,
+  // so a streak survives across days the app is simply left open.
+  const lastForegroundDay = useRef<string>(todayKey());
+  useEffect(() => {
+    if (!uid || !ready) return;
+    recordActiveDayNow();
+    lastForegroundDay.current = todayKey();
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return;
+      const now = todayKey();
+      if (now !== lastForegroundDay.current) {
+        lastForegroundDay.current = now;
+        recordActiveDayNow();
+      }
+    });
+    return () => sub.remove();
+  }, [uid, ready, recordActiveDayNow]);
 
   const updateProfile = useCallback(
     async (patch: Partial<Profile>) => {
@@ -448,10 +533,28 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const isFavorite = useCallback((workoutId: string) => favorites.includes(workoutId), [favorites]);
 
+  // The combined active-OR-workout day set and the single streak number, derived
+  // once here so every screen (home card + pills, profile badge, workout
+  // completion screen, and the streak notification) reads the same value. A day
+  // counts when the member signed in / opened the app (active days, persisted)
+  // OR completed a workout (device-local completions).
+  const completionDayKeys = useMemo(
+    () => completions.map((c) => todayKey(new Date(c.ts))),
+    [completions]
+  );
+  const streakDays = useMemo(
+    () => combineDays(streakState.recentDays, completionDayKeys),
+    [streakState.recentDays, completionDayKeys]
+  );
+  const streak = useMemo(
+    () => displayStreak(streakState, streakDays, todayKey()),
+    [streakState, streakDays]
+  );
+
   const notifications = useMemo<AppNotification[]>(() => {
-    const base = buildNotifications({ waterLogs, calorieLogs, completions, profile });
+    const base = buildNotifications({ waterLogs, calorieLogs, completions, profile, streak });
     return base.map((n) => ({ ...n, read: notifReadIds.includes(n.id) }));
-  }, [waterLogs, calorieLogs, completions, profile, notifReadIds]);
+  }, [waterLogs, calorieLogs, completions, profile, streak, notifReadIds]);
 
   const unreadCount = useMemo(() => notifications.filter((n) => !n.read).length, [notifications]);
 
@@ -496,11 +599,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       addCalorie,
       deleteCalorie,
       completeWorkout,
+      streak,
+      streakDays,
       notifications,
       unreadCount,
       markNotificationsRead,
     }),
-    [ready, profile, waterLogs, weightLogs, progressPhotos, calorieLogs, completions, favorites, toggleFavorite, isFavorite, updateProfile, addWater, removeWater, addWeight, removeWeight, addPhoto, removePhoto, addCalorie, deleteCalorie, completeWorkout, notifications, unreadCount, markNotificationsRead]
+    [ready, profile, waterLogs, weightLogs, progressPhotos, calorieLogs, completions, favorites, toggleFavorite, isFavorite, updateProfile, addWater, removeWater, addWeight, removeWeight, addPhoto, removePhoto, addCalorie, deleteCalorie, completeWorkout, streak, streakDays, notifications, unreadCount, markNotificationsRead]
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
