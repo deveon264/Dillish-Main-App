@@ -33,7 +33,7 @@ export default function WorkoutPlayer() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useInsets();
-  const { completeWorkout, toggleFavorite, isFavorite, streak, streakDays } = useData();
+  const { completeWorkout, toggleFavorite, isFavorite, streak, streakDays, newBestToday } = useData();
   const { isAdmin } = useAuth();
   const workout = getWorkout(id);
   const fav = workout ? isFavorite(workout.id) : false;
@@ -63,6 +63,8 @@ export default function WorkoutPlayer() {
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toastAnim = useRef(new Animated.Value(0)).current;
   const savedRef = useRef(false);
+  // Drives the "new personal best" celebration banner on the completion screen.
+  const pbAnim = useRef(new Animated.Value(0)).current;
 
   // Each exercise in this workout can have its OWN uploaded video, keyed by the
   // exercise id. We load them up front and play the matching one in the header.
@@ -292,6 +294,21 @@ export default function WorkoutPlayer() {
       if (hideTimer.current) clearTimeout(hideTimer.current);
     };
   }, []);
+
+  // Animate the personal-best banner in once we land on the completion screen
+  // with a new record to celebrate. Reads the same de-duped `newBestToday` the
+  // notification uses, so it never re-fires for an already-celebrated best.
+  useEffect(() => {
+    if (phase !== "done" || newBestToday == null) return;
+    if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Animated.spring(pbAnim, {
+      toValue: 1,
+      friction: 6,
+      tension: 80,
+      useNativeDriver: true,
+    }).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, newBestToday]);
 
   const scheduleHide = () => {
     if (hideTimer.current) clearTimeout(hideTimer.current);
@@ -941,6 +958,27 @@ export default function WorkoutPlayer() {
         </View>
         <Text style={styles.doneTitle}>Beautifully done</Text>
         <Text style={styles.doneSub}>You completed {workout.title}. Take a breath and feel proud.</Text>
+        {newBestToday != null && (
+          <Animated.View
+            style={[
+              styles.pbBanner,
+              {
+                opacity: pbAnim,
+                transform: [
+                  { scale: pbAnim.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }) },
+                ],
+              },
+            ]}
+          >
+            <View style={styles.pbIcon}>
+              <Ionicons name="trophy" size={18} color={colors.onPrimaryStrong} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.pbEyebrow}>NEW PERSONAL BEST</Text>
+              <Text style={styles.pbValue}>{newBestToday} day streak!</Text>
+            </View>
+          </Animated.View>
+        )}
         <View style={styles.doneStats}>
           <View style={styles.doneStat}>
             <Text style={styles.doneStatNum}>{workout.kcal}</Text>
@@ -1200,6 +1238,22 @@ const styles = StyleSheet.create({
   doneIcon: { width: 96, height: 96, borderRadius: 48, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
   doneTitle: { fontFamily: fonts.serifSemibold, fontSize: 34, color: colors.foreground, marginTop: 24 },
   doneSub: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted, textAlign: "center", marginTop: 10, lineHeight: 23 },
+  pbBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 24,
+    alignSelf: "stretch",
+    backgroundColor: colors.accentTint,
+    borderWidth: 1,
+    borderColor: colors.accentBorderLg,
+    borderRadius: colors.radiusLg,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  pbIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
+  pbEyebrow: { fontFamily: fonts.sansSemibold, fontSize: 10.5, color: colors.accent, letterSpacing: 1.2 },
+  pbValue: { fontFamily: fonts.serifSemibold, fontSize: 20, color: colors.foreground, marginTop: 2 },
   doneStats: { flexDirection: "row", alignItems: "center", marginTop: 32, backgroundColor: colors.card, borderRadius: colors.radiusLg, borderWidth: 1, borderColor: colors.cardBorder, paddingVertical: 20, paddingHorizontal: 10, alignSelf: "stretch", justifyContent: "space-around" },
   doneStat: { alignItems: "center", flex: 1 },
   doneStatNum: { fontFamily: fonts.serifSemibold, fontSize: 26, color: colors.accent },

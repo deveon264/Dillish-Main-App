@@ -174,6 +174,11 @@ type DataContextType = {
   // Personal best: the longest streak the member has ever reached. Never below
   // the current `streak`.
   streakBest: number;
+  // The value of a brand-new personal best reached today that has not yet been
+  // celebrated on this device, or null when there is nothing to celebrate. Drives
+  // both the streak notification and the workout-completion banner, so both read
+  // the same de-duped record and never re-fire for an already-celebrated best.
+  newBestToday: number | null;
   streakDays: Set<string>;
   notifications: AppNotification[];
   unreadCount: number;
@@ -668,12 +673,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       completeWorkout,
       streak,
       streakBest,
+      newBestToday,
       streakDays,
       notifications,
       unreadCount,
       markNotificationsRead,
     }),
-    [ready, profile, waterLogs, weightLogs, progressPhotos, calorieLogs, completions, favorites, toggleFavorite, isFavorite, updateProfile, addWater, removeWater, addWeight, removeWeight, addPhoto, removePhoto, addCalorie, deleteCalorie, completeWorkout, streak, streakBest, streakDays, notifications, unreadCount, markNotificationsRead]
+    [ready, profile, waterLogs, weightLogs, progressPhotos, calorieLogs, completions, favorites, toggleFavorite, isFavorite, updateProfile, addWater, removeWater, addWeight, removeWeight, addPhoto, removePhoto, addCalorie, deleteCalorie, completeWorkout, streak, streakBest, newBestToday, streakDays, notifications, unreadCount, markNotificationsRead]
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
