@@ -12,6 +12,7 @@ import { pageHeaderStyles } from "@/components/PageHeader";
 import { Button } from "@/components/Button";
 import { getWorkout } from "@/constants/workouts";
 import { listWorkoutExercises, videoUrl, posterUrl } from "@/lib/exercises";
+import { computeWorkoutProgress } from "@/lib/workoutProgress";
 import { useData } from "@/contexts/DataContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { todayKey, getJSON, setJSON } from "@/lib/storage";
@@ -544,19 +545,23 @@ export default function WorkoutPlayer() {
   }
 
   if (phase === "active" && current) {
-    const totalSeconds = workout.exercises.reduce((s, e) => s + e.seconds, 0);
-    const priorSeconds = workout.exercises.slice(0, index).reduce((s, e) => s + e.seconds, 0);
-    const elapsed = priorSeconds + (current.seconds - remaining);
-    const overall = totalSeconds > 0 ? elapsed / totalSeconds : 0;
-    const overallPct = `${Math.round(overall * 100)}%` as const;
     // When this exercise has an uploaded video, the bar always tracks the clip:
     // 0:00 / empty while it loads, then the real clip time. Exercises with no
     // video show the current exercise's own configured duration and the time
     // elapsed within that single exercise, resetting as the workout advances.
+    // Whole-workout stats (overall %, kcal, bpm/zone) keep using cumulative
+    // time. See lib/workoutProgress.ts (unit-tested) for the math.
     const hasMappedVideo = !!currentVideo;
-    const barElapsed = hasMappedVideo ? Math.min(videoTime, videoDuration) : current.seconds - remaining;
-    const barTotal = hasMappedVideo ? videoDuration : current.seconds;
-    const barPct = `${Math.round((barTotal > 0 ? barElapsed / barTotal : 0) * 100)}%` as const;
+    const { totalSeconds, elapsed, overall, overallPct, barElapsed, barTotal, barPct, kcalBurned, bpm, zone, bpmPct } =
+      computeWorkoutProgress({
+        exerciseSeconds: workout.exercises.map((e) => e.seconds),
+        index,
+        remaining,
+        workoutKcal: workout.kcal,
+        hasVideo: hasMappedVideo,
+        videoTime,
+        videoDuration,
+      });
     // While a mapped clip loads, show its poster (the video's own frame) instead
     // of the generic stock thumbnail. No poster → neutral dark background.
     const playerImage = hasMappedVideo
@@ -564,11 +569,6 @@ export default function WorkoutPlayer() {
         ? { uri: posterUrl(currentVideo!.id) }
         : undefined
       : current.image ?? workout.image;
-    const kcalBurned = Math.round(workout.kcal * overall);
-    const kcalPct = `${Math.round(overall * 100)}%` as const;
-    const bpm = 96 + Math.round(overall * 44);
-    const zone = bpm < 110 ? "Light" : bpm < 135 ? "Moderate" : "Intense";
-    const bpmPct = `${Math.min(100, Math.round(((bpm - 60) / 120) * 100))}%` as const;
     const monday = new Date();
     monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
     const tkNow = todayKey();
@@ -895,7 +895,7 @@ export default function WorkoutPlayer() {
                         colors={colors.gradient}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
-                        style={[styles.miniBarFill, { width: kcalPct }]}
+                        style={[styles.miniBarFill, { width: overallPct }]}
                       />
                     </View>
                   </View>
