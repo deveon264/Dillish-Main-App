@@ -6,6 +6,7 @@ import * as Haptics from "expo-haptics";
 import { Platform } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
+import * as ScreenOrientation from "expo-screen-orientation";
 import { Image as ExpoImage } from "expo-image";
 import { Asset } from "expo-asset";
 import { useEventListener } from "expo";
@@ -111,6 +112,33 @@ export default function WorkoutPlayer() {
   useEventListener(player, "playToEnd", () => {
     onVideoEndRef.current();
   });
+
+  // Fullscreen lets a member watch the demo in landscape. The app is locked to
+  // portrait, so we unlock orientation while the native fullscreen view is open
+  // (letting the device rotate to landscape) and re-lock to portrait on exit so
+  // the inline player and the countdown/rest flow stay upright. Web has no
+  // orientation lock and falls back to the browser's own fullscreen.
+  const onFullscreenEnter =
+    Platform.OS === "web"
+      ? undefined
+      : () => {
+          ScreenOrientation.unlockAsync().catch(() => {});
+        };
+  const onFullscreenExit =
+    Platform.OS === "web"
+      ? undefined
+      : () => {
+          ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+        };
+  // Safety net: if the screen unmounts (e.g. the member navigates back) while
+  // still in fullscreen, restore portrait so the rest of the app isn't left
+  // sideways.
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    return () => {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+    };
+  }, []);
 
   const overlayOpacity = useRef(new Animated.Value(1)).current;
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -636,6 +664,8 @@ export default function WorkoutPlayer() {
                 contentFit="cover"
                 nativeControls={false}
                 allowsFullscreen
+                onFullscreenEnter={onFullscreenEnter}
+                onFullscreenExit={onFullscreenExit}
                 pointerEvents="none"
               />
             )}
