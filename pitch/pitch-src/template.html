@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Shape by {{NAME}} - Partnership Proposal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --cream: #EFE3D7;
+    --cream-deep: #E0CFBF;
+    --card: #FBF6F0;
+    --rose: #DD8DA0;
+    --rose-soft: #EBB1C0;
+    --rose-deep: #9E4E61;
+    --ink: #4A2E33;
+    --honey: #C2925E;
+    --blush: #F3C7C2;
+    --sage: #7FA37C;
+    --muted: #8A6F66;
+    --body: #6E5650;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: #d8c8ba;
+    font-family: "DM Sans", -apple-system, sans-serif;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .deck { display: flex; flex-direction: column; align-items: center; gap: 28px; padding: 28px 0; }
+
+  .slide {
+    position: relative;
+    width: 1280px;
+    height: 720px;
+    background: var(--cream);
+    overflow: hidden;
+    page-break-after: always;
+    break-after: page;
+  }
+  .slide:last-child { page-break-after: auto; }
+
+  /* soft ambient glow */
+  .slide::before {
+    content: "";
+    position: absolute;
+    top: -260px; right: -200px;
+    width: 640px; height: 640px;
+    background: radial-gradient(circle, rgba(243,199,194,0.55), rgba(243,199,194,0) 68%);
+    pointer-events: none;
+  }
+  .slide::after {
+    content: "";
+    position: absolute;
+    bottom: -300px; left: -220px;
+    width: 620px; height: 620px;
+    background: radial-gradient(circle, rgba(221,141,160,0.18), rgba(221,141,160,0) 70%);
+    pointer-events: none;
+  }
+
+  .pad { position: absolute; inset: 0; padding: 72px 84px; display: flex; flex-direction: column; }
+  .pad.row { flex-direction: row; }
+
+  /* footer */
+  .foot {
+    position: absolute;
+    left: 84px; right: 84px; bottom: 34px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+    color: rgba(110,86,80,0.6); font-weight: 600; z-index: 5;
+  }
+  .foot .dot { color: var(--rose); }
+
+  /* brand lockup */
+  .lockup { display: flex; align-items: center; gap: 14px; }
+  .mark {
+    width: 52px; height: 52px; border-radius: 17px;
+    background: linear-gradient(155deg, #E69DAE, #C76C82);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 10px 22px rgba(158,78,97,0.30);
+    flex: none;
+  }
+  .mark svg { width: 30px; height: 30px; }
+  .mark.sm { width: 36px; height: 36px; border-radius: 12px; }
+  .mark.sm svg { width: 21px; height: 21px; }
+  .wordmark { display: flex; flex-direction: column; line-height: 1; }
+  .wordmark .name { font-family: "Cormorant Garamond", serif; font-weight: 600; font-size: 32px; color: var(--ink); letter-spacing: 0.01em; }
+  .wordmark .sub { font-size: 9.5px; letter-spacing: 0.42em; text-transform: uppercase; color: var(--rose-deep); margin-top: 3px; font-weight: 600; }
+
+  /* typography */
+  .eyebrow { font-size: 13px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--rose-deep); font-weight: 700; }
+  h1 { font-family: "Cormorant Garamond", serif; font-weight: 500; color: var(--ink); line-height: 1.04; letter-spacing: 0.005em; }
+  .display { font-size: 76px; }
+  .h-xl { font-size: 60px; }
+  .h-lg { font-size: 50px; }
+  h1 em { font-style: italic; color: var(--rose-deep); }
+  .lead { font-family: "DM Sans", sans-serif; color: var(--body); font-size: 19px; line-height: 1.62; font-weight: 400; }
+  .small { font-size: 15px; color: var(--muted); line-height: 1.55; }
+
+  .rule { width: 64px; height: 3px; border-radius: 3px; background: var(--rose); }
+
+  /* phone frame */
+  .phone {
+    border-radius: 38px; padding: 7px;
+    background: linear-gradient(160deg, #fff, #efd9d9 55%, #d99fae);
+    box-shadow: 0 30px 60px rgba(74,46,51,0.28), 0 4px 12px rgba(74,46,51,0.14);
+    flex: none;
+  }
+  .phone img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 32px; }
+
+  .pill { display: inline-flex; align-items: center; gap: 8px; padding: 7px 16px; border-radius: 999px; background: rgba(221,141,160,0.12); border: 1px solid rgba(221,141,160,0.28); color: var(--rose-deep); font-size: 13px; font-weight: 600; letter-spacing: 0.02em; }
+
+  .card { background: var(--card); border: 1px solid rgba(221,141,160,0.16); border-radius: 22px; box-shadow: 0 14px 30px rgba(74,46,51,0.07); }
+
+  /* layout helpers */
+  .row { display: flex; }
+  .col { display: flex; flex-direction: column; }
+  .grow { flex: 1; }
+  .center { align-items: center; }
+  .between { justify-content: space-between; }
+
+  /* numbers table */
+  table.scn { width: 100%; border-collapse: collapse; font-size: 16px; }
+  table.scn th { text-align: left; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); font-weight: 700; padding: 0 14px 12px; }
+  table.scn td { padding: 14px 14px; border-top: 1px solid rgba(138,111,102,0.18); color: var(--ink); font-weight: 500; }
+  table.scn td.num { font-variant-numeric: tabular-nums; }
+  table.scn tr.hot td { background: rgba(221,141,160,0.10); color: var(--rose-deep); font-weight: 700; }
+  table.scn tr.hot td:first-child { border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
+  table.scn tr.hot td:last-child { border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
+
+  .stat-num { font-family: "Cormorant Garamond", serif; font-weight: 600; color: var(--ink); line-height: 1; }
+
+  /* print: one slide per page, no accumulating gaps */
+  @media print {
+    .deck { gap: 0; padding: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="deck">
+
+  <!-- ============ SLIDE 1 : COVER ============ -->
+  <section class="slide">
+    <div class="pad row" style="padding:0;">
+      <!-- left -->
+      <div class="col grow" style="padding:84px; justify-content:center;">
+        <div class="lockup" style="margin-bottom:54px;">
+          <div class="mark">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="M12 8.5C12 5.7 10.4 3.5 12 3.5s0 2.2 0 5Z"/><path d="M12 15.5c0 2.8 1.6 5 0 5s0-2.2 0-5Z"/><path d="M8.5 12c-2.8 0-5-1.6-5 0s2.2 0 5 0Z"/><path d="M15.5 12c2.8 0 5 1.6 5 0s-2.2 0-5 0Z"/><path d="M9.5 9.5C7.5 7.5 6 5.5 7 4.5s2.5 3 2.5 5Z"/><path d="M14.5 14.5c2 2 3.5 4 2.5 5s-2.5-3-2.5-5Z"/><path d="M14.5 9.5c2-2 3.5-4 2.5-5s-2.5 3-2.5 5Z"/><path d="M9.5 14.5c-2 2-3.5 4-2.5 5s2.5-3 2.5-5Z"/></svg>
+          </div>
+          <div class="wordmark">
+            <span class="name">Shape</span>
+            <span class="sub">by {{NAME}}</span>
+          </div>
+        </div>
+
+        <div class="eyebrow" style="margin-bottom:22px;">A partnership proposal</div>
+        <h1 class="display">Your name is<br>already <em>on it.</em></h1>
+        <p class="lead" style="margin-top:26px; max-width:480px;">
+          A women's fitness app in the making, built around your coaching
+          and branded <strong>Shape by {{NAME}}</strong>. The foundation and the
+          brand are here. What it needs next is you.
+        </p>
+
+        <div class="row" style="gap:12px; margin-top:38px;">
+          <span class="pill">Co-founder</span>
+          <span class="pill">Brand ambassador</span>
+          <span class="pill">40% of profit</span>
+        </div>
+      </div>
+
+      <!-- right -->
+      <div class="col center" style="width:520px; justify-content:center; background:linear-gradient(160deg, #f6dfe0, #e7aebb); position:relative;">
+        <div style="position:absolute; inset:0; background:radial-gradient(circle at 50% 30%, rgba(255,255,255,0.5), rgba(255,255,255,0) 60%);"></div>
+        <div class="phone" style="width:300px; height:650px; position:relative;">
+          <img src="assets/welcome.png" alt="Shape by {{NAME}} welcome screen" />
+        </div>
+      </div>
+    </div>
+    <div class="foot"><span>Shape <span class="dot">by</span> {{NAME}}</span><span>Partnership Proposal</span></div>
+  </section>
+
+  <!-- ============ SLIDE 2 : OPPORTUNITY ============ -->
+  <section class="slide">
+    <div class="pad">
+      <div class="eyebrow">The opportunity</div>
+      <h1 class="h-xl" style="margin-top:18px; max-width:880px;">The moment for women's<br>wellness is <em>right now.</em></h1>
+      <p class="lead" style="margin-top:22px; max-width:760px;">
+        Women everywhere want to feel stronger, calmer and more confident, and
+        they want to be guided by someone they actually trust. The hardest part
+        of building a fitness brand is earning that trust at scale. You already
+        have it.
+      </p>
+
+      <div class="row" style="gap:24px; margin-top:48px;">
+        <div class="card col grow" style="padding:32px;">
+          <div class="stat-num" style="font-size:52px; color:var(--rose-deep);">Trust</div>
+          <div style="font-weight:700; margin-top:10px; font-size:17px;">People follow people</div>
+          <p class="small" style="margin-top:8px;">Audiences subscribe to a face and a voice they believe in, not to a faceless app. That relationship is the product.</p>
+        </div>
+        <div class="card col grow" style="padding:32px;">
+          <div class="stat-num" style="font-size:52px; color:var(--rose-deep);">Reach</div>
+          <div style="font-weight:700; margin-top:10px; font-size:17px;">An engaged audience</div>
+          <p class="small" style="margin-top:8px;">A loyal, multi-country following is the single hardest asset to build. It is also the one piece a product cannot create on its own.</p>
+        </div>
+        <div class="card col grow" style="padding:32px;">
+          <div class="stat-num" style="font-size:52px; color:var(--rose-deep);">Timing</div>
+          <div style="font-weight:700; margin-top:10px; font-size:17px;">Getting in early</div>
+          <p class="small" style="margin-top:8px;">Most creators join once a product is finished. You can help shape this one from the start, and it already carries your name.</p>
+        </div>
+      </div>
+    </div>
+    <div class="foot"><span>Shape <span class="dot">by</span> {{NAME}}</span><span>02</span></div>
+  </section>
+
+  <!-- ============ SLIDE 3 : MEET SHAPE ============ -->
+  <section class="slide">
+    <div class="pad row" style="gap:64px;">
+      <div class="col grow" style="justify-content:center; max-width:600px;">
+        <div class="eyebrow">Meet Shape</div>
+        <h1 class="h-xl" style="margin-top:18px;">Not just an idea.<br>A real <em>start.</em></h1>
+        <p class="lead" style="margin-top:24px;">
+          Shape is a premium fitness and wellness app for women, in active
+          development. The look, the brand and the first screens are real, and
+          there is plenty still to build before launch.
+        </p>
+        <div class="col" style="gap:18px; margin-top:30px;">
+          <div class="row center" style="gap:14px;"><div class="mark sm"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"/></svg></div><span class="lead" style="font-size:18px;">Your workout videos sit at the heart of the experience.</span></div>
+          <div class="row center" style="gap:14px;"><div class="mark sm"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"/></svg></div><span class="lead" style="font-size:18px;">An AI calorie tracker makes healthy eating effortless.</span></div>
+          <div class="row center" style="gap:14px;"><div class="mark sm"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"/></svg></div><span class="lead" style="font-size:18px;">A subscription turns it into recurring monthly income.</span></div>
+        </div>
+      </div>
+      <div class="col center" style="justify-content:center;">
+        <div class="phone" style="width:312px; height:676px;"><img src="assets/home.png" alt="Shape home screen" /></div>
+      </div>
+    </div>
+    <div class="foot"><span>Shape <span class="dot">by</span> {{NAME}}</span><span>03</span></div>
+  </section>
+
+  <!-- ============ SLIDE 4 : PRODUCT TOUR ============ -->
+  <section class="slide">
+    <div class="pad">
+      <div class="eyebrow">A tour of the app</div>
+      <h1 class="h-lg" style="margin-top:16px;">The first screens, already <em>designed.</em></h1>
+
+      <div class="row between" style="gap:22px; margin-top:30px; align-items:flex-start;">
+        <div class="col center" style="width:255px;">
+          <div class="phone" style="width:182px; height:394px;"><img src="assets/home.png" alt="Home" /></div>
+          <div style="font-weight:700; margin-top:18px; font-size:15px; text-align:center;">Today's workout</div>
+          <p class="small" style="text-align:center; margin-top:5px;">Members open straight into a session led by you.</p>
+        </div>
+        <div class="col center" style="width:255px;">
+          <div class="phone" style="width:182px; height:394px;"><img src="assets/workouts.png" alt="Workout library" /></div>
+          <div style="font-weight:700; margin-top:18px; font-size:15px; text-align:center;">Workout library</div>
+          <p class="small" style="text-align:center; margin-top:5px;">Your full collection of guided routines, organised by type.</p>
+        </div>
+        <div class="col center" style="width:255px;">
+          <div class="phone" style="width:182px; height:394px;"><img src="assets/calories.png" alt="AI calorie tracker" /></div>
+          <div style="font-weight:700; margin-top:18px; font-size:15px; text-align:center;">AI calorie tracker</div>
+          <p class="small" style="text-align:center; margin-top:5px;">Snap a photo or describe a meal, AI does the counting.</p>
+        </div>
+        <div class="col center" style="width:255px;">
+          <div class="phone" style="width:182px; height:394px;"><img src="assets/progress.png" alt="Progress" /></div>
+          <div style="font-weight:700; margin-top:18px; font-size:15px; text-align:center;">Progress tracking</div>
+          <p class="small" style="text-align:center; margin-top:5px;">Weight, goals and photos keep members coming back.</p>
+        </div>
+      </div>
+    </div>
+    <div class="foot"><span>Shape <span class="dot">by</span> {{NAME}}</span><span>04</span></div>
+  </section>
+
+  <!-- ============ SLIDE 5 : WHY AJAY ============ -->
+  <section class="slide">
+    <div class="pad row" style="gap:56px;">
+      <div class="col" style="justify-content:center; width:430px;">
+        <div class="eyebrow">Why you</div>
+        <h1 class="display" style="margin-top:16px;"><span class="stat-num" style="font-size:128px; color:var(--rose-deep);">{{AUDIENCE_BIG}}</span></h1>
+        <div style="font-weight:700; font-size:20px; margin-top:6px;">engaged followers, and counting.</div>
+        {{SPLIT_LINE}}<p class="lead" style="margin-top:{{LEAD_MT}}px;">
+          A multi-country audience in the exact niche this app serves. That reach
+          is the growth engine, and it is already yours.
+        </p>
+      </div>
+      <div class="col grow" style="justify-content:center; gap:18px;">
+        <div class="card row center" style="padding:26px 30px; gap:20px;"><div class="stat-num" style="font-size:40px; color:var(--rose); width:54px;">1</div><div><div style="font-weight:700; font-size:17px;">The perfect-fit audience</div><p class="small" style="margin-top:4px;">Your followers already come to you for fitness and wellness. They are the exact people who subscribe.</p></div></div>
+        <div class="card row center" style="padding:26px 30px; gap:20px;"><div class="stat-num" style="font-size:40px; color:var(--rose); width:54px;">2</div><div><div style="font-weight:700; font-size:17px;">Multi-country reach</div><p class="small" style="margin-top:4px;">From Namibia and beyond, a digital subscription crosses every border with no extra cost.</p></div></div>
+        <div class="card row center" style="padding:26px 30px; gap:20px;"><div class="stat-num" style="font-size:40px; color:var(--rose); width:54px;">3</div><div><div style="font-weight:700; font-size:17px;">Authentic brand fit</div><p class="small" style="margin-top:4px;">Empowering women's wellness is your message. This app is simply that message, made into a product.</p></div></div>
+        <div class="card row center" style="padding:26px 30px; gap:20px;"><div class="stat-num" style="font-size:40px; color:var(--rose); width:54px;">4</div><div><div style="font-weight:700; font-size:17px;">It already carries your name</div><p class="small" style="margin-top:4px;">Shape by {{NAME}}. The brand was built around you from the very first screen.</p></div></div>
+      </div>
+    </div>
+    <div class="foot"><span>Shape <span class="dot">by</span> {{NAME}}</span><span>05</span></div>
+  </section>
+
+  <!-- ============ SLIDE 6 : BUSINESS MODEL ============ -->
+  <section class="slide">
+    <div class="pad">
+      <div class="eyebrow">The business model</div>
+      <h1 class="h-xl" style="margin-top:16px;">Recurring income,<br>not a one-time <em>sale.</em></h1>
+      <p class="lead" style="margin-top:20px; max-width:760px;">
+        Members pay a subscription to keep their access. Choose weekly, monthly or
+        yearly. Every month, your name, brand and audience turn into income that
+        keeps coming back.
+      </p>
+
+      <div class="row" style="gap:24px; margin-top:44px; align-items:stretch;">
+        <div class="card col" style="padding:30px; flex:1;">
+          <div class="eyebrow" style="font-size:11px;">Weekly</div>
+          <div style="margin-top:14px;"><span class="stat-num" style="font-size:48px;">$1.99</span><span class="small"> (N$34) / week</span></div>
+          <p class="small" style="margin-top:12px;">An easy way to start, perfect for a launch promotion to your followers.</p>
+        </div>
+        <div class="card col" style="padding:30px; flex:1; border:2px solid var(--rose); box-shadow:0 20px 40px rgba(221,141,160,0.22);">
+          <div class="row between center"><div class="eyebrow" style="font-size:11px;">Monthly</div><span class="pill" style="padding:4px 12px; font-size:11px;">Most popular</span></div>
+          <div style="margin-top:14px;"><span class="stat-num" style="font-size:48px; color:var(--rose-deep);">$4.99</span><span class="small"> (N$85) / month</span></div>
+          <p class="small" style="margin-top:12px;">The anchor plan. Every projection in this deck is based on this price.</p>
+        </div>
+        <div class="card col" style="padding:30px; flex:1;">
+          <div class="eyebrow" style="font-size:11px;">Yearly</div>
+          <div style="margin-top:14px;"><span class="stat-num" style="font-size:48px;">$39.99</span><span class="small"> (N$680) / year</span></div>
+          <p class="small" style="margin-top:12px;">Best value for committed members, and it locks in revenue for a full year.</p>
+        </div>
+      </div>
+      <p class="small" style="margin-top:22px;">Pricing shown is indicative. The monthly plan is used as the basis for the figures on the next slide.</p>
+    </div>
+    <div class="foot"><span>Shape <span class="dot">by</span> {{NAME}}</span><span>06</span></div>
+  </section>
+
+  <!-- ============ SLIDE 7 : THE NUMBERS ============ -->
+  <section class="slide">
+    <div class="pad">
+      <div class="eyebrow">The opportunity, in numbers</div>
+      <h1 class="h-lg" style="margin-top:10px; font-size:44px; line-height:1.15;">If just <em>1%</em> of your {{AUDIENCE_FULL}} audience subscribes at ${{PRICE_USD}} ({{LOCAL_SYM}}{{PRICE_LOCAL}}) per month.</h1>
+
+      <div class="row" style="gap:26px; margin-top:22px;">
+        <div class="card col center" style="padding:24px 20px; flex:1;"><div class="stat-num" style="font-size:46px; color:var(--ink);">{{H_SUBS}}</div><div class="small" style="margin-top:4px;">subscribers</div></div>
+        <div class="card col center" style="padding:24px 20px; flex:1;"><div class="stat-num" style="font-size:46px; color:var(--ink);">{{H_PROFIT_USD}}</div><div class="small" style="margin-top:4px;">profit / month ({{LOCAL_SYM}}{{H_PROFIT_LOCAL}})</div></div>
+        <div class="card col center" style="padding:24px 20px; flex:1; background:rgba(221,141,160,0.12); border-color:rgba(221,141,160,0.3);"><div class="stat-num" style="font-size:46px; color:var(--rose-deep);">{{H_SHARE_USD}}</div><div class="small" style="margin-top:4px;">your 40% / month</div></div>
+        <div class="card col center" style="padding:24px 20px; flex:1; background:rgba(221,141,160,0.12); border-color:rgba(221,141,160,0.3);"><div class="stat-num" style="font-size:46px; color:var(--rose-deep);">{{LOCAL_SYM}}{{H_SHARE_LOCAL}}</div><div class="small" style="margin-top:4px;">your 40% / month</div></div>
+      </div>
+
+      <table class="scn" style="margin-top:22px;">
+        <thead><tr><th>Conversion</th><th>Subscribers</th><th>Profit / month</th><th>Your 40% (USD)</th><th></th><th>Your 40% (N$)</th></tr></thead>
+        <tbody>
+{{TABLE_ROWS}}
+        </tbody>
+      </table>
+      <p class="small" style="margin-top:14px; max-width:1000px;">
+        Illustrative figures based on {{AUDIENCE_FULL}} followers, ${{PRICE_USD}} ({{LOCAL_SYM}}{{PRICE_LOCAL}}) per month, and about {{LOCAL_SYM}}{{RATE}} per US dollar.
+        These ranges are meant to show the shape of the opportunity, not a guarantee.
+      </p>
+    </div>
+    <div class="foot"><span>Shape <span class="dot">by</span> {{NAME}}</span><span>07</span></div>
+  </section>
+
+  <!-- ============ SLIDE 8 : THE PARTNERSHIP ============ -->
+  <section class="slide">
+    <div class="pad">
+      <div class="eyebrow">The partnership</div>
+      <h1 class="h-xl" style="margin-top:14px;">You bring the audience.<br>I bring the <em>product.</em></h1>
+      <p class="lead" style="margin-top:18px; max-width:820px;">
+        You join as co-founder and the face of Shape by {{NAME}}. You invest your
+        promotion, not your cash. The profit is split 60% to the founder and
+        40% to you.
+      </p>
+
+      <div class="row" style="gap:26px; margin-top:38px; align-items:stretch;">
+        <div class="card col" style="padding:34px; flex:1;">
+          <div class="row center between"><div style="font-weight:700; font-size:20px; color:var(--rose-deep);">You bring</div><span class="stat-num" style="font-size:40px; color:var(--rose-deep);">40%</span></div>
+          <div class="rule" style="margin:16px 0 20px;"></div>
+          <ul style="list-style:none; display:flex; flex-direction:column; gap:14px;">
+            <li class="lead" style="font-size:17px;">Your voice, your audience, your reach.</li>
+            <li class="lead" style="font-size:17px;">Ongoing promotion to drive subscribers.</li>
+            <li class="lead" style="font-size:17px;">You as co-founder and brand ambassador.</li>
+            <li class="lead" style="font-size:17px;">The trust that turns followers into members.</li>
+          </ul>
+        </div>
+        <div class="card col" style="padding:34px; flex:1;">
+          <div class="row center between"><div style="font-weight:700; font-size:20px;">The founder brings</div><span class="stat-num" style="font-size:40px;">60%</span></div>
+          <div class="rule" style="margin:16px 0 20px; background:var(--ink);"></div>
+          <ul style="list-style:none; display:flex; flex-direction:column; gap:14px;">
+            <li class="lead" style="font-size:17px;">The product and its ongoing development.</li>
+            <li class="lead" style="font-size:17px;">All the building, at no cost to you.</li>
+            <li class="lead" style="font-size:17px;">Hosting, maintenance and updates.</li>
+            <li class="lead" style="font-size:17px;">The day-to-day running of the business.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="foot"><span>Shape <span class="dot">by</span> {{NAME}}</span><span>08</span></div>
+  </section>
+
+  <!-- ============ SLIDE 9 : ROADMAP ============ -->
+  <section class="slide">
+    <div class="pad">
+      <div class="eyebrow">Where we are, and what is next</div>
+      <h1 class="h-xl" style="margin-top:14px;">You are the final <em>piece.</em></h1>
+      <p class="lead" style="margin-top:18px; max-width:780px;">
+        An early build and the brand are in place. Your commitment unlocks the
+        next stages and the launch.
+      </p>
+
+      <div class="row" style="gap:0; margin-top:54px; align-items:flex-start;">
+        <div class="col" style="flex:1; padding-right:26px;">
+          <div class="row center" style="gap:12px;"><div class="mark sm" style="background:linear-gradient(155deg,#7FA37C,#5f8a5c);"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"/></svg></div><span class="eyebrow" style="color:var(--sage);">So far</span></div>
+          <div style="font-family:'Cormorant Garamond',serif; font-size:26px; margin-top:14px; font-weight:600;">Started and branded</div>
+          <p class="small" style="margin-top:8px;">The concept, an early build and the brand Shape by {{NAME}} are in place.</p>
+        </div>
+        <div class="col" style="flex:1; padding:0 26px; border-left:1px solid rgba(138,111,102,0.25);">
+          <div class="row center" style="gap:12px;"><div class="mark sm">2</div><span class="eyebrow">Next</span></div>
+          <div style="font-family:'Cormorant Garamond',serif; font-size:26px; margin-top:14px; font-weight:600;">You come on board</div>
+          <p class="small" style="margin-top:8px;">You join as co-founder and the face of the app.</p>
+        </div>
+        <div class="col" style="flex:1; padding:0 26px; border-left:1px solid rgba(138,111,102,0.25);">
+          <div class="row center" style="gap:12px;"><div class="mark sm">3</div><span class="eyebrow">Launch</span></div>
+          <div style="font-family:'Cormorant Garamond',serif; font-size:26px; margin-top:14px; font-weight:600;">Build and release</div>
+          <p class="small" style="margin-top:8px;">We complete the remaining development and launch on the app stores.</p>
+        </div>
+        <div class="col" style="flex:1; padding-left:26px; border-left:1px solid rgba(138,111,102,0.25);">
+          <div class="row center" style="gap:12px;"><div class="mark sm">4</div><span class="eyebrow">Grow</span></div>
+          <div style="font-family:'Cormorant Garamond',serif; font-size:26px; margin-top:14px; font-weight:600;">Grow together</div>
+          <p class="small" style="margin-top:8px;">Your audience brings members, and the recurring revenue compounds.</p>
+        </div>
+      </div>
+    </div>
+    <div class="foot"><span>Shape <span class="dot">by</span> {{NAME}}</span><span>09</span></div>
+  </section>
+
+  <!-- ============ SLIDE 10 : THE ASK ============ -->
+  <section class="slide">
+    <div class="pad col center" style="text-align:center; align-items:center; justify-content:center;">
+      <div class="lockup" style="margin-bottom:40px;">
+        <div class="mark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="M12 8.5C12 5.7 10.4 3.5 12 3.5s0 2.2 0 5Z"/><path d="M12 15.5c0 2.8 1.6 5 0 5s0-2.2 0-5Z"/><path d="M8.5 12c-2.8 0-5-1.6-5 0s2.2 0 5 0Z"/><path d="M15.5 12c2.8 0 5 1.6 5 0s-2.2 0-5 0Z"/><path d="M9.5 9.5C7.5 7.5 6 5.5 7 4.5s2.5 3 2.5 5Z"/><path d="M14.5 14.5c2 2 3.5 4 2.5 5s-2.5-3-2.5-5Z"/><path d="M14.5 9.5c2-2 3.5-4 2.5-5s-2.5 3-2.5 5Z"/><path d="M9.5 14.5c-2 2-3.5 4-2.5 5s2.5-3 2.5-5Z"/></svg>
+        </div>
+        <div class="wordmark"><span class="name">Shape</span><span class="sub">by {{NAME}}</span></div>
+      </div>
+
+      <h1 class="display" style="max-width:900px;">Let's build it,<br><em>together.</em></h1>
+      <p class="lead" style="margin-top:24px; max-width:620px;">
+        Come on board as co-founder and the face of Shape by {{NAME}}. The
+        foundation is here, the brand is yours, and the upside is shared. Let's
+        build the rest together.
+      </p>
+
+      <div class="row" style="gap:14px; margin-top:40px;">
+        <span class="pill" style="font-size:15px; padding:10px 22px;">Co-founder and 40% partner</span>
+        <span class="pill" style="font-size:15px; padding:10px 22px;">Zero cash investment</span>
+      </div>
+
+      <p class="small" style="margin-top:46px; letter-spacing:0.04em;">Let's talk about making it official. I would love to have you.</p>
+    </div>
+    <div class="foot"><span>Shape <span class="dot">by</span> {{NAME}}</span><span>10</span></div>
+  </section>
+
+</div>
+</body>
+</html>

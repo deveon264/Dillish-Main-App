@@ -1,0 +1,38 @@
+{
+  "sharedAssets": ["calories.png", "progress.png", "workouts.png"],
+  "ambassadorAssets": ["welcome.png", "home.png"],
+  "currency": { "priceUSD": 4.99, "rate": 17, "symbol": "N$" },
+  "share": 0.4,
+  "conversions": [0.5, 1, 2, 5],
+  "ambassadors": [
+    {
+      "id": "ajay",
+      "name": "Ajay",
+      "assets": "ajay",
+      "platforms": [{ "name": "Instagram", "count": 336000 }],
+      "outputs": [
+        {
+          "html": "pitch/index.html",
+          "assetsDir": "pitch/assets",
+          "pdf": "pitch/Shape-by-Ajay-Pitch.pdf"
+        }
+      ]
+    },
+    {
+      "id": "jloss",
+      "name": "J.loss",
+      "assets": "jloss",
+      "platforms": [
+        { "name": "TikTok", "count": 1000000 },
+        { "name": "Instagram", "count": 105000 }
+      ],
+      "outputs": [
+        {
+          "html": "pitch/jloss/index.html",
+          "assetsDir": "pitch/jloss/assets",
+          "pdf": "pitch/Shape-by-Jloss-Pitch.pdf"
+        }
+      ]
+    }
+  ]
+}
