@@ -130,6 +130,8 @@ export async function listPosts(opts: {
   const vals: any[] = [opts.viewerId];
   const where: string[] = [
     `NOT EXISTS (SELECT 1 FROM community_blocks b WHERE b.blocker_id = $1 AND b.blocked_id = p.author_id)`,
+    // Members an admin has globally blocked are hidden from everyone's feed.
+    `NOT EXISTS (SELECT 1 FROM community_admin_blocks ab WHERE ab.user_id = p.author_id)`,
   ];
   if (opts.type) {
     vals.push(opts.type);
@@ -357,6 +359,11 @@ export type ReportGroup = {
   latestCreatedAt: number;
   // Each member's report, newest first.
   reports: ReportEntry[];
+  // How many reports the post's author has accumulated across all their posts,
+  // so a coach can spot repeat offenders. Whether that author is currently
+  // under a global admin block.
+  authorReportCount: number;
+  authorBlocked: boolean;
 };
 
 // Admin moderation queue: reported posts grouped so each post appears once with
@@ -381,7 +388,11 @@ export async function listReports(opts: {
        ${AUTHOR_SELECT},
        (SELECT COUNT(*) FROM community_likes l WHERE l.post_id = p.id) AS like_count,
        (SELECT COUNT(*) FROM community_comments c WHERE c.post_id = p.id) AS comment_count,
-       EXISTS (SELECT 1 FROM community_likes l2 WHERE l2.post_id = p.id AND l2.user_id = $1) AS liked_by_me
+       EXISTS (SELECT 1 FROM community_likes l2 WHERE l2.post_id = p.id AND l2.user_id = $1) AS liked_by_me,
+       (SELECT COUNT(*) FROM community_reports r2
+          JOIN community_posts p2 ON p2.id = r2.post_id
+          WHERE p2.author_id = p.author_id) AS author_report_count,
+       EXISTS (SELECT 1 FROM community_admin_blocks ab WHERE ab.user_id = p.author_id) AS author_blocked
      FROM community_reports r
      JOIN community_posts p ON p.id = r.post_id
      JOIN users u ON u.id = p.author_id
@@ -416,6 +427,8 @@ export async function listReports(opts: {
         reportCount: 1,
         latestCreatedAt: entry.createdAt,
         reports: [entry],
+        authorReportCount: Number(r.author_report_count ?? 0),
+        authorBlocked: !!r.author_blocked,
       });
     }
   }
@@ -460,4 +473,25 @@ export async function listBlockedIds(blockerId: string): Promise<string[]> {
     [blockerId]
   );
   return rows.map((r) => r.blocked_id as string);
+}
+
+// Global, admin-applied block: the member's posts disappear from everyone's
+// feed (see listPosts). Idempotent. `blockedBy` records which admin acted.
+export async function adminBlockUser(input: {
+  userId: string;
+  blockedBy: string;
+}): Promise<void> {
+  await ensureSchema();
+  await getPool().query(
+    `INSERT INTO community_admin_blocks (user_id, blocked_by, created_at)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (user_id) DO NOTHING`,
+    [input.userId, input.blockedBy, Date.now()]
+  );
+}
+
+// Reverses adminBlockUser: the member's posts reappear in the feed.
+export async function adminUnblockUser(userId: string): Promise<void> {
+  await ensureSchema();
+  await getPool().query(`DELETE FROM community_admin_blocks WHERE user_id = $1`, [userId]);
 }

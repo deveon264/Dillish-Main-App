@@ -250,6 +250,10 @@ export type ReportGroup = {
   reportCount: number;
   latestCreatedAt: number;
   reports: ReportEntry[];
+  // How many times the post's author has been reported (across all their
+  // posts), and whether they are currently under a global admin block.
+  authorReportCount: number;
+  authorBlocked: boolean;
 };
 
 // Admin-only: the moderation queue, one item per reported post (grouped with all
@@ -269,6 +273,26 @@ export async function dismissReportsForPost(opts: { token: string; postId: strin
     token: opts.token,
     method: "DELETE",
     fallback: "Could not dismiss reports",
+  });
+}
+
+// Admin-only: globally block a post's author so their posts drop out of every
+// member's feed. Reversible with unblockAuthor.
+export async function blockAuthor(opts: { token: string; authorId: string }): Promise<void> {
+  await authed(`/api/community-author-block`, {
+    token: opts.token,
+    method: "POST",
+    body: { authorId: opts.authorId },
+    fallback: "Could not block member",
+  });
+}
+
+// Admin-only: reverse a global block so the member's posts return to the feed.
+export async function unblockAuthor(opts: { token: string; authorId: string }): Promise<void> {
+  await authed(`/api/community-author-block?authorId=${encodeURIComponent(opts.authorId)}`, {
+    token: opts.token,
+    method: "DELETE",
+    fallback: "Could not unblock member",
   });
 }
 

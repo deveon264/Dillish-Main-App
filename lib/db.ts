@@ -186,6 +186,18 @@ export function ensureSchema(): Promise<void> {
           )`
         )
       )
+      // Global moderation block applied by an admin (coach). Unlike
+      // community_blocks (a per-viewer mute), a row here hides the member's
+      // posts from everyone's feed. Reversible by deleting the row (unblock).
+      .then(() =>
+        pool.query(
+          `CREATE TABLE IF NOT EXISTS community_admin_blocks (
+            user_id TEXT PRIMARY KEY,
+            blocked_by TEXT NOT NULL DEFAULT '',
+            created_at BIGINT NOT NULL
+          )`
+        )
+      )
       // Feed reads order by (created_at DESC, id DESC) with a keyset cursor;
       // comment/like reads are scoped to a post. These indexes back those paths.
       .then(() =>

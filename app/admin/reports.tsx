@@ -21,11 +21,13 @@ import { POST_TYPE_META } from "@/components/community/postTypes";
 import { useInsets } from "@/hooks/useInsets";
 import { useAuth } from "@/contexts/AuthContext";
 import {
+  blockAuthor,
   communityPhotoUri,
   deletePost,
   dismissReportsForPost,
   fetchReports,
   timeAgo,
+  unblockAuthor,
   type ReportGroup,
 } from "@/lib/community";
 import { colors } from "@/constants/colors";
@@ -111,6 +113,45 @@ export default function Reports() {
         }
       }
     );
+  };
+
+  const toggleBlock = (group: ReportGroup) => {
+    const author = group.post.author;
+    const blocking = !group.authorBlocked;
+    const run = async () => {
+      if (!token) return;
+      setBusyId(group.post.id);
+      try {
+        if (blocking) await blockAuthor({ token, authorId: author.id });
+        else await unblockAuthor({ token, authorId: author.id });
+        // One author can have several reported posts in the queue; reflect the
+        // new block state on every group by that author.
+        setReports((prev) =>
+          prev
+            ? prev.map((g) =>
+                g.post.author.id === author.id ? { ...g, authorBlocked: blocking } : g
+              )
+            : prev
+        );
+      } catch (e: any) {
+        notify(
+          blocking ? "Could not block member" : "Could not unblock member",
+          e?.message ?? "Please try again."
+        );
+      } finally {
+        setBusyId(null);
+      }
+    };
+    if (blocking) {
+      confirmAction(
+        "Block member",
+        `${author.name}'s posts will be hidden from everyone's feed. You can unblock them anytime.`,
+        "Block",
+        run
+      );
+    } else {
+      void run();
+    }
   };
 
   const dismiss = (group: ReportGroup) => {
@@ -234,7 +275,24 @@ export default function Reports() {
                       </Text>
                       <Text style={styles.postTime}>{timeAgo(group.post.createdAt)}</Text>
                     </View>
+                    {group.authorReportCount > 1 ? (
+                      <View style={styles.repeatBadge}>
+                        <Ionicons name="flag" size={11} color={colors.danger} />
+                        <Text style={styles.repeatText}>
+                          {group.authorReportCount}× reported
+                        </Text>
+                      </View>
+                    ) : null}
                   </View>
+
+                  {group.authorBlocked ? (
+                    <View style={styles.blockedNote}>
+                      <Ionicons name="remove-circle" size={13} color={colors.danger} />
+                      <Text style={styles.blockedNoteText}>
+                        Blocked: this member's posts are hidden from the feed.
+                      </Text>
+                    </View>
+                  ) : null}
 
                   <View style={styles.tag}>
                     <Ionicons name={meta.icon} size={12} color={colors.accentDark} />
@@ -287,6 +345,30 @@ export default function Reports() {
                     )}
                   </Pressable>
                 </View>
+
+                <Pressable
+                  style={[
+                    styles.actionBtn,
+                    styles.blockBtn,
+                    group.authorBlocked && styles.unblockBtn,
+                  ]}
+                  onPress={() => toggleBlock(group)}
+                  disabled={busy}
+                >
+                  <Ionicons
+                    name={group.authorBlocked ? "refresh-outline" : "remove-circle-outline"}
+                    size={16}
+                    color={group.authorBlocked ? colors.accentDark : colors.danger}
+                  />
+                  <Text
+                    style={[
+                      styles.blockText,
+                      group.authorBlocked && styles.unblockText,
+                    ]}
+                  >
+                    {group.authorBlocked ? "Unblock author" : "Block author"}
+                  </Text>
+                </Pressable>
               </View>
             );
           })
@@ -424,6 +506,35 @@ const styles = StyleSheet.create({
   dismissText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.accentDark },
   deleteBtn: { backgroundColor: "rgba(217, 97, 79, 0.10)", borderColor: "rgba(217, 97, 79, 0.30)" },
   deleteText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.danger },
+  blockBtn: {
+    marginTop: 8,
+    backgroundColor: "rgba(217, 97, 79, 0.10)",
+    borderColor: "rgba(217, 97, 79, 0.30)",
+  },
+  blockText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.danger },
+  unblockBtn: { backgroundColor: colors.accentTint, borderColor: colors.accentBorderMd },
+  unblockText: { color: colors.accentDark },
+  repeatBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(217, 97, 79, 0.10)",
+    borderRadius: 999,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+  },
+  repeatText: { fontFamily: fonts.sansSemibold, fontSize: 11, color: colors.danger },
+  blockedNote: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 10,
+    backgroundColor: "rgba(217, 97, 79, 0.08)",
+    borderRadius: colors.radius,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  blockedNoteText: { flex: 1, fontFamily: fonts.sans, fontSize: 12, color: colors.danger, lineHeight: 17 },
   guard: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32, gap: 8 },
   guardTitle: { fontFamily: fonts.serifSemibold, fontSize: 24, color: colors.foreground, marginTop: 8 },
   guardText: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted, textAlign: "center" },
