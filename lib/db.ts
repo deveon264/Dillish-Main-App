@@ -198,6 +198,32 @@ export function ensureSchema(): Promise<void> {
           )`
         )
       )
+      // Member-facing moderation notices. A warning is a lighter touch than a
+      // block: the admin sends the member a plain-language message they see the
+      // next time they open the feed. The member can dismiss it
+      // (acknowledged_at), and the admin can withdraw it (delete the row), so
+      // notices are reversible from both sides. Block notices are not stored
+      // here: they are derived live from community_admin_blocks so an unblock
+      // clears the notice automatically.
+      .then(() =>
+        pool.query(
+          `CREATE TABLE IF NOT EXISTS community_notices (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            kind TEXT NOT NULL DEFAULT 'warning',
+            message TEXT NOT NULL DEFAULT '',
+            created_by TEXT NOT NULL DEFAULT '',
+            created_at BIGINT NOT NULL,
+            acknowledged_at BIGINT
+          )`
+        )
+      )
+      .then(() =>
+        pool.query(
+          `CREATE INDEX IF NOT EXISTS idx_community_notices_user
+             ON community_notices (user_id, created_at DESC)`
+        )
+      )
       // Feed reads order by (created_at DESC, id DESC) with a keyset cursor;
       // comment/like reads are scoped to a post. These indexes back those paths.
       .then(() =>

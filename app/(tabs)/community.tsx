@@ -16,6 +16,7 @@ import { GradientBackground } from "@/components/GradientBackground";
 import { PageHeader } from "@/components/PageHeader";
 import { HelpButton } from "@/components/HelpButton";
 import { Avatar } from "@/components/community/Avatar";
+import { MemberNotices } from "@/components/community/MemberNotices";
 import { PostCard } from "@/components/community/PostCard";
 import { PostMenu } from "@/components/community/PostMenu";
 import { POST_TYPE_META } from "@/components/community/postTypes";
@@ -248,6 +249,8 @@ export default function Community() {
         <Text style={styles.composePlaceholder}>Share something with the community</Text>
         <Ionicons name="create-outline" size={20} color={colors.accent} />
       </Pressable>
+
+      <MemberNotices />
     </View>
   );
 

@@ -9,6 +9,9 @@ import {
   Alert,
   Platform,
   RefreshControl,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
 } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
@@ -28,10 +31,19 @@ import {
   fetchReports,
   timeAgo,
   unblockAuthor,
+  unwarnAuthor,
+  warnAuthor,
   type ReportGroup,
 } from "@/lib/community";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
+
+// Prefilled into the warn composer so an admin can send a clear note in one tap
+// or tweak it first. No em dashes per the project's copy rules.
+const DEFAULT_WARN_MESSAGE =
+  "Your recent post was reported by other members. Please review our community guidelines and keep posts kind and on topic. This is a friendly heads up, not a block.";
+
+const MAX_WARN_CHARS = 500;
 
 function notify(title: string, message: string) {
   if (Platform.OS === "web") window.alert(`${title}\n\n${message}`);
@@ -58,6 +70,12 @@ export default function Reports() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  // Warn composer state. `warnTarget` holds the group being warned (null when
+  // the modal is closed); `warnText` is the editable message.
+  const [warnTarget, setWarnTarget] = useState<ReportGroup | null>(null);
+  const [warnText, setWarnText] = useState("");
+  const [warnSending, setWarnSending] = useState(false);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -152,6 +170,72 @@ export default function Reports() {
     } else {
       void run();
     }
+  };
+
+  const openWarn = (group: ReportGroup) => {
+    setWarnTarget(group);
+    setWarnText(DEFAULT_WARN_MESSAGE);
+  };
+
+  const closeWarn = () => {
+    if (warnSending) return;
+    setWarnTarget(null);
+    setWarnText("");
+  };
+
+  const sendWarn = async () => {
+    if (!token || !warnTarget) return;
+    const message = warnText.trim();
+    if (!message) {
+      notify("Add a message", "Please write a short warning before sending.");
+      return;
+    }
+    const authorId = warnTarget.post.author.id;
+    setWarnSending(true);
+    try {
+      await warnAuthor({ token, authorId, message });
+      // One author can have several reported posts in the queue; reflect the new
+      // warning state on every group by that author.
+      setReports((prev) =>
+        prev
+          ? prev.map((g) => (g.post.author.id === authorId ? { ...g, authorWarned: true } : g))
+          : prev
+      );
+      setWarnTarget(null);
+      setWarnText("");
+      notify("Warning sent", "The member will see your note the next time they open the feed.");
+    } catch (e: any) {
+      notify("Could not warn member", e?.message ?? "Please try again.");
+    } finally {
+      setWarnSending(false);
+    }
+  };
+
+  const withdrawWarn = (group: ReportGroup) => {
+    const author = group.post.author;
+    confirmAction(
+      "Withdraw warning",
+      `${author.name}'s warning will be removed. They will no longer see it.`,
+      "Withdraw",
+      async () => {
+        if (!token) return;
+        setBusyId(group.post.id);
+        try {
+          await unwarnAuthor({ token, authorId: author.id });
+          setReports((prev) =>
+            prev
+              ? prev.map((g) =>
+                  g.post.author.id === author.id ? { ...g, authorWarned: false } : g
+                )
+              : prev
+          );
+        } catch (e: any) {
+          notify("Could not withdraw warning", e?.message ?? "Please try again.");
+        } finally {
+          setBusyId(null);
+        }
+      }
+    );
   };
 
   const dismiss = (group: ReportGroup) => {
@@ -292,6 +376,13 @@ export default function Reports() {
                         Blocked: this member's posts are hidden from the feed.
                       </Text>
                     </View>
+                  ) : group.authorWarned ? (
+                    <View style={styles.warnedNote}>
+                      <Ionicons name="warning" size={13} color={colors.highlight} />
+                      <Text style={styles.warnedNoteText}>
+                        Warned: this member has an active warning.
+                      </Text>
+                    </View>
                   ) : null}
 
                   <View style={styles.tag}>
@@ -346,34 +437,111 @@ export default function Reports() {
                   </Pressable>
                 </View>
 
-                <Pressable
-                  style={[
-                    styles.actionBtn,
-                    styles.blockBtn,
-                    group.authorBlocked && styles.unblockBtn,
-                  ]}
-                  onPress={() => toggleBlock(group)}
-                  disabled={busy}
-                >
-                  <Ionicons
-                    name={group.authorBlocked ? "refresh-outline" : "remove-circle-outline"}
-                    size={16}
-                    color={group.authorBlocked ? colors.accentDark : colors.danger}
-                  />
-                  <Text
+                <View style={styles.moderationRow}>
+                  <Pressable
                     style={[
-                      styles.blockText,
-                      group.authorBlocked && styles.unblockText,
+                      styles.actionBtn,
+                      styles.warnBtn,
+                      group.authorWarned && styles.unwarnBtn,
                     ]}
+                    onPress={() => (group.authorWarned ? withdrawWarn(group) : openWarn(group))}
+                    disabled={busy}
                   >
-                    {group.authorBlocked ? "Unblock author" : "Block author"}
-                  </Text>
-                </Pressable>
+                    <Ionicons
+                      name={group.authorWarned ? "checkmark-circle-outline" : "warning-outline"}
+                      size={16}
+                      color={colors.highlight}
+                    />
+                    <Text style={styles.warnText}>
+                      {group.authorWarned ? "Warned" : "Warn author"}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.actionBtn,
+                      styles.blockBtn,
+                      group.authorBlocked && styles.unblockBtn,
+                    ]}
+                    onPress={() => toggleBlock(group)}
+                    disabled={busy}
+                  >
+                    <Ionicons
+                      name={group.authorBlocked ? "refresh-outline" : "remove-circle-outline"}
+                      size={16}
+                      color={group.authorBlocked ? colors.accentDark : colors.danger}
+                    />
+                    <Text
+                      style={[
+                        styles.blockText,
+                        group.authorBlocked && styles.unblockText,
+                      ]}
+                    >
+                      {group.authorBlocked ? "Unblock" : "Block author"}
+                    </Text>
+                  </Pressable>
+                </View>
               </View>
             );
           })
         )}
       </ScrollView>
+
+      <Modal
+        visible={!!warnTarget}
+        transparent
+        animationType="fade"
+        onRequestClose={closeWarn}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <View style={styles.modalCard}>
+            <View style={styles.modalHead}>
+              <Ionicons name="warning" size={20} color={colors.highlight} />
+              <Text style={styles.modalTitle}>
+                Warn {warnTarget?.post.author.name ?? "member"}
+              </Text>
+            </View>
+            <Text style={styles.modalSub}>
+              They keep posting but see this note the next time they open the feed. Lighter than a
+              block, and you can withdraw it later.
+            </Text>
+            <TextInput
+              style={styles.modalInput}
+              value={warnText}
+              onChangeText={(t) => setWarnText(t.slice(0, MAX_WARN_CHARS))}
+              placeholder="Write a short, kind warning..."
+              placeholderTextColor={colors.muted}
+              multiline
+              editable={!warnSending}
+            />
+            <Text style={styles.modalCount}>
+              {warnText.length}/{MAX_WARN_CHARS}
+            </Text>
+            <View style={styles.modalActions}>
+              <Pressable
+                style={[styles.modalBtn, styles.modalCancel]}
+                onPress={closeWarn}
+                disabled={warnSending}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.modalBtn, styles.modalSend, !warnText.trim() && styles.modalSendOff]}
+                onPress={sendWarn}
+                disabled={warnSending || !warnText.trim()}
+              >
+                {warnSending ? (
+                  <ActivityIndicator size="small" color={colors.onPrimaryStrong} />
+                ) : (
+                  <Text style={styles.modalSendText}>Send warning</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </GradientBackground>
   );
 }
@@ -506,8 +674,17 @@ const styles = StyleSheet.create({
   dismissText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.accentDark },
   deleteBtn: { backgroundColor: "rgba(217, 97, 79, 0.10)", borderColor: "rgba(217, 97, 79, 0.30)" },
   deleteText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.danger },
+  moderationRow: { flexDirection: "row", gap: 8, marginTop: 8 },
+  warnBtn: {
+    backgroundColor: colors.highlightTint,
+    borderColor: colors.highlightBorder,
+  },
+  unwarnBtn: {
+    backgroundColor: colors.highlightTintMd,
+    borderColor: colors.highlightBorder,
+  },
+  warnText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.highlight },
   blockBtn: {
-    marginTop: 8,
     backgroundColor: "rgba(217, 97, 79, 0.10)",
     borderColor: "rgba(217, 97, 79, 0.30)",
   },
@@ -535,6 +712,79 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   blockedNoteText: { flex: 1, fontFamily: fonts.sans, fontSize: 12, color: colors.danger, lineHeight: 17 },
+  warnedNote: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 10,
+    backgroundColor: colors.highlightTint,
+    borderRadius: colors.radius,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  warnedNoteText: { flex: 1, fontFamily: fonts.sans, fontSize: 12, color: colors.highlight, lineHeight: 17 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(74, 46, 51, 0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 440,
+    backgroundColor: colors.card,
+    borderRadius: colors.radiusLg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    padding: 20,
+  },
+  modalHead: { flexDirection: "row", alignItems: "center", gap: 8 },
+  modalTitle: { flex: 1, fontFamily: fonts.serifSemibold, fontSize: 19, color: colors.foreground },
+  modalSub: {
+    fontFamily: fonts.sans,
+    fontSize: 13,
+    color: colors.mutedForeground,
+    lineHeight: 19,
+    marginTop: 8,
+  },
+  modalInput: {
+    minHeight: 110,
+    backgroundColor: colors.background,
+    borderRadius: colors.radius,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 12,
+    fontFamily: fonts.sans,
+    fontSize: 15,
+    color: colors.foreground,
+    marginTop: 14,
+    textAlignVertical: "top",
+  },
+  modalCount: {
+    alignSelf: "flex-end",
+    fontFamily: fonts.sans,
+    fontSize: 11,
+    color: colors.muted,
+    marginTop: 6,
+  },
+  modalActions: { flexDirection: "row", gap: 10, marginTop: 14 },
+  modalBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: colors.radius,
+    paddingVertical: 12,
+    borderWidth: 1,
+  },
+  modalCancel: { backgroundColor: colors.card, borderColor: colors.cardBorder },
+  modalCancelText: { fontFamily: fonts.sansSemibold, fontSize: 14, color: colors.foreground },
+  modalSend: { backgroundColor: colors.accent, borderColor: colors.accent },
+  modalSendOff: { opacity: 0.45 },
+  modalSendText: { fontFamily: fonts.sansSemibold, fontSize: 14, color: colors.onPrimaryStrong },
   guard: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32, gap: 8 },
   guardTitle: { fontFamily: fonts.serifSemibold, fontSize: 24, color: colors.foreground, marginTop: 8 },
   guardText: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted, textAlign: "center" },

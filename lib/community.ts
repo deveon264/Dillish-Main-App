@@ -251,9 +251,20 @@ export type ReportGroup = {
   latestCreatedAt: number;
   reports: ReportEntry[];
   // How many times the post's author has been reported (across all their
-  // posts), and whether they are currently under a global admin block.
+  // posts), whether they are currently under a global admin block, and whether
+  // they have an outstanding warning.
   authorReportCount: number;
   authorBlocked: boolean;
+  authorWarned: boolean;
+};
+
+// A moderation notice the signed-in member should see: a warning an admin sent,
+// or a notice that they have been blocked.
+export type MemberNotice = {
+  id: string;
+  kind: "warning" | "block";
+  message: string;
+  createdAt: number;
 };
 
 // Admin-only: the moderation queue, one item per reported post (grouped with all
@@ -293,6 +304,48 @@ export async function unblockAuthor(opts: { token: string; authorId: string }): 
     token: opts.token,
     method: "DELETE",
     fallback: "Could not unblock member",
+  });
+}
+
+// Admin-only: send a member a warning (lighter than a block). They keep posting
+// but see the message the next time they open the feed.
+export async function warnAuthor(opts: {
+  token: string;
+  authorId: string;
+  message: string;
+}): Promise<void> {
+  await authed(`/api/community-author-warn`, {
+    token: opts.token,
+    method: "POST",
+    body: { authorId: opts.authorId, message: opts.message },
+    fallback: "Could not warn member",
+  });
+}
+
+// Admin-only: withdraw a member's outstanding warning (reversal).
+export async function unwarnAuthor(opts: { token: string; authorId: string }): Promise<void> {
+  await authed(`/api/community-author-warn?authorId=${encodeURIComponent(opts.authorId)}`, {
+    token: opts.token,
+    method: "DELETE",
+    fallback: "Could not withdraw warning",
+  });
+}
+
+// The signed-in member's own moderation notices (block notice and/or warnings).
+export async function fetchMyNotices(opts: { token: string }): Promise<MemberNotice[]> {
+  const { notices } = await authed<{ notices: MemberNotice[] }>(`/api/community-notices`, {
+    token: opts.token,
+    fallback: "Could not load notices",
+  });
+  return notices;
+}
+
+// Member: dismiss one of your own warning notices so it stops showing.
+export async function dismissNotice(opts: { token: string; id: string }): Promise<void> {
+  await authed(`/api/community-notices?id=${encodeURIComponent(opts.id)}`, {
+    token: opts.token,
+    method: "DELETE",
+    fallback: "Could not dismiss notice",
   });
 }
 

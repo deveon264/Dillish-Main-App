@@ -361,9 +361,10 @@ export type ReportGroup = {
   reports: ReportEntry[];
   // How many reports the post's author has accumulated across all their posts,
   // so a coach can spot repeat offenders. Whether that author is currently
-  // under a global admin block.
+  // under a global admin block, and whether they have an outstanding warning.
   authorReportCount: number;
   authorBlocked: boolean;
+  authorWarned: boolean;
 };
 
 // Admin moderation queue: reported posts grouped so each post appears once with
@@ -392,7 +393,9 @@ export async function listReports(opts: {
        (SELECT COUNT(*) FROM community_reports r2
           JOIN community_posts p2 ON p2.id = r2.post_id
           WHERE p2.author_id = p.author_id) AS author_report_count,
-       EXISTS (SELECT 1 FROM community_admin_blocks ab WHERE ab.user_id = p.author_id) AS author_blocked
+       EXISTS (SELECT 1 FROM community_admin_blocks ab WHERE ab.user_id = p.author_id) AS author_blocked,
+       EXISTS (SELECT 1 FROM community_notices n
+          WHERE n.user_id = p.author_id AND n.kind = 'warning' AND n.acknowledged_at IS NULL) AS author_warned
      FROM community_reports r
      JOIN community_posts p ON p.id = r.post_id
      JOIN users u ON u.id = p.author_id
@@ -429,6 +432,7 @@ export async function listReports(opts: {
         reports: [entry],
         authorReportCount: Number(r.author_report_count ?? 0),
         authorBlocked: !!r.author_blocked,
+        authorWarned: !!r.author_warned,
       });
     }
   }
@@ -494,4 +498,115 @@ export async function adminBlockUser(input: {
 export async function adminUnblockUser(userId: string): Promise<void> {
   await ensureSchema();
   await getPool().query(`DELETE FROM community_admin_blocks WHERE user_id = $1`, [userId]);
+}
+
+// A moderation notice shown to a member: either a warning an admin wrote, or a
+// notice that they have been blocked. `id` is "block" for the derived block
+// notice (so the client has a stable key) and a row id for warnings.
+export type MemberNotice = {
+  id: string;
+  kind: "warning" | "block";
+  message: string;
+  createdAt: number;
+};
+
+// The standard explanation a blocked member sees. Derived live from the admin
+// block, so it disappears the moment an admin unblocks them. No em dashes per
+// the project's copy rules.
+const BLOCK_NOTICE_MESSAGE =
+  "An admin has blocked your account, so your posts no longer appear in the community feed. If you think this was a mistake, please reach out to your admin.";
+
+// Sends a member a warning notice (lighter than a block). Stored so they see it
+// the next time they open the feed. `warnedBy` records which admin acted.
+export async function warnUser(input: {
+  userId: string;
+  message: string;
+  warnedBy: string;
+}): Promise<void> {
+  await ensureSchema();
+  await getPool().query(
+    `INSERT INTO community_notices (id, user_id, kind, message, created_by, created_at)
+     VALUES ($1, $2, 'warning', $3, $4, $5)`,
+    [uuid(), input.userId, input.message, input.warnedBy, Date.now()]
+  );
+}
+
+// Admin-side reversal: withdraws every outstanding (un-acknowledged) warning for
+// a member, so a warning sent in error can be taken back.
+export async function withdrawWarnings(userId: string): Promise<number> {
+  await ensureSchema();
+  const { rowCount } = await getPool().query(
+    `DELETE FROM community_notices
+       WHERE user_id = $1 AND kind = 'warning' AND acknowledged_at IS NULL`,
+    [userId]
+  );
+  return rowCount ?? 0;
+}
+
+// Whether a member currently has an outstanding warning (used to reflect state
+// on the admin review screen).
+export async function hasActiveWarning(userId: string): Promise<boolean> {
+  await ensureSchema();
+  const { rows } = await getPool().query(
+    `SELECT 1 FROM community_notices
+       WHERE user_id = $1 AND kind = 'warning' AND acknowledged_at IS NULL
+       LIMIT 1`,
+    [userId]
+  );
+  return rows.length > 0;
+}
+
+// The notices a member should see right now: a block notice (derived live from
+// the admin block) first, then any warnings they have not dismissed yet,
+// newest first.
+export async function listNoticesForMember(userId: string): Promise<MemberNotice[]> {
+  await ensureSchema();
+  const notices: MemberNotice[] = [];
+
+  const block = await getPool().query(
+    `SELECT created_at FROM community_admin_blocks WHERE user_id = $1`,
+    [userId]
+  );
+  if (block.rows[0]) {
+    notices.push({
+      id: "block",
+      kind: "block",
+      message: BLOCK_NOTICE_MESSAGE,
+      createdAt: Number(block.rows[0].created_at),
+    });
+  }
+
+  const { rows } = await getPool().query(
+    `SELECT id, message, created_at FROM community_notices
+       WHERE user_id = $1 AND kind = 'warning' AND acknowledged_at IS NULL
+       ORDER BY created_at DESC, id DESC`,
+    [userId]
+  );
+  for (const r of rows) {
+    notices.push({
+      id: r.id,
+      kind: "warning",
+      message: r.message ?? "",
+      createdAt: Number(r.created_at),
+    });
+  }
+
+  return notices;
+}
+
+// Member-side dismissal: marks one of the member's own warning notices as
+// acknowledged so it stops showing. Scoped to the member's id so a member can
+// only dismiss their own notices. Returns false when no such notice exists.
+export async function acknowledgeNotice(input: {
+  userId: string;
+  id: string;
+}): Promise<boolean> {
+  await ensureSchema();
+  const { rowCount } = await getPool().query(
+    `UPDATE community_notices
+       SET acknowledged_at = $3
+       WHERE id = $1 AND user_id = $2 AND kind = 'warning' AND acknowledged_at IS NULL`,
+    [input.id, input.userId, Date.now()]
+  );
+  return (rowCount ?? 0) > 0;
 }
