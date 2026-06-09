@@ -47,7 +47,7 @@ export default function Profile() {
   const router = useRouter();
   const insets = useInsets();
   const { user, isAdmin, logout, updateUser, uploadAvatar, removeAvatar: removeAvatarFn } = useAuth();
-  const { profile, completions, calorieLogs, weightLogs, waterLogs, updateProfile, streak } = useData();
+  const { profile, completions, calorieLogs, weightLogs, waterLogs, updateProfile, streak, streakBest } = useData();
   const { subscription, switchPlan, cancel, resume, subscribe } = useSubscription();
 
   const [editing, setEditing] = useState(false);
@@ -706,6 +706,10 @@ export default function Profile() {
                     <View style={styles.badge}>
                       <Ionicons name="flame" size={12} color={colors.highlight} />
                       <Text style={styles.badgeText}>{streak} day streak</Text>
+                    </View>
+                    <View style={styles.badge}>
+                      <Ionicons name="trophy" size={12} color={colors.highlight} />
+                      <Text style={styles.badgeText}>Best: {streakBest} {streakBest === 1 ? "day" : "days"}</Text>
                     </View>
                   </View>
                 </View>

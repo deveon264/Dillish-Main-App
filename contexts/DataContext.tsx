@@ -11,6 +11,7 @@ import {
   recordActiveDay,
   combineDays,
   displayStreak,
+  displayBest,
 } from "@/lib/streak";
 
 // Re-exported so existing importers (`@/contexts/DataContext`) keep working;
@@ -148,6 +149,9 @@ type DataContextType = {
   // The single streak number shown everywhere, plus the combined active-OR-
   // workout day set that drives the home / workout pill rows.
   streak: number;
+  // Personal best: the longest streak the member has ever reached. Never below
+  // the current `streak`.
+  streakBest: number;
   streakDays: Set<string>;
   notifications: AppNotification[];
   unreadCount: number;
@@ -550,6 +554,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     () => displayStreak(streakState, streakDays, todayKey()),
     [streakState, streakDays]
   );
+  const streakBest = useMemo(
+    () => displayBest(streakState, streak),
+    [streakState, streak]
+  );
 
   const notifications = useMemo<AppNotification[]>(() => {
     const base = buildNotifications({ waterLogs, calorieLogs, completions, profile, streak });
@@ -600,12 +608,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       deleteCalorie,
       completeWorkout,
       streak,
+      streakBest,
       streakDays,
       notifications,
       unreadCount,
       markNotificationsRead,
     }),
-    [ready, profile, waterLogs, weightLogs, progressPhotos, calorieLogs, completions, favorites, toggleFavorite, isFavorite, updateProfile, addWater, removeWater, addWeight, removeWeight, addPhoto, removePhoto, addCalorie, deleteCalorie, completeWorkout, streak, streakDays, notifications, unreadCount, markNotificationsRead]
+    [ready, profile, waterLogs, weightLogs, progressPhotos, calorieLogs, completions, favorites, toggleFavorite, isFavorite, updateProfile, addWater, removeWater, addWeight, removeWeight, addPhoto, removePhoto, addCalorie, deleteCalorie, completeWorkout, streak, streakBest, streakDays, notifications, unreadCount, markNotificationsRead]
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

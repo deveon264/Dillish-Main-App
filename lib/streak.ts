@@ -15,6 +15,11 @@ export type StreakState = {
   // Persisted so a streak longer than the rolling window below still restores on
   // a fresh device.
   count: number;
+  // Personal best: the longest the running count has ever reached. Updated
+  // whenever `count` exceeds the stored best, and never decreases when a streak
+  // breaks, so it can be shown as a target to beat. Backfilled from `count` on
+  // first write for accounts whose stored blob predates this field.
+  longest: number;
   // The most recent active-day key ("YYYY-MM-DD"), or null if never recorded.
   lastActiveDay: string | null;
   // Bounded, ascending rolling window of recent active-day keys. Enough to drive
@@ -30,6 +35,7 @@ export const STREAK_WINDOW_DAYS = 60;
 
 export const DEFAULT_STREAK_STATE: StreakState = {
   count: 0,
+  longest: 0,
   lastActiveDay: null,
   recentDays: [],
   updatedAt: 0,
@@ -77,11 +83,15 @@ export function sanitizeStreakState(input: unknown): StreakState {
   const src = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;
   const rawCount = Number(src.count);
   const count = Number.isFinite(rawCount) ? Math.max(0, Math.floor(rawCount)) : 0;
+  // Backfill: a blob written before `longest` existed has no field, so seed the
+  // best from the current count. The best can never be below the current count.
+  const rawLongest = Number(src.longest);
+  const longest = Number.isFinite(rawLongest) ? Math.max(0, Math.floor(rawLongest), count) : count;
   const lastActiveDay = isDayKey(src.lastActiveDay) ? src.lastActiveDay : null;
   const recentDays = pruneWindow(Array.isArray(src.recentDays) ? (src.recentDays as unknown[]).filter(isDayKey) as string[] : []);
   const rawUpdated = Number(src.updatedAt);
   const updatedAt = Number.isFinite(rawUpdated) ? Math.max(0, rawUpdated) : 0;
-  return { count, lastActiveDay, recentDays, updatedAt };
+  return { count, longest, lastActiveDay, recentDays, updatedAt };
 }
 
 // Records `day` as an active day and returns the next state. Idempotent: calling
@@ -100,14 +110,18 @@ export function recordActiveDay(prev: StreakState, day: string, now: number = Da
     count = shiftKey(prev.lastActiveDay, 1) === day ? prev.count + 1 : 1;
     lastActiveDay = day;
   }
+  // Personal best: bump it the moment the running count beats it, and keep it
+  // when the streak later breaks (count restarts but longest stays).
+  const longest = Math.max(prev.longest, count);
   const recentDays = pruneWindow([...prev.recentDays, day]);
   const unchanged =
     count === prev.count &&
+    longest === prev.longest &&
     lastActiveDay === prev.lastActiveDay &&
     recentDays.length === prev.recentDays.length &&
     recentDays.every((k, i) => k === prev.recentDays[i]);
   if (unchanged) return prev;
-  return { count, lastActiveDay, recentDays, updatedAt: now };
+  return { count, longest, lastActiveDay, recentDays, updatedAt: now };
 }
 
 // Merges extra active-day keys into the state's rolling window without touching
@@ -161,4 +175,12 @@ export function displayStreak(
       ? state.count
       : 0;
   return Math.max(live, serverAlive);
+}
+
+// The personal-best streak shown to the member. It is the larger of the
+// persisted `longest` and the currently displayed streak, so the best can never
+// read below the live number (the live union can exceed the persisted count on a
+// day with workout-only or offline-recorded activity that hasn't synced yet).
+export function displayBest(state: StreakState, currentStreak: number): number {
+  return Math.max(state.longest, currentStreak);
 }
