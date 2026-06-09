@@ -682,7 +682,7 @@ export default function WorkoutPlayer() {
               </View>
               <View style={styles.metaItem}>
                 <Ionicons name="person-outline" size={15} color={colors.muted} />
-                <Text style={styles.metaText2}>Florish</Text>
+                <Text style={styles.metaText2}>With Dillish</Text>
               </View>
             </View>
 

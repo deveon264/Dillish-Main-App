@@ -195,6 +195,10 @@ export default function Workouts() {
                           <Ionicons name="flame-outline" size={14} color="#FFFFFF" />
                           <Text style={styles.metaText}>{w.kcal} kcal</Text>
                         </View>
+                        <View style={styles.metaItem}>
+                          <Ionicons name="person-outline" size={14} color="#FFFFFF" />
+                          <Text style={styles.metaText}>With Dillish</Text>
+                        </View>
                       </View>
                     </View>
                   </View>
