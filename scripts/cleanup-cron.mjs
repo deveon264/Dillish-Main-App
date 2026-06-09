@@ -11,6 +11,8 @@
 //   - POST /api/meal-photo-cleanup   reclaims meal-photo objects older than the
 //                                    endpoint's age window (logs are device-local,
 //                                    so age — not a DB join — is the only signal)
+//   - POST /api/community-photo-cleanup reclaims orphaned community post photos
+//                                    (reconciled against the `community_posts` table)
 //
 // Auth: rather than introducing a new machine secret, it mints the very same
 // HMAC-signed admin Bearer token the endpoint already verifies, using the
@@ -94,12 +96,16 @@ async function main() {
   const root = base.replace(/\/$/, "");
   const query = dryRun ? "?dryRun=1" : "";
 
-  // Both sweeps run on the same schedule and share the same admin token. They
+  // All sweeps run on the same schedule and share the same admin token. They
   // are independent storage folders, so a failure of one must not skip the
-  // other; the worst exit code across the two becomes the script's exit code so
+  // others; the worst exit code across them becomes the script's exit code so
   // the Scheduled Deployment surfaces any failure.
   let worstExit = 0;
-  for (const path of ["exercise-cleanup", "meal-photo-cleanup"]) {
+  for (const path of [
+    "exercise-cleanup",
+    "meal-photo-cleanup",
+    "community-photo-cleanup",
+  ]) {
     const ok = await triggerCleanup(`${root}/api/${path}${query}`, token, dryRun);
     if (!ok) worstExit = 1;
   }

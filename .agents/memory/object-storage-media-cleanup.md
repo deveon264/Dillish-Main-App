@@ -22,8 +22,10 @@ sweep for it, or its objects accumulate forever. Two reconciliation styles exist
 create call fails after upload) is orphaned silently. There is no foreign key or
 TTL on the bucket; only the cron sweep reclaims it.
 
-**How to apply:** community-photos was shipped WITHOUT a sweep (known gap). It is
-reference-countable against `community_posts.photo_object_path`, so a new
-`community-photo-cleanup` route + a third call in `cleanup-cron.mjs` (mirroring
-the exercise-media reconciliation) is the right fix. Keep the one-line
-`scanned=… deleted=…` log summary so a coach can confirm it ran.
+**How to apply:** community-photos now HAS a sweep (`community-photo-cleanup`
+route + third call in `cleanup-cron.mjs`), reference-counted against
+`community_posts.photo_object_path` with a 1-hour grace window. The remaining
+known gap is `profile-avatars/<uuid>` (replaced avatars are deleted inline, but
+a crash between upload and the `users.avatar_object_path` update orphans the old
+object). Keep the one-line `scanned=… deleted=…` log summary so a coach can
+confirm any new sweep ran.

@@ -14,9 +14,13 @@ export type FakeDb = {
   users: Map<string, Row>;
   settings: Map<string, string>;
   exercises: Row[];
+  communityPosts: Row[];
   seedUser: (u: Partial<Row> & { id: string; email: string }) => Row;
   seedExercise: (
     e: Partial<Row> & { video_object_path: string }
+  ) => Row;
+  seedCommunityPost: (
+    p: Partial<Row> & { photo_object_path: string | null }
   ) => Row;
 };
 
@@ -53,6 +57,7 @@ export function installFakeDb(): FakeDb {
   const users = new Map<string, Row>();
   const settings = new Map<string, string>();
   const exercises: Row[] = [];
+  const communityPosts: Row[] = [];
 
   async function query(text: string, params: any[] = []): Promise<{ rows: Row[] }> {
     const sql = text.trim();
@@ -65,6 +70,15 @@ export function installFakeDb(): FakeDb {
           poster_object_path: e.poster_object_path ?? null,
         })),
       };
+    }
+
+    // --- community_posts (photo paths the cleanup sweep reconciles against) -
+    if (/FROM\s+community_posts/i.test(sql)) {
+      const onlyWithPhoto = /photo_object_path\s+IS\s+NOT\s+NULL/i.test(sql);
+      const rows = communityPosts
+        .filter((p) => !onlyWithPhoto || p.photo_object_path != null)
+        .map((p) => ({ photo_object_path: p.photo_object_path ?? null }));
+      return { rows };
     }
 
     // --- app_settings ------------------------------------------------------
@@ -158,10 +172,12 @@ export function installFakeDb(): FakeDb {
   __setPoolForTests(fakePool);
 
   let exerciseSeq = 0;
+  let postSeq = 0;
   return {
     users,
     settings,
     exercises,
+    communityPosts,
     seedUser(u) {
       const row: Row = {
         id: u.id,
@@ -185,6 +201,14 @@ export function installFakeDb(): FakeDb {
         poster_object_path: e.poster_object_path ?? null,
       };
       exercises.push(row);
+      return row;
+    },
+    seedCommunityPost(p) {
+      const row: Row = {
+        id: p.id ?? `post-${++postSeq}`,
+        photo_object_path: p.photo_object_path ?? null,
+      };
+      communityPosts.push(row);
       return row;
     },
   };
