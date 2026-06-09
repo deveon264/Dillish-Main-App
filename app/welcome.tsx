@@ -107,7 +107,7 @@ export default function Welcome() {
         ]}
       >
         <View style={styles.top}>
-          <Logo size="lg" tagline="by j.loss" />
+          <Logo size="lg" tagline="by ajay" />
         </View>
 
         <View style={styles.center}>
