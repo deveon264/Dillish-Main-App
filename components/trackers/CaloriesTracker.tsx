@@ -14,6 +14,7 @@ import { useData } from "@/contexts/DataContext";
 import { useInsets } from "@/hooks/useInsets";
 import { getApiUrl } from "@/lib/api";
 import { todayKey } from "@/lib/storage";
+import { getCalorieInsight } from "@/lib/calorieInsights";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
@@ -125,7 +126,25 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
   const goalCarbs = Math.round((profile.calorieGoal * 0.4) / 4);
   const goalFats = Math.round((profile.calorieGoal * 0.3) / 9);
 
-  const proteinLeft = Math.max(0, goalProtein - totals.protein);
+  const insight = useMemo(
+    () =>
+      getCalorieInsight({
+        totals,
+        goals: {
+          kcal: profile.calorieGoal,
+          protein: goalProtein,
+          carbs: goalCarbs,
+          fats: goalFats,
+        },
+      }),
+    [totals, profile.calorieGoal, goalProtein, goalCarbs, goalFats]
+  );
+  const insightMacroColor =
+    insight.featuredMacro === "carbs"
+      ? colors.carbs
+      : insight.featuredMacro === "fats"
+        ? colors.fats
+        : colors.protein;
 
   const week = useMemo(() => {
     const base = new Date();
@@ -659,30 +678,29 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
             </View>
             <Text style={styles.insightEyebrow}>AI INSIGHT</Text>
           </View>
-          {proteinLeft > 0 ? (
-            <Text style={styles.insightText}>
-              You're doing great! You still need{" "}
-              <Text style={styles.insightStrong}>{proteinLeft}g of protein</Text> to hit your daily
-              goal. Consider adding a protein-rich dinner like salmon or lentils.
-            </Text>
-          ) : (
-            <Text style={styles.insightText}>
-              Excellent work, you've hit your{" "}
-              <Text style={styles.insightStrong}>protein goal</Text> for today. Keep your meals
-              balanced to stay on track.
-            </Text>
-          )}
+          <Text style={styles.insightText}>
+            {insight.segments.map((seg, i) =>
+              seg.strong ? (
+                <Text key={i} style={styles.insightStrong}>
+                  {seg.text}
+                </Text>
+              ) : (
+                seg.text
+              )
+            )}
+          </Text>
           <View style={styles.insightChips}>
-            <View style={styles.insightChip}>
-              <Ionicons name="fish" size={14} color={colors.accent} />
-              <Text style={styles.insightChipName}>Salmon fillet</Text>
-              <Text style={styles.insightChipVal}>+35g</Text>
-            </View>
-            <View style={styles.insightChip}>
-              <Ionicons name="restaurant" size={14} color={colors.accent} />
-              <Text style={styles.insightChipName}>Lentil soup</Text>
-              <Text style={styles.insightChipVal}>+18g</Text>
-            </View>
+            {insight.chips.map((chip, i) => (
+              <View key={i} style={styles.insightChip}>
+                <Ionicons name={chip.icon} size={14} color={insightMacroColor} />
+                <Text style={styles.insightChipName} numberOfLines={1}>
+                  {chip.name}
+                </Text>
+                <Text style={[styles.insightChipVal, { color: insightMacroColor }]}>
+                  +{chip.value}g
+                </Text>
+              </View>
+            ))}
           </View>
         </Card>
 
