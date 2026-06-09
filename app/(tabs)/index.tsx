@@ -188,7 +188,7 @@ export default function Dashboard() {
         {/* Today's Workout hero */}
         <View style={{ marginTop: 24 }}>
           <View style={styles.heroBadge}>
-            <Text style={styles.heroBadgeText}>TODAY'S WORKOUT WITH AJAY</Text>
+            <Text style={styles.heroBadgeText}>TODAY'S WORKOUT WITH DILLISH</Text>
           </View>
           <Pressable onPress={() => router.push(`/workout/${featured.id}`)}>
           <ImageBackground source={featured.image} style={styles.hero} imageStyle={styles.heroImg}>
