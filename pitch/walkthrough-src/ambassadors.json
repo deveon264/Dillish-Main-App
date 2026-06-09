@@ -28,6 +28,15 @@
         { "html": "public/walkthrough-jloss/index.html", "assetsDir": "public/walkthrough-jloss/assets" },
         { "html": "pitch/walkthrough-jloss/index.html", "assetsDir": "pitch/walkthrough-jloss/assets" }
       ]
+    },
+    {
+      "id": "dillish",
+      "name": "Dillish",
+      "assets": "dillish",
+      "outputs": [
+        { "html": "public/walkthrough-dillish/index.html", "assetsDir": "public/walkthrough-dillish/assets" },
+        { "html": "pitch/walkthrough-dillish/index.html", "assetsDir": "pitch/walkthrough-dillish/assets" }
+      ]
     }
   ]
 }
