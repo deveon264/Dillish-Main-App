@@ -35,11 +35,12 @@ function compact(n) {
   return String(n);
 }
 
-function splitLine(platforms) {
-  if (platforms.length < 2) return "";
+function platformLine(platforms) {
   const frags = platforms.map((p) => compact(p.count) + " on " + p.name);
   const joined =
-    frags.length === 2
+    frags.length === 1
+      ? frags[0]
+      : frags.length === 2
       ? frags[0] + " and " + frags[1]
       : frags.slice(0, -1).join(", ") + " and " + frags[frags.length - 1];
   return (
@@ -85,12 +86,15 @@ function render(amb) {
     .map((c) => "          " + tableRow(c, audience, cur, share))
     .join("\n");
 
+  const showLine = amb.platforms.length >= 2 || amb.showPlatformLine === true;
+
   const values = {
     NAME: amb.name,
+    BRAND: amb.brand || "Shape",
     AUDIENCE_BIG: compact(audience),
     AUDIENCE_FULL: group(audience),
-    SPLIT_LINE: splitLine(amb.platforms),
-    LEAD_MT: amb.platforms.length >= 2 ? "14" : "18",
+    SPLIT_LINE: showLine ? platformLine(amb.platforms) : "",
+    LEAD_MT: showLine ? "14" : "18",
     PRICE_USD: String(cur.priceUSD),
     PRICE_LOCAL: group(cur.priceUSD * cur.rate),
     LOCAL_SYM: cur.symbol,

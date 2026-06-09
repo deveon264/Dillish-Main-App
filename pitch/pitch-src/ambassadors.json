@@ -33,6 +33,21 @@
           "pdf": "pitch/Shape-by-Jloss-Pitch.pdf"
         }
       ]
+    },
+    {
+      "id": "dillish",
+      "name": "Dillish",
+      "brand": "Florish",
+      "assets": "dillish",
+      "platforms": [{ "name": "Instagram", "count": 775000 }],
+      "showPlatformLine": true,
+      "outputs": [
+        {
+          "html": "pitch/dillish/index.html",
+          "assetsDir": "pitch/dillish/assets",
+          "pdf": "pitch/Florish-by-Dillish-Pitch.pdf"
+        }
+      ]
     }
   ]
 }
