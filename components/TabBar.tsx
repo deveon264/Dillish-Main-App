@@ -31,7 +31,7 @@ export function TabBar({ state, navigation }: TabBarProps) {
   const routesByName = Object.fromEntries(state.routes.map((r) => [r.name, r]));
 
   return (
-    <View style={[styles.wrap, { paddingBottom: insets.bottom + 8 }]}>
+    <View style={[styles.wrap, { paddingBottom: insets.bottom + 3 }]}>
       <View style={styles.bar}>
         {/* Native frosted-glass blur — content scrolls through it on iOS. */}
         <BlurView
