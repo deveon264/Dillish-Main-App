@@ -90,7 +90,7 @@ export default function Welcome() {
   return (
     <View style={[styles.bg, webFill]}>
       <Image
-        source={require("@/assets/images/photos/welcomehero.png")}
+        source={require("@/assets/images/photos/welcomehero.webp")}
         style={styles.heroImg}
         resizeMode="cover"
       />

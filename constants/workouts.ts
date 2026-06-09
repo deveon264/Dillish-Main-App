@@ -42,7 +42,7 @@ export const WORKOUTS: Workout[] = [
     exercises: [
       {
         id: "e1",
-        image: require("@/assets/exercises/the-hundred.png"),
+        image: require("@/assets/exercises/the-hundred.webp"),
         name: "The Hundred",
         detail: "Core warm-up",
         description:
@@ -59,7 +59,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "e2",
-        image: require("@/assets/exercises/roll-up.png"),
+        image: require("@/assets/exercises/roll-up.webp"),
         name: "Roll Up",
         detail: "Spine articulation",
         description:
@@ -75,7 +75,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "e3",
-        image: require("@/assets/exercises/single-leg-circles.png"),
+        image: require("@/assets/exercises/single-leg-circles.webp"),
         name: "Single Leg Circles",
         detail: "Hip mobility",
         description:
@@ -91,7 +91,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "e4",
-        image: require("@/assets/exercises/rolling-like-a-ball.png"),
+        image: require("@/assets/exercises/rolling-like-a-ball.webp"),
         name: "Rolling Like a Ball",
         detail: "Balance & control",
         description:
@@ -107,7 +107,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "e5",
-        image: require("@/assets/exercises/single-leg-stretch.png"),
+        image: require("@/assets/exercises/single-leg-stretch.webp"),
         name: "Single Leg Stretch",
         detail: "Core series",
         description:
@@ -123,7 +123,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "e6",
-        image: require("@/assets/exercises/spine-stretch-forward.png"),
+        image: require("@/assets/exercises/spine-stretch-forward.webp"),
         name: "Spine Stretch Forward",
         detail: "Lengthen",
         description:
@@ -139,7 +139,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "e7",
-        image: require("@/assets/exercises/saw.png"),
+        image: require("@/assets/exercises/saw.webp"),
         name: "Saw",
         detail: "Rotation",
         description:
@@ -155,7 +155,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "e8",
-        image: require("@/assets/exercises/seal.png"),
+        image: require("@/assets/exercises/seal.webp"),
         name: "Seal",
         detail: "Cool down",
         description:
@@ -185,7 +185,7 @@ export const WORKOUTS: Workout[] = [
     exercises: [
       {
         id: "y1",
-        image: require("@/assets/exercises/childs-pose.png"),
+        image: require("@/assets/exercises/childs-pose.webp"),
         name: "Child's Pose",
         detail: "Ground",
         description:
@@ -201,7 +201,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "y2",
-        image: require("@/assets/exercises/cat-cow.png"),
+        image: require("@/assets/exercises/cat-cow.webp"),
         name: "Cat-Cow",
         detail: "Spinal warm-up",
         description:
@@ -217,7 +217,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "y3",
-        image: require("@/assets/exercises/downward-dog.png"),
+        image: require("@/assets/exercises/downward-dog.webp"),
         name: "Downward Dog",
         detail: "Lengthen",
         description:
@@ -233,7 +233,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "y4",
-        image: require("@/assets/exercises/low-lunge.png"),
+        image: require("@/assets/exercises/low-lunge.webp"),
         name: "Low Lunge",
         detail: "Hip opener",
         description:
@@ -249,7 +249,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "y5",
-        image: require("@/assets/exercises/forward-fold.png"),
+        image: require("@/assets/exercises/forward-fold.webp"),
         name: "Forward Fold",
         detail: "Release",
         description:
@@ -265,7 +265,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "y6",
-        image: require("@/assets/exercises/seated-twist.png"),
+        image: require("@/assets/exercises/seated-twist.webp"),
         name: "Seated Twist",
         detail: "Detox",
         description:
@@ -281,7 +281,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "y7",
-        image: require("@/assets/exercises/savasana.png"),
+        image: require("@/assets/exercises/savasana.webp"),
         name: "Savasana",
         detail: "Rest",
         description:
@@ -311,7 +311,7 @@ export const WORKOUTS: Workout[] = [
     exercises: [
       {
         id: "s1",
-        image: require("@/assets/exercises/goblet-squat.png"),
+        image: require("@/assets/exercises/goblet-squat.webp"),
         name: "Goblet Squat",
         detail: "Lower body",
         description:
@@ -327,7 +327,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "s2",
-        image: require("@/assets/exercises/romanian-deadlift.png"),
+        image: require("@/assets/exercises/romanian-deadlift.webp"),
         name: "Romanian Deadlift",
         detail: "Hamstrings & glutes",
         description:
@@ -343,7 +343,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "s3",
-        image: require("@/assets/exercises/shoulder-press.png"),
+        image: require("@/assets/exercises/shoulder-press.webp"),
         name: "Shoulder Press",
         detail: "Upper body",
         description:
@@ -359,7 +359,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "s4",
-        image: require("@/assets/exercises/reverse-lunge.png"),
+        image: require("@/assets/exercises/reverse-lunge.webp"),
         name: "Reverse Lunge",
         detail: "Legs & balance",
         description:
@@ -375,7 +375,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "s5",
-        image: require("@/assets/exercises/bent-over-row.png"),
+        image: require("@/assets/exercises/bent-over-row.webp"),
         name: "Bent Over Row",
         detail: "Back",
         description:
@@ -391,7 +391,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "s6",
-        image: require("@/assets/exercises/glute-bridge.png"),
+        image: require("@/assets/exercises/glute-bridge.webp"),
         name: "Glute Bridge",
         detail: "Glutes",
         description:
@@ -407,7 +407,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "s7",
-        image: require("@/assets/exercises/plank.png"),
+        image: require("@/assets/exercises/plank.webp"),
         name: "Plank",
         detail: "Core",
         description:
@@ -436,7 +436,7 @@ export const WORKOUTS: Workout[] = [
     exercises: [
       {
         id: "h1",
-        image: require("@/assets/exercises/jumping-jacks.png"),
+        image: require("@/assets/exercises/jumping-jacks.webp"),
         name: "Jumping Jacks",
         detail: "Warm-up",
         description:
@@ -452,7 +452,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "h2",
-        image: require("@/assets/exercises/squat-jumps.png"),
+        image: require("@/assets/exercises/squat-jumps.webp"),
         name: "Squat Jumps",
         detail: "Power",
         description:
@@ -468,7 +468,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "h3",
-        image: require("@/assets/exercises/mountain-climbers.png"),
+        image: require("@/assets/exercises/mountain-climbers.webp"),
         name: "Mountain Climbers",
         detail: "Cardio core",
         description:
@@ -484,7 +484,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "h4",
-        image: require("@/assets/exercises/burpees.png"),
+        image: require("@/assets/exercises/burpees.webp"),
         name: "Burpees",
         detail: "Full body",
         description:
@@ -500,7 +500,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "h5",
-        image: require("@/assets/exercises/high-knees.png"),
+        image: require("@/assets/exercises/high-knees.webp"),
         name: "High Knees",
         detail: "Cardio",
         description:
@@ -516,7 +516,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "h6",
-        image: require("@/assets/exercises/plank-shoulder-taps.png"),
+        image: require("@/assets/exercises/plank-shoulder-taps.webp"),
         name: "Plank Shoulder Taps",
         detail: "Core",
         description:
@@ -545,7 +545,7 @@ export const WORKOUTS: Workout[] = [
     exercises: [
       {
         id: "m1",
-        image: require("@/assets/exercises/neck-rolls.png"),
+        image: require("@/assets/exercises/neck-rolls.webp"),
         name: "Neck Rolls",
         detail: "Release",
         description:
@@ -561,7 +561,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "m2",
-        image: require("@/assets/exercises/thread-the-needle.png"),
+        image: require("@/assets/exercises/thread-the-needle.webp"),
         name: "Thread the Needle",
         detail: "Upper back",
         description:
@@ -577,7 +577,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "m3",
-        image: require("@/assets/exercises/hip-flexor-stretch.png"),
+        image: require("@/assets/exercises/hip-flexor-stretch.webp"),
         name: "Hip Flexor Stretch",
         detail: "Hips",
         description:
@@ -593,7 +593,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "m4",
-        image: require("@/assets/exercises/figure-four.png"),
+        image: require("@/assets/exercises/figure-four.webp"),
         name: "Figure Four",
         detail: "Glutes",
         description:
@@ -609,7 +609,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "m5",
-        image: require("@/assets/exercises/supine-twist.png"),
+        image: require("@/assets/exercises/supine-twist.webp"),
         name: "Supine Twist",
         detail: "Spine",
         description:
@@ -638,7 +638,7 @@ export const WORKOUTS: Workout[] = [
     exercises: [
       {
         id: "c1",
-        image: require("@/assets/exercises/dead-bug.png"),
+        image: require("@/assets/exercises/dead-bug.webp"),
         name: "Dead Bug",
         detail: "Stability",
         description:
@@ -654,7 +654,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "c2",
-        image: require("@/assets/exercises/bicycle-crunch.png"),
+        image: require("@/assets/exercises/bicycle-crunch.webp"),
         name: "Bicycle Crunch",
         detail: "Obliques",
         description:
@@ -670,7 +670,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "c3",
-        image: require("@/assets/exercises/hollow-hold.png"),
+        image: require("@/assets/exercises/hollow-hold.webp"),
         name: "Hollow Hold",
         detail: "Deep core",
         description:
@@ -686,7 +686,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "c4",
-        image: require("@/assets/exercises/side-plank.png"),
+        image: require("@/assets/exercises/side-plank.webp"),
         name: "Side Plank",
         detail: "Obliques",
         description:
@@ -702,7 +702,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "c5",
-        image: require("@/assets/exercises/leg-lowers.png"),
+        image: require("@/assets/exercises/leg-lowers.webp"),
         name: "Leg Lowers",
         detail: "Lower abs",
         description:

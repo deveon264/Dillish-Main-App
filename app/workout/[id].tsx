@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, ImageBackground, Image, Animated, Share } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, Animated, Share } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Platform } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
+import { Image as ExpoImage } from "expo-image";
+import { Asset } from "expo-asset";
 import { useEventListener } from "expo";
 import { GradientBackground } from "@/components/GradientBackground";
 import { pageHeaderStyles } from "@/components/PageHeader";
@@ -439,6 +441,26 @@ export default function WorkoutPlayer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, paused, restRemaining]);
 
+  // Warm this workout's exercise photos into the image cache the moment the
+  // player opens, so the header and the rest "up next" backgrounds appear
+  // instantly instead of popping in one screen at a time.
+  useEffect(() => {
+    if (!workout) return;
+    const mods = [workout.image, ...workout.exercises.map((e) => e.image)].filter(
+      (s): s is number => typeof s === "number",
+    );
+    const uris = mods
+      .map((m) => {
+        try {
+          return Asset.fromModule(m).uri;
+        } catch {
+          return null;
+        }
+      })
+      .filter((u): u is string => !!u);
+    if (uris.length) void ExpoImage.prefetch(uris, "memory-disk");
+  }, [workout]);
+
   if (!workout) {
     return (
       <GradientBackground>
@@ -501,7 +523,14 @@ export default function WorkoutPlayer() {
     const restPct = `${restGap > 0 ? Math.max(0, Math.min(100, Math.round(((restGap - restRemaining) / restGap) * 100))) : 0}%` as const;
     return (
       <GradientBackground>
-        <ImageBackground source={next.image ?? workout.image} style={styles.restScreen}>
+        <View style={styles.restScreen}>
+          <ExpoImage
+            source={next.image ?? workout.image}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            transition={250}
+            cachePolicy="memory-disk"
+          />
           <LinearGradient
             colors={["rgba(16,17,17,0.55)", "rgba(16,17,17,0.78)", "rgba(16,17,17,0.95)"]}
             style={StyleSheet.absoluteFill}
@@ -539,7 +568,7 @@ export default function WorkoutPlayer() {
               <Text style={styles.restStartText}>Start now</Text>
             </Pressable>
           </View>
-        </ImageBackground>
+        </View>
       </GradientBackground>
     );
   }
@@ -586,7 +615,16 @@ export default function WorkoutPlayer() {
     return (
       <GradientBackground>
         <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 24 }} showsVerticalScrollIndicator={false}>
-          <ImageBackground source={playerImage} style={styles.player}>
+          <View style={styles.player}>
+            {playerImage && (
+              <ExpoImage
+                source={playerImage}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+                transition={250}
+                cachePolicy="memory-disk"
+              />
+            )}
             {currentVideo && (
               <VideoView
                 player={player}
@@ -636,7 +674,7 @@ export default function WorkoutPlayer() {
                 <Text style={styles.playerTime}>{fmt(barTotal)}</Text>
               </View>
             </Animated.View>
-          </ImageBackground>
+          </View>
 
           <View style={styles.info}>
             <View style={styles.infoTop}>
@@ -764,7 +802,7 @@ export default function WorkoutPlayer() {
                           <Ionicons name="checkmark" size={15} color={colors.onPrimaryStrong} />
                         </View>
                       )}
-                      <Image source={e.image ?? workout.image} style={styles.exThumb} />
+                      <ExpoImage source={e.image ?? workout.image} style={styles.exThumb} contentFit="cover" transition={150} cachePolicy="memory-disk" />
                       <View style={{ flex: 1, minWidth: 0 }}>
                         {isCurrent && <Text style={styles.exEyebrow}>EXERCISE {i + 1}</Text>}
                         <Text style={[styles.exCardTitle, done && styles.exCardTitleDone]}>{e.name}</Text>
@@ -1334,7 +1372,7 @@ const styles = StyleSheet.create({
   restChipOn: { backgroundColor: colors.accent, borderColor: "transparent" },
   restChipText: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.muted },
   restChipTextOn: { color: colors.onPrimaryStrong },
-  restScreen: { flex: 1, justifyContent: "space-between" },
+  restScreen: { flex: 1, justifyContent: "space-between", backgroundColor: "#101111" },
   restTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20 },
   restBody: { alignItems: "center", paddingHorizontal: 24 },
   restEyebrow: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.accent, letterSpacing: 3 },
