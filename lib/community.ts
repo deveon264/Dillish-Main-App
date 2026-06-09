@@ -151,6 +151,33 @@ export async function createPost(opts: {
   return post;
 }
 
+// Edits an existing post. Omit photoKey/removePhoto to keep the current photo;
+// pass a freshly uploaded photoKey to replace it, or removePhoto:true to clear.
+export async function updatePost(opts: {
+  token: string;
+  id: string;
+  type: PostType;
+  text: string;
+  photoKey?: string | null;
+  removePhoto?: boolean;
+}): Promise<CommunityPost> {
+  const { post } = await authed<{ post: CommunityPost }>(
+    `/api/community-posts?id=${encodeURIComponent(opts.id)}`,
+    {
+      token: opts.token,
+      method: "PATCH",
+      body: {
+        type: opts.type,
+        text: opts.text,
+        ...(opts.photoKey ? { photoKey: opts.photoKey } : {}),
+        ...(opts.removePhoto ? { removePhoto: true } : {}),
+      },
+      fallback: "Could not update your post",
+    }
+  );
+  return post;
+}
+
 export async function deletePost(opts: { token: string; id: string }): Promise<void> {
   await authed(`/api/community-posts?id=${encodeURIComponent(opts.id)}`, {
     token: opts.token,
@@ -206,6 +233,32 @@ export async function reportPost(opts: {
     method: "POST",
     body: { postId: opts.postId, reason: opts.reason ?? "" },
     fallback: "Could not submit report",
+  });
+}
+
+export type CommunityReport = {
+  id: string;
+  reason: string;
+  createdAt: number;
+  reporter: CommunityAuthor;
+  post: CommunityPost;
+};
+
+// Admin-only: the moderation queue of reported posts, newest first.
+export async function fetchReports(opts: { token: string }): Promise<CommunityReport[]> {
+  const { reports } = await authed<{ reports: CommunityReport[] }>(`/api/community-reports`, {
+    token: opts.token,
+    fallback: "Could not load reports",
+  });
+  return reports;
+}
+
+// Admin-only: dismiss a report without touching the post.
+export async function dismissReport(opts: { token: string; id: string }): Promise<void> {
+  await authed(`/api/community-reports?id=${encodeURIComponent(opts.id)}`, {
+    token: opts.token,
+    method: "DELETE",
+    fallback: "Could not dismiss report",
   });
 }
 

@@ -143,6 +143,12 @@ export default function PostDetail() {
     }
   };
 
+  const onEdit = () => {
+    if (!post) return;
+    closeMenu();
+    router.push(`/community/compose?id=${post.id}`);
+  };
+
   const onDelete = async () => {
     if (!token || !post) return;
     closeMenu();
@@ -304,6 +310,7 @@ export default function PostDetail() {
         busy={menuBusy}
         onReport={onReport}
         onBlock={onBlock}
+        onEdit={onEdit}
         onDelete={onDelete}
       />
     </GradientBackground>

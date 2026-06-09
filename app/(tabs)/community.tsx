@@ -188,6 +188,13 @@ export default function Community() {
     }
   };
 
+  const onEdit = () => {
+    if (!menuPost) return;
+    const target = menuPost;
+    closeMenu();
+    router.push(`/community/compose?id=${target.id}`);
+  };
+
   const onDelete = async () => {
     if (!token || !menuPost) return;
     const target = menuPost;
@@ -326,6 +333,7 @@ export default function Community() {
         busy={menuBusy}
         onReport={onReport}
         onBlock={onBlock}
+        onEdit={onEdit}
         onDelete={onDelete}
       />
     </GradientBackground>

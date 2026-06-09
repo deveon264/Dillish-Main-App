@@ -175,6 +175,32 @@ export async function createPost(input: {
   return getPost(id, input.authorId);
 }
 
+// Edits an existing post's type/body, and optionally its photo. When `photo`
+// is omitted the stored photo is left untouched; when present, the photo path is
+// set to the given value (a new object path, or null to clear it). The caller is
+// responsible for authorization and for deleting any replaced photo object.
+export async function updatePost(input: {
+  id: string;
+  viewerId: string;
+  type: PostType;
+  body: string;
+  photo?: { objectPath: string | null };
+}): Promise<CommunityPost | null> {
+  await ensureSchema();
+  if (input.photo !== undefined) {
+    await getPool().query(
+      `UPDATE community_posts SET type = $2, body = $3, photo_object_path = $4 WHERE id = $1`,
+      [input.id, input.type, input.body, input.photo.objectPath]
+    );
+  } else {
+    await getPool().query(
+      `UPDATE community_posts SET type = $2, body = $3 WHERE id = $1`,
+      [input.id, input.type, input.body]
+    );
+  }
+  return getPost(input.id, input.viewerId);
+}
+
 // Lightweight read for authorization + photo cleanup before a delete.
 export async function getPostMeta(
   id: string
@@ -311,6 +337,65 @@ export async function reportPost(input: {
      WHERE EXISTS (SELECT 1 FROM community_posts WHERE id = $2)`,
     [id, input.postId, input.reporterId, input.reason, Date.now()]
   );
+  return !!rowCount;
+}
+
+export type CommunityReport = {
+  id: string;
+  reason: string;
+  createdAt: number;
+  reporter: CommunityAuthor;
+  post: CommunityPost;
+};
+
+// Admin moderation queue: every report, newest first, joined to the reported
+// post (with its live author + counts) and the member who filed it. Reports are
+// cascade-deleted with their post, so the post JOIN always matches. `viewerId`
+// (the admin) only drives the post's likedByMe flag.
+export async function listReports(opts: {
+  viewerId: string;
+  limit: number;
+}): Promise<CommunityReport[]> {
+  await ensureSchema();
+  const limit = Math.max(1, Math.min(100, opts.limit));
+  const { rows } = await getPool().query(
+    `SELECT
+       r.id AS report_id, r.reason AS report_reason, r.created_at AS report_created_at,
+       ru.id AS reporter_id, ru.name AS reporter_name,
+       CASE WHEN ru.avatar_object_path IS NULL THEN ru.avatar ELSE NULL END AS reporter_avatar,
+       ru.avatar_object_path AS reporter_avatar_path,
+       p.id, p.type, p.body, p.photo_object_path, p.created_at,
+       ${AUTHOR_SELECT},
+       (SELECT COUNT(*) FROM community_likes l WHERE l.post_id = p.id) AS like_count,
+       (SELECT COUNT(*) FROM community_comments c WHERE c.post_id = p.id) AS comment_count,
+       EXISTS (SELECT 1 FROM community_likes l2 WHERE l2.post_id = p.id AND l2.user_id = $1) AS liked_by_me
+     FROM community_reports r
+     JOIN community_posts p ON p.id = r.post_id
+     JOIN users u ON u.id = p.author_id
+     JOIN users ru ON ru.id = r.reporter_id
+     ORDER BY r.created_at DESC, r.id DESC
+     LIMIT $2`,
+    [opts.viewerId, limit]
+  );
+  return rows.map((r) => ({
+    id: r.report_id,
+    reason: r.report_reason ?? "",
+    createdAt: Number(r.report_created_at),
+    reporter: {
+      id: r.reporter_id,
+      name: r.reporter_name,
+      avatar: r.reporter_avatar ?? null,
+      avatarVersion: keyFromPath(r.reporter_avatar_path ?? null),
+    },
+    post: mapPost(r),
+  }));
+}
+
+// Dismisses (deletes) a single report row. Returns false when it no longer
+// exists. The reported post is left untouched.
+export async function dismissReport(id: string): Promise<boolean> {
+  await ensureSchema();
+  const { rowCount } = await getPool().query(`DELETE FROM community_reports WHERE id = $1`, [id]);
   return !!rowCount;
 }
 

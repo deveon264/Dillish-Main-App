@@ -15,6 +15,7 @@ type Props = {
   busy?: boolean;
   onReport: () => void;
   onBlock: () => void;
+  onEdit: () => void;
   onDelete: () => void;
 };
 
@@ -30,6 +31,7 @@ export function PostMenu({
   busy,
   onReport,
   onBlock,
+  onEdit,
   onDelete,
 }: Props) {
   const canDelete = isOwn || isAdmin;
@@ -44,12 +46,14 @@ export function PostMenu({
             </View>
           ) : (
             <>
-              {!isOwn ? (
+              {isOwn ? (
+                <Row icon="create-outline" label="Edit post" onPress={onEdit} />
+              ) : (
                 <>
                   <Row icon="flag-outline" label="Report post" onPress={onReport} />
                   <Row icon="ban-outline" label={`Block ${authorName}`} onPress={onBlock} />
                 </>
-              ) : null}
+              )}
               {canDelete ? (
                 <Row icon="trash-outline" label="Delete post" danger onPress={onDelete} />
               ) : null}

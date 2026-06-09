@@ -484,6 +484,17 @@ export default function Profile() {
                     </View>
                     <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
                   </Pressable>
+                  <View style={styles.settingsDivider} />
+                  <Pressable
+                    style={styles.acctRow}
+                    onPress={() => router.push("/admin/reports")}
+                  >
+                    <View style={styles.acctLeft}>
+                      <Ionicons name="flag-outline" size={20} color={colors.accent} />
+                      <Text style={styles.acctLabel}>Reported Posts</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
+                  </Pressable>
                 </Card>
               </>
             ) : null}

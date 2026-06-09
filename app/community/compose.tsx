@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -10,18 +10,27 @@ import {
   Platform,
   ActionSheetIOS,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Button } from "@/components/Button";
 import { POST_TYPE_META } from "@/components/community/postTypes";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInsets } from "@/hooks/useInsets";
 import { notify } from "@/lib/confirm";
-import { createPost, uploadCommunityPhoto, POST_TYPES, type PostType } from "@/lib/community";
+import {
+  communityPhotoUri,
+  createPost,
+  fetchPost,
+  updatePost,
+  uploadCommunityPhoto,
+  POST_TYPES,
+  type PostType,
+} from "@/lib/community";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
@@ -31,13 +40,51 @@ export default function Compose() {
   const insets = useInsets();
   const router = useRouter();
   const { token } = useAuth();
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const isEdit = !!id;
 
   const [type, setType] = useState<PostType>("progress");
   const [text, setText] = useState("");
+  // The photo currently shown in the preview: a remote URL for the post's
+  // existing photo, or a local file URI for a freshly picked one.
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [photoMime, setPhotoMime] = useState<string | null>(null);
+  // True when photoUri is a newly picked local file that must be uploaded on
+  // save. False when it's the post's already-stored photo.
+  const [isNewPhoto, setIsNewPhoto] = useState(false);
+  // The post's original stored photo key, so on save we can tell whether the
+  // author cleared an existing photo.
+  const [originalPhotoKey, setOriginalPhotoKey] = useState<string | null>(null);
+
+  const [loading, setLoading] = useState(isEdit);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // In edit mode, load the post once and prefill the form.
+  useEffect(() => {
+    if (!isEdit || !token || !id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const post = await fetchPost({ token, id });
+        if (cancelled) return;
+        setType(post.type);
+        setText(post.body);
+        setOriginalPhotoKey(post.photoKey);
+        if (post.photoKey) {
+          setPhotoUri(communityPhotoUri(post.photoKey));
+          setIsNewPhoto(false);
+        }
+      } catch (e: any) {
+        if (!cancelled) setError(e?.message ?? "Could not load this post.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isEdit, token, id]);
 
   const pickFrom = async (fromCamera: boolean) => {
     setError(null);
@@ -61,6 +108,7 @@ export default function Compose() {
       const asset = res.assets[0];
       setPhotoUri(asset.uri);
       setPhotoMime(asset.mimeType ?? null);
+      setIsNewPhoto(true);
     } catch {
       setError("Unable to open the camera or library on this device.");
     }
@@ -89,7 +137,13 @@ export default function Compose() {
     ]);
   };
 
-  const share = async () => {
+  const removePhoto = () => {
+    setPhotoUri(null);
+    setPhotoMime(null);
+    setIsNewPhoto(false);
+  };
+
+  const submit = async () => {
     if (!token) {
       setError("Please sign in again.");
       return;
@@ -102,14 +156,25 @@ export default function Compose() {
     setSubmitting(true);
     setError(null);
     try {
-      let photoKey: string | null = null;
-      if (photoUri) {
-        photoKey = await uploadCommunityPhoto(photoUri, photoMime, token);
+      if (isEdit && id) {
+        let photoKey: string | undefined;
+        let removeExisting = false;
+        if (isNewPhoto && photoUri) {
+          photoKey = await uploadCommunityPhoto(photoUri, photoMime, token);
+        } else if (!photoUri && originalPhotoKey) {
+          removeExisting = true;
+        }
+        await updatePost({ token, id, type, text: body, photoKey, removePhoto: removeExisting });
+      } else {
+        let photoKey: string | null = null;
+        if (photoUri) {
+          photoKey = await uploadCommunityPhoto(photoUri, photoMime, token);
+        }
+        await createPost({ token, type, text: body, photoKey });
       }
-      await createPost({ token, type, text: body, photoKey });
       router.back();
     } catch (e: any) {
-      setError(e?.message ?? "Could not share your post.");
+      setError(e?.message ?? (isEdit ? "Could not save your changes." : "Could not share your post."));
       setSubmitting(false);
     }
   };
@@ -120,80 +185,94 @@ export default function Compose() {
         <Pressable hitSlop={8} onPress={() => router.back()} style={styles.iconBtn}>
           <Ionicons name="close" size={24} color={colors.foreground} />
         </Pressable>
-        <Text style={styles.topTitle}>New post</Text>
+        <Text style={styles.topTitle}>{isEdit ? "Edit post" : "New post"}</Text>
         <View style={styles.iconBtn} />
       </View>
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={insets.top + 50}
-      >
-        <ScrollView
-          contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 30 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator color={colors.accent} />
+        </View>
+      ) : (
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={insets.top + 50}
         >
-          <Text style={styles.label}>WHAT ARE YOU SHARING?</Text>
-          <View style={styles.types}>
-            {POST_TYPES.map((t) => {
-              const active = t === type;
-              const meta = POST_TYPE_META[t];
-              return (
-                <Pressable
-                  key={t}
-                  onPress={() => setType(t)}
-                  style={[styles.typeChip, active && styles.typeChipActive]}
-                >
-                  <Ionicons
-                    name={meta.icon}
-                    size={15}
-                    color={active ? colors.onPrimaryStrong : colors.accentDark}
-                  />
-                  <Text style={[styles.typeText, active && styles.typeTextActive]}>{meta.label}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <Text style={[styles.label, { marginTop: 22 }]}>YOUR MESSAGE</Text>
-          <TextInput
-            style={styles.textArea}
-            placeholder="Share an update, a win, a meal, or some encouragement..."
-            placeholderTextColor={colors.muted}
-            value={text}
-            onChangeText={(v) => setText(v.slice(0, MAX_CHARS))}
-            multiline
-          />
-          <Text style={styles.counter}>
-            {text.length}/{MAX_CHARS}
-          </Text>
-
-          {photoUri ? (
-            <View style={styles.previewWrap}>
-              <Image source={{ uri: photoUri }} style={styles.preview} contentFit="cover" />
-              <Pressable style={styles.removePhoto} onPress={() => { setPhotoUri(null); setPhotoMime(null); }}>
-                <Ionicons name="close" size={18} color={colors.onPrimaryStrong} />
-              </Pressable>
+          <ScrollView
+            contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 30 }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <Text style={styles.label}>WHAT ARE YOU SHARING?</Text>
+            <View style={styles.types}>
+              {POST_TYPES.map((t) => {
+                const active = t === type;
+                const meta = POST_TYPE_META[t];
+                return (
+                  <Pressable
+                    key={t}
+                    onPress={() => setType(t)}
+                    style={[styles.typeChip, active && styles.typeChipActive]}
+                  >
+                    <Ionicons
+                      name={meta.icon}
+                      size={15}
+                      color={active ? colors.onPrimaryStrong : colors.accentDark}
+                    />
+                    <Text style={[styles.typeText, active && styles.typeTextActive]}>{meta.label}</Text>
+                  </Pressable>
+                );
+              })}
             </View>
-          ) : (
-            <Pressable style={styles.addPhoto} onPress={addPhoto}>
-              <Ionicons name="image-outline" size={20} color={colors.accentDark} />
-              <Text style={styles.addPhotoText}>Add a photo (optional)</Text>
-            </Pressable>
-          )}
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+            <Text style={[styles.label, { marginTop: 22 }]}>YOUR MESSAGE</Text>
+            <TextInput
+              style={styles.textArea}
+              placeholder="Share an update, a win, a meal, or some encouragement..."
+              placeholderTextColor={colors.muted}
+              value={text}
+              onChangeText={(v) => setText(v.slice(0, MAX_CHARS))}
+              multiline
+            />
+            <Text style={styles.counter}>
+              {text.length}/{MAX_CHARS}
+            </Text>
 
-          <Button
-            label={submitting ? "Sharing..." : "Share post"}
-            onPress={share}
-            loading={submitting}
-            disabled={!text.trim()}
-            style={{ marginTop: 22 }}
-          />
-        </ScrollView>
-      </KeyboardAvoidingView>
+            {photoUri ? (
+              <View style={styles.previewWrap}>
+                <Image source={{ uri: photoUri }} style={styles.preview} contentFit="cover" />
+                <Pressable style={styles.removePhoto} onPress={removePhoto}>
+                  <Ionicons name="close" size={18} color={colors.onPrimaryStrong} />
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable style={styles.addPhoto} onPress={addPhoto}>
+                <Ionicons name="image-outline" size={20} color={colors.accentDark} />
+                <Text style={styles.addPhotoText}>Add a photo (optional)</Text>
+              </Pressable>
+            )}
+
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+
+            <Button
+              label={
+                submitting
+                  ? isEdit
+                    ? "Saving..."
+                    : "Sharing..."
+                  : isEdit
+                    ? "Save changes"
+                    : "Share post"
+              }
+              onPress={submit}
+              loading={submitting}
+              disabled={!text.trim()}
+              style={{ marginTop: 22 }}
+            />
+          </ScrollView>
+        </KeyboardAvoidingView>
+      )}
     </GradientBackground>
   );
 }
@@ -208,6 +287,7 @@ const styles = StyleSheet.create({
   },
   iconBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   topTitle: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.foreground },
+  center: { flex: 1, alignItems: "center", justifyContent: "center" },
   label: { fontFamily: fonts.sansMedium, fontSize: 12, letterSpacing: 2, color: colors.muted, marginBottom: 12 },
   types: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   typeChip: {
