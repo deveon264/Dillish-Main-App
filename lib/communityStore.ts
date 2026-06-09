@@ -340,22 +340,35 @@ export async function reportPost(input: {
   return !!rowCount;
 }
 
-export type CommunityReport = {
+// One member's report of a post: who filed it, why, and when.
+export type ReportEntry = {
   id: string;
   reason: string;
   createdAt: number;
   reporter: CommunityAuthor;
-  post: CommunityPost;
 };
 
-// Admin moderation queue: every report, newest first, joined to the reported
-// post (with its live author + counts) and the member who filed it. Reports are
-// cascade-deleted with their post, so the post JOIN always matches. `viewerId`
-// (the admin) only drives the post's likedByMe flag.
+// A reported post with every report filed against it grouped together, so a post
+// reported by five members is one review item, not five.
+export type ReportGroup = {
+  post: CommunityPost;
+  reportCount: number;
+  // The newest report time, used to order groups and label the card.
+  latestCreatedAt: number;
+  // Each member's report, newest first.
+  reports: ReportEntry[];
+};
+
+// Admin moderation queue: reported posts grouped so each post appears once with
+// all of its reporters/reasons. Groups are ordered by their newest report. Each
+// report row JOINs the live post (with its author + counts) and the member who
+// filed it; reports are cascade-deleted with their post, so the post JOIN always
+// matches. `viewerId` (the admin) only drives the post's likedByMe flag. `limit`
+// caps the number of grouped posts returned.
 export async function listReports(opts: {
   viewerId: string;
   limit: number;
-}): Promise<CommunityReport[]> {
+}): Promise<ReportGroup[]> {
   await ensureSchema();
   const limit = Math.max(1, Math.min(100, opts.limit));
   const { rows } = await getPool().query(
@@ -373,30 +386,53 @@ export async function listReports(opts: {
      JOIN community_posts p ON p.id = r.post_id
      JOIN users u ON u.id = p.author_id
      JOIN users ru ON ru.id = r.reporter_id
-     ORDER BY r.created_at DESC, r.id DESC
-     LIMIT $2`,
-    [opts.viewerId, limit]
+     ORDER BY r.created_at DESC, r.id DESC`,
+    [opts.viewerId]
   );
-  return rows.map((r) => ({
-    id: r.report_id,
-    reason: r.report_reason ?? "",
-    createdAt: Number(r.report_created_at),
-    reporter: {
-      id: r.reporter_id,
-      name: r.reporter_name,
-      avatar: r.reporter_avatar ?? null,
-      avatarVersion: keyFromPath(r.reporter_avatar_path ?? null),
-    },
-    post: mapPost(r),
-  }));
+
+  // Rows arrive newest-first, so the first row seen for a post is its newest
+  // report: that fixes both the group order and each group's reports order.
+  const byPost = new Map<string, ReportGroup>();
+  for (const r of rows) {
+    const entry: ReportEntry = {
+      id: r.report_id,
+      reason: r.report_reason ?? "",
+      createdAt: Number(r.report_created_at),
+      reporter: {
+        id: r.reporter_id,
+        name: r.reporter_name,
+        avatar: r.reporter_avatar ?? null,
+        avatarVersion: keyFromPath(r.reporter_avatar_path ?? null),
+      },
+    };
+    const postId = r.id as string;
+    const existing = byPost.get(postId);
+    if (existing) {
+      existing.reports.push(entry);
+      existing.reportCount += 1;
+    } else {
+      byPost.set(postId, {
+        post: mapPost(r),
+        reportCount: 1,
+        latestCreatedAt: entry.createdAt,
+        reports: [entry],
+      });
+    }
+  }
+  return Array.from(byPost.values()).slice(0, limit);
 }
 
-// Dismisses (deletes) a single report row. Returns false when it no longer
-// exists. The reported post is left untouched.
-export async function dismissReport(id: string): Promise<boolean> {
+// Dismisses (deletes) every report filed against a post, leaving the post
+// itself untouched. Returns the number of report rows removed (0 when the post
+// had no reports). Used by both the admin "dismiss" action and is implied by a
+// post deletion (which cascade-removes reports anyway).
+export async function dismissReportsForPost(postId: string): Promise<number> {
   await ensureSchema();
-  const { rowCount } = await getPool().query(`DELETE FROM community_reports WHERE id = $1`, [id]);
-  return !!rowCount;
+  const { rowCount } = await getPool().query(
+    `DELETE FROM community_reports WHERE post_id = $1`,
+    [postId]
+  );
+  return rowCount ?? 0;
 }
 
 export async function blockUser(input: { blockerId: string; blockedId: string }): Promise<void> {

@@ -236,29 +236,39 @@ export async function reportPost(opts: {
   });
 }
 
-export type CommunityReport = {
+// One member's report of a post: who filed it, why, and when.
+export type ReportEntry = {
   id: string;
   reason: string;
   createdAt: number;
   reporter: CommunityAuthor;
-  post: CommunityPost;
 };
 
-// Admin-only: the moderation queue of reported posts, newest first.
-export async function fetchReports(opts: { token: string }): Promise<CommunityReport[]> {
-  const { reports } = await authed<{ reports: CommunityReport[] }>(`/api/community-reports`, {
+// A reported post with every report against it grouped into one review item.
+export type ReportGroup = {
+  post: CommunityPost;
+  reportCount: number;
+  latestCreatedAt: number;
+  reports: ReportEntry[];
+};
+
+// Admin-only: the moderation queue, one item per reported post (grouped with all
+// of its reporters/reasons), newest report first.
+export async function fetchReports(opts: { token: string }): Promise<ReportGroup[]> {
+  const { reports } = await authed<{ reports: ReportGroup[] }>(`/api/community-reports`, {
     token: opts.token,
     fallback: "Could not load reports",
   });
   return reports;
 }
 
-// Admin-only: dismiss a report without touching the post.
-export async function dismissReport(opts: { token: string; id: string }): Promise<void> {
-  await authed(`/api/community-reports?id=${encodeURIComponent(opts.id)}`, {
+// Admin-only: dismiss every report against a post at once, without touching the
+// post itself.
+export async function dismissReportsForPost(opts: { token: string; postId: string }): Promise<void> {
+  await authed(`/api/community-reports?postId=${encodeURIComponent(opts.postId)}`, {
     token: opts.token,
     method: "DELETE",
-    fallback: "Could not dismiss report",
+    fallback: "Could not dismiss reports",
   });
 }
 

@@ -1,11 +1,11 @@
 import { requireSession } from "@/lib/adminAuth";
-import { dismissReport, listReports } from "@/lib/communityStore";
+import { dismissReportsForPost, listReports } from "@/lib/communityStore";
 
 const PAGE_SIZE = 100;
 
-// GET -> the moderation queue: every reported post, newest first, with the
-// reporter and reason. Admin (coach) only: a member's session token is rejected
-// even though it is otherwise valid.
+// GET -> the moderation queue: each reported post once, grouped with all of its
+// reporters/reasons and a report count, newest report first. Admin (coach) only:
+// a member's session token is rejected even though it is otherwise valid.
 export async function GET(request: Request): Promise<Response> {
   try {
     const session = await requireSession(request);
@@ -22,8 +22,8 @@ export async function GET(request: Request): Promise<Response> {
   }
 }
 
-// DELETE ?id=<reportId> -> dismiss a single report, leaving the post in place.
-// Admin (coach) only.
+// DELETE ?postId=<postId> -> dismiss every report against a post at once,
+// leaving the post in place. Admin (coach) only.
 export async function DELETE(request: Request): Promise<Response> {
   try {
     const session = await requireSession(request);
@@ -32,14 +32,14 @@ export async function DELETE(request: Request): Promise<Response> {
       return Response.json({ error: "Admins only" }, { status: 403 });
     }
 
-    const id = new URL(request.url).searchParams.get("id");
-    if (!id) return Response.json({ error: "Missing report id" }, { status: 400 });
+    const postId = new URL(request.url).searchParams.get("postId");
+    if (!postId) return Response.json({ error: "Missing post id" }, { status: 400 });
 
-    const ok = await dismissReport(id);
-    if (!ok) return Response.json({ error: "Report not found" }, { status: 404 });
-    return Response.json({ ok: true });
+    const dismissed = await dismissReportsForPost(postId);
+    if (!dismissed) return Response.json({ error: "No reports found" }, { status: 404 });
+    return Response.json({ ok: true, dismissed });
   } catch (e: any) {
     console.error("community-reports DELETE error:", e?.message ?? e);
-    return Response.json({ error: "Could not dismiss report" }, { status: 500 });
+    return Response.json({ error: "Could not dismiss reports" }, { status: 500 });
   }
 }

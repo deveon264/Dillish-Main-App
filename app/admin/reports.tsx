@@ -23,10 +23,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   communityPhotoUri,
   deletePost,
-  dismissReport,
+  dismissReportsForPost,
   fetchReports,
   timeAgo,
-  type CommunityReport,
+  type ReportGroup,
 } from "@/lib/community";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
@@ -52,7 +52,7 @@ export default function Reports() {
   const insets = useInsets();
   const { isAdmin, token } = useAuth();
 
-  const [reports, setReports] = useState<CommunityReport[] | null>(null);
+  const [reports, setReports] = useState<ReportGroup[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -92,17 +92,18 @@ export default function Reports() {
     );
   }
 
-  const removePost = (report: CommunityReport) => {
+  const removePost = (group: ReportGroup) => {
+    const plural = group.reportCount === 1 ? "report" : "reports";
     confirmAction(
       "Delete post",
-      "This permanently removes the post for everyone. The report will clear too.",
+      `This permanently removes the post for everyone. All ${group.reportCount} ${plural} will clear too.`,
       "Delete",
       async () => {
         if (!token) return;
-        setBusyId(report.id);
+        setBusyId(group.post.id);
         try {
-          await deletePost({ token, id: report.post.id });
-          setReports((prev) => (prev ? prev.filter((r) => r.post.id !== report.post.id) : prev));
+          await deletePost({ token, id: group.post.id });
+          setReports((prev) => (prev ? prev.filter((g) => g.post.id !== group.post.id) : prev));
         } catch (e: any) {
           notify("Could not delete post", e?.message ?? "Please try again.");
         } finally {
@@ -112,19 +113,20 @@ export default function Reports() {
     );
   };
 
-  const dismiss = (report: CommunityReport) => {
+  const dismiss = (group: ReportGroup) => {
+    const plural = group.reportCount === 1 ? "report" : "reports";
     confirmAction(
-      "Dismiss report",
-      "This clears the report but keeps the post visible.",
+      "Dismiss reports",
+      `This clears all ${group.reportCount} ${plural} for this post but keeps the post visible.`,
       "Dismiss",
       async () => {
         if (!token) return;
-        setBusyId(report.id);
+        setBusyId(group.post.id);
         try {
-          await dismissReport({ token, id: report.id });
-          setReports((prev) => (prev ? prev.filter((r) => r.id !== report.id) : prev));
+          await dismissReportsForPost({ token, postId: group.post.id });
+          setReports((prev) => (prev ? prev.filter((g) => g.post.id !== group.post.id) : prev));
         } catch (e: any) {
-          notify("Could not dismiss report", e?.message ?? "Please try again.");
+          notify("Could not dismiss reports", e?.message ?? "Please try again.");
         } finally {
           setBusyId(null);
         }
@@ -179,43 +181,58 @@ export default function Reports() {
             <Text style={styles.emptyText}>There are no reported posts to review right now.</Text>
           </View>
         ) : (
-          reports.map((report) => {
-            const meta = POST_TYPE_META[report.post.type];
-            const busy = busyId === report.id;
+          reports.map((group) => {
+            const meta = POST_TYPE_META[group.post.type];
+            const busy = busyId === group.post.id;
             return (
-              <View key={report.id} style={styles.card}>
+              <View key={group.post.id} style={styles.card}>
                 <Pressable
                   style={styles.reporterRow}
-                  onPress={() => router.push(`/community/${report.post.id}`)}
+                  onPress={() => router.push(`/community/${group.post.id}`)}
                 >
                   <Ionicons name="flag" size={15} color={colors.danger} />
-                  <Text style={styles.reporterText} numberOfLines={2}>
+                  <Text style={styles.reporterText} numberOfLines={1}>
                     Reported by{" "}
-                    <Text style={styles.reporterName}>{report.reporter.name}</Text> ·{" "}
-                    {timeAgo(report.createdAt)}
+                    <Text style={styles.reporterName}>
+                      {group.reportCount} {group.reportCount === 1 ? "member" : "members"}
+                    </Text>{" "}
+                    · {timeAgo(group.latestCreatedAt)}
                   </Text>
                 </Pressable>
 
-                {report.reason ? (
-                  <View style={styles.reasonBox}>
-                    <Text style={styles.reasonLabel}>Reason</Text>
-                    <Text style={styles.reasonText}>{report.reason}</Text>
-                  </View>
-                ) : (
-                  <Text style={styles.noReason}>No reason given</Text>
-                )}
+                <View style={styles.reportList}>
+                  {group.reports.map((entry, i) => (
+                    <View
+                      key={entry.id}
+                      style={[styles.reportItem, i > 0 && styles.reportItemDivider]}
+                    >
+                      <View style={styles.reportItemHead}>
+                        <Avatar author={entry.reporter} size={24} />
+                        <Text style={styles.reportItemName} numberOfLines={1}>
+                          {entry.reporter.name}
+                        </Text>
+                        <Text style={styles.reportItemTime}>{timeAgo(entry.createdAt)}</Text>
+                      </View>
+                      {entry.reason ? (
+                        <Text style={styles.reportItemReason}>{entry.reason}</Text>
+                      ) : (
+                        <Text style={styles.reportItemNoReason}>No reason given</Text>
+                      )}
+                    </View>
+                  ))}
+                </View>
 
                 <Pressable
                   style={styles.postPreview}
-                  onPress={() => router.push(`/community/${report.post.id}`)}
+                  onPress={() => router.push(`/community/${group.post.id}`)}
                 >
                   <View style={styles.postHead}>
-                    <Avatar author={report.post.author} size={38} />
+                    <Avatar author={group.post.author} size={38} />
                     <View style={styles.postHeadText}>
                       <Text style={styles.postAuthor} numberOfLines={1}>
-                        {report.post.author.name}
+                        {group.post.author.name}
                       </Text>
-                      <Text style={styles.postTime}>{timeAgo(report.post.createdAt)}</Text>
+                      <Text style={styles.postTime}>{timeAgo(group.post.createdAt)}</Text>
                     </View>
                   </View>
 
@@ -225,12 +242,12 @@ export default function Reports() {
                   </View>
 
                   <Text style={styles.postBody} numberOfLines={6}>
-                    {report.post.body}
+                    {group.post.body}
                   </Text>
 
-                  {report.post.photoKey ? (
+                  {group.post.photoKey ? (
                     <Image
-                      source={{ uri: communityPhotoUri(report.post.photoKey) }}
+                      source={{ uri: communityPhotoUri(group.post.photoKey) }}
                       style={styles.photo}
                       contentFit="cover"
                       transition={150}
@@ -241,7 +258,7 @@ export default function Reports() {
                 <View style={styles.actions}>
                   <Pressable
                     style={[styles.actionBtn, styles.openBtn]}
-                    onPress={() => router.push(`/community/${report.post.id}`)}
+                    onPress={() => router.push(`/community/${group.post.id}`)}
                     disabled={busy}
                   >
                     <Ionicons name="open-outline" size={16} color={colors.foreground} />
@@ -249,7 +266,7 @@ export default function Reports() {
                   </Pressable>
                   <Pressable
                     style={[styles.actionBtn, styles.dismissBtn]}
-                    onPress={() => dismiss(report)}
+                    onPress={() => dismiss(group)}
                     disabled={busy}
                   >
                     <Ionicons name="checkmark-outline" size={16} color={colors.accentDark} />
@@ -257,7 +274,7 @@ export default function Reports() {
                   </Pressable>
                   <Pressable
                     style={[styles.actionBtn, styles.deleteBtn]}
-                    onPress={() => removePost(report)}
+                    onPress={() => removePost(group)}
                     disabled={busy}
                   >
                     {busy ? (
@@ -327,22 +344,37 @@ const styles = StyleSheet.create({
   reporterRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   reporterText: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: colors.mutedForeground, lineHeight: 18 },
   reporterName: { fontFamily: fonts.sansSemibold, color: colors.foreground },
-  reasonBox: {
+  reportList: {
     backgroundColor: colors.accentTintFaint,
     borderRadius: colors.radius,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 4,
     marginTop: 12,
   },
-  reasonLabel: {
+  reportItem: { paddingVertical: 10 },
+  reportItemDivider: { borderTopWidth: 1, borderTopColor: colors.cardBorder },
+  reportItemHead: { flexDirection: "row", alignItems: "center", gap: 8 },
+  reportItemName: {
+    flex: 1,
     fontFamily: fonts.sansSemibold,
-    fontSize: 11,
-    letterSpacing: 0.4,
-    color: colors.muted,
-    marginBottom: 3,
+    fontSize: 13,
+    color: colors.foreground,
   },
-  reasonText: { fontFamily: fonts.sans, fontSize: 14, color: colors.foreground, lineHeight: 20 },
-  noReason: { fontFamily: fonts.sans, fontSize: 13, color: colors.muted, marginTop: 12, fontStyle: "italic" },
+  reportItemTime: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted },
+  reportItemReason: {
+    fontFamily: fonts.sans,
+    fontSize: 14,
+    color: colors.foreground,
+    lineHeight: 20,
+    marginTop: 6,
+  },
+  reportItemNoReason: {
+    fontFamily: fonts.sans,
+    fontSize: 13,
+    color: colors.muted,
+    fontStyle: "italic",
+    marginTop: 6,
+  },
   postPreview: {
     backgroundColor: colors.background,
     borderWidth: 1,
