@@ -5,6 +5,7 @@
 - [Device-local persistence](device-local-persistence.md) — calorie/water/etc logs are AsyncStorage-only, keyed by uid; mutators must await setJSON, and load must hydrate local slices before any network await.
 - [Pitch deck PDF render](pitch-deck-pdf-render.md) — fixed-height HTML deck exported blank/cut pages: zero `.deck` gap+padding in `@media print`; watch per-slide overflow clip; re-render via pitch/tooling/render.cjs.
 - [Walkthrough animation](walkthrough-animation.md) — pitch/walkthrough.html looping 16:9 feature reel: water scene is a CSS orb (no screenshot exists, intentional); one rAF clock drives scene+timeline; anchor flips sides per scene.
+- [Walkthrough reel template](walkthrough-reel-template.md) — ambassador reels (Ajay/Sendry/J.loss) generated from pitch/walkthrough-src/ (template.html + ambassadors.json + build.cjs); never hand-edit generated public/ + pitch/ copies.
 - [Responsive preview scaling](responsive-preview-scaling.md) — web preview frame is narrower than iOS; fixed RN font sizes wrap; use hooks/useScale ms() + numberOfLines, verify on narrow width not desktop screenshot.
 - [OpenAI integration model + empty-output guard](openai-integration-models.md) — use `gpt-5.4` (model the integration serves, not gpt-5-mini); reasoning models return "" so guard before JSON.parse; creds only in app runtime, not sandbox.
 - [Testing RN hooks/effects](testing-rn-hooks.md) — node:test+tsx has no RN renderer; extract effect logic into a deps-injectable hook and test with react-test-renderer act(); set IS_REACT_ACT_ENVIRONMENT.

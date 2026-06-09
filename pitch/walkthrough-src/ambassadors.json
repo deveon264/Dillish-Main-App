@@ -1,0 +1,33 @@
+{
+  "sharedAssets": ["calories.png", "progress.png", "workouts.png"],
+  "ambassadorAssets": ["welcome.png", "home.png"],
+  "ambassadors": [
+    {
+      "id": "ajay",
+      "name": "Ajay",
+      "assets": "ajay",
+      "outputs": [
+        { "html": "public/walkthrough/index.html", "assetsDir": "public/walkthrough/assets" },
+        { "html": "pitch/walkthrough.html", "assetsDir": "pitch/assets" }
+      ]
+    },
+    {
+      "id": "sendry",
+      "name": "Sendry",
+      "assets": "sendry",
+      "outputs": [
+        { "html": "public/walkthrough-sendry/index.html", "assetsDir": "public/walkthrough-sendry/assets" },
+        { "html": "pitch/walkthrough-sendry/index.html", "assetsDir": "pitch/walkthrough-sendry/assets" }
+      ]
+    },
+    {
+      "id": "jloss",
+      "name": "J.loss",
+      "assets": "jloss",
+      "outputs": [
+        { "html": "public/walkthrough-jloss/index.html", "assetsDir": "public/walkthrough-jloss/assets" },
+        { "html": "pitch/walkthrough-jloss/index.html", "assetsDir": "pitch/walkthrough-jloss/assets" }
+      ]
+    }
+  ]
+}
