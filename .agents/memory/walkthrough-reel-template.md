@@ -40,10 +40,16 @@ Per-ambassador brand override (mirrors the pitch deck's `brand`/`{{BRAND}}`):
   swapping the welcome image leaves a mismatched screenshot.
 
 Verification:
-- `verify-brand.cjs` (validation step `reel-brand`, run after `build.cjs`) asserts
-  each ambassador's HTML outputs contain their expected brand (`amb.brand ||
-  "Shape"`) and zero of any other roster brand. Expectations derive from
-  `ambassadors.json`, so a new ambassador/brand is covered automatically.
+- The `reel-brand` validation step runs both halves as one gate:
+  `node build.cjs --check && node verify-brand.cjs`.
+- `build.cjs --check` is a non-destructive drift check: it re-renders every output
+  in memory and byte-compares against the committed HTML + assets, failing if any
+  committed copy is stale/missing. It does NOT use git (git is off-limits in task
+  agents) and never writes — so it catches a forgotten rebuild without touching the
+  tree. Plain `build.cjs` (no flag) still writes/regenerates as before.
+- `verify-brand.cjs` asserts each ambassador's HTML outputs contain their expected
+  brand (`amb.brand || "Shape"`) and zero of any other roster brand. Expectations
+  derive from `ambassadors.json`, so a new ambassador/brand is covered automatically.
 
 Gotchas:
 - Only the name + brand vary in the HTML (8 brand slots: title, og/twitter meta,

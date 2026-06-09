@@ -56,12 +56,12 @@ isCanvasWorkflow = true
 name = "reel-brand"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "node pitch/walkthrough-src/verify-brand.cjs"
-
 [workflows.workflow.metadata]
 isValidation = true
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node pitch/walkthrough-src/build.cjs --check && node pitch/walkthrough-src/verify-brand.cjs"
 
 [[ports]]
 localPort = 3001
