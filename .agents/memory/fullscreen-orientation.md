@@ -10,6 +10,13 @@ is native video fullscreen, centralized in `hooks/useFullscreenOrientation.ts`
 and wired onto the `<VideoView>` in `app/exercise/[id].tsx` and
 `app/workout/[id].tsx`.
 
+The behavior is split for testability: the platform-agnostic logic lives in
+`hooks/useFullscreenOrientationCore.ts` (imports ONLY `react`, takes native deps
+as injected fns) and is covered by `__tests__/fullscreen-orientation.test.ts`.
+`hooks/useFullscreenOrientation.ts` is a thin wrapper that injects the real
+react-native AppState/Platform + expo-screen-orientation. Edit the logic in the
+core; the wrapper just supplies deps.
+
 The hook: unlock on `onFullscreenEnter`, re-lock `PORTRAIT_UP` on
 `onFullscreenExit`, plus two safety nets that the raw enter/exit pair misses on
 device:
