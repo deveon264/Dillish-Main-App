@@ -15,6 +15,7 @@ export type FakeDb = {
   settings: Map<string, string>;
   exercises: Row[];
   communityPosts: Row[];
+  communityReports: Row[];
   notices: Row[];
   adminBlocks: Map<string, Row>;
   seedUser: (u: Partial<Row> & { id: string; email: string }) => Row;
@@ -22,7 +23,10 @@ export type FakeDb = {
     e: Partial<Row> & { video_object_path: string }
   ) => Row;
   seedCommunityPost: (
-    p: Partial<Row> & { photo_object_path: string | null }
+    p: Partial<Row> & { photo_object_path?: string | null }
+  ) => Row;
+  seedReport: (
+    r: Partial<Row> & { post_id: string; reporter_id: string }
   ) => Row;
   seedNotice: (n: Partial<Row> & { user_id: string }) => Row;
   seedAdminBlock: (b: Partial<Row> & { user_id: string }) => Row;
@@ -62,6 +66,7 @@ export function installFakeDb(): FakeDb {
   const settings = new Map<string, string>();
   const exercises: Row[] = [];
   const communityPosts: Row[] = [];
+  const communityReports: Row[] = [];
   const notices: Row[] = [];
   const adminBlocks = new Map<string, Row>();
 
@@ -70,6 +75,80 @@ export function installFakeDb(): FakeDb {
     params: any[] = []
   ): Promise<{ rows: Row[]; rowCount?: number }> {
     const sql = text.trim();
+
+    // --- community_reports (moderation queue grouping + dismiss-by-post) -----
+    // Insert mirrors reportPost(): the report is only recorded when its post
+    // exists (INSERT ... SELECT ... WHERE EXISTS).
+    if (/INSERT\s+INTO\s+community_reports/i.test(sql)) {
+      const [id, postId, reporterId, reason, created_at] = params;
+      if (!communityPosts.some((p) => p.id === postId)) return { rows: [], rowCount: 0 };
+      communityReports.push({
+        id,
+        post_id: postId,
+        reporter_id: reporterId,
+        reason,
+        created_at,
+      });
+      return { rows: [], rowCount: 1 };
+    }
+    // Dismiss-all-by-post: delete every report row for a post, report the count.
+    if (/DELETE\s+FROM\s+community_reports/i.test(sql)) {
+      const postId = params[0];
+      const before = communityReports.length;
+      for (let i = communityReports.length - 1; i >= 0; i--) {
+        if (communityReports[i].post_id === postId) communityReports.splice(i, 1);
+      }
+      return { rows: [], rowCount: before - communityReports.length };
+    }
+    // The grouped moderation read. listReports JOINs each report to its live
+    // post, the post's author, and the reporter (all INNER JOINs), ordered
+    // newest report first (created_at DESC, id DESC). We mirror that shape so
+    // the JS grouping/ordering in listReports is exercised verbatim.
+    if (/FROM\s+community_reports\s+r/i.test(sql)) {
+      const sorted = [...communityReports].sort((a, b) => {
+        if (b.created_at !== a.created_at) return b.created_at - a.created_at;
+        return a.id < b.id ? 1 : a.id > b.id ? -1 : 0; // id DESC
+      });
+      const rows: Row[] = [];
+      for (const rep of sorted) {
+        const post = communityPosts.find((p) => p.id === rep.post_id);
+        if (!post) continue; // JOIN community_posts
+        const author = users.get(post.author_id);
+        const reporter = users.get(rep.reporter_id);
+        if (!author || !reporter) continue; // JOIN users (author + reporter)
+        const authorReportCount = communityReports.filter((r2) => {
+          const p2 = communityPosts.find((p) => p.id === r2.post_id);
+          return !!p2 && p2.author_id === post.author_id;
+        }).length;
+        rows.push({
+          report_id: rep.id,
+          report_reason: rep.reason ?? null,
+          report_created_at: rep.created_at,
+          reporter_id: reporter.id,
+          reporter_name: reporter.name,
+          reporter_avatar:
+            reporter.avatar_object_path == null ? (reporter.avatar ?? null) : null,
+          reporter_avatar_path: reporter.avatar_object_path ?? null,
+          id: post.id,
+          type: post.type ?? "progress",
+          body: post.body ?? "",
+          photo_object_path: post.photo_object_path ?? null,
+          created_at: post.created_at,
+          author_id: author.id,
+          author_name: author.name,
+          author_avatar:
+            author.avatar_object_path == null ? (author.avatar ?? null) : null,
+          author_avatar_path: author.avatar_object_path ?? null,
+          like_count: 0,
+          comment_count: 0,
+          liked_by_me: false,
+          author_report_count: authorReportCount,
+          author_blocked: false,
+          author_warned: false,
+        });
+      }
+      return { rows };
+    }
 
     // --- exercises (media paths the cleanup sweep reconciles against) -------
     if (/FROM\s+exercises/i.test(sql)) {
@@ -281,12 +360,14 @@ export function installFakeDb(): FakeDb {
 
   let exerciseSeq = 0;
   let postSeq = 0;
+  let reportSeq = 0;
   let noticeSeq = 0;
   return {
     users,
     settings,
     exercises,
     communityPosts,
+    communityReports,
     notices,
     adminBlocks,
     seedUser(u) {
@@ -317,9 +398,24 @@ export function installFakeDb(): FakeDb {
     seedCommunityPost(p) {
       const row: Row = {
         id: p.id ?? `post-${++postSeq}`,
+        author_id: p.author_id ?? null,
+        type: p.type ?? "progress",
+        body: p.body ?? "",
         photo_object_path: p.photo_object_path ?? null,
+        created_at: p.created_at ?? Date.now(),
       };
       communityPosts.push(row);
+      return row;
+    },
+    seedReport(r) {
+      const row: Row = {
+        id: r.id ?? `report-${++reportSeq}`,
+        post_id: r.post_id,
+        reporter_id: r.reporter_id,
+        reason: r.reason ?? "",
+        created_at: r.created_at ?? Date.now(),
+      };
+      communityReports.push(row);
       return row;
     },
     seedNotice(n) {
