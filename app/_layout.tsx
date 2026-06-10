@@ -25,6 +25,7 @@ import {
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DataProvider } from "@/contexts/DataContext";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
+import { NoticesProvider } from "@/contexts/NoticesContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { colors } from "@/constants/colors";
 
@@ -95,6 +96,7 @@ export default function RootLayout() {
             <AuthProvider>
               <DataProvider>
                 <SubscriptionProvider>
+                <NoticesProvider>
                 <StatusBar style="dark" />
                 <Stack
                   screenOptions={{
@@ -112,6 +114,7 @@ export default function RootLayout() {
                   />
                   <Stack.Screen name="community/[id]" />
                 </Stack>
+                </NoticesProvider>
                 </SubscriptionProvider>
               </DataProvider>
             </AuthProvider>

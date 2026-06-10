@@ -2,53 +2,40 @@ import React, { useCallback, useState } from "react";
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
-import { useAuth } from "@/contexts/AuthContext";
-import { dismissNotice, fetchMyNotices, type MemberNotice } from "@/lib/community";
+import { useNotices } from "@/contexts/NoticesContext";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
 // Shows the signed-in member their moderation notices at the top of the feed: a
 // block notice (an admin hid their posts) and any warnings an admin sent. The
 // member can dismiss a warning; the block notice clears only when an admin
-// unblocks them. Renders nothing when there are no notices.
+// unblocks them. Renders nothing when there are no notices. Notices are sourced
+// from the app-wide NoticesContext, so dismissing one here also clears the
+// community tab badge everywhere.
 export function MemberNotices() {
-  const { token } = useAuth();
-  const [notices, setNotices] = useState<MemberNotice[]>([]);
+  const { notices, refresh, dismiss } = useNotices();
   const [dismissingId, setDismissingId] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    if (!token) return;
-    try {
-      const list = await fetchMyNotices({ token });
-      setNotices(list);
-    } catch {
-      // A failed notice fetch should never block the feed; just show nothing.
-      setNotices([]);
-    }
-  }, [token]);
-
+  // Pull the freshest notices whenever the feed gains focus, on top of the
+  // context's background poll, so a just-sent notice shows without delay.
   useFocusEffect(
     useCallback(() => {
-      load();
-    }, [load])
+      refresh();
+    }, [refresh])
   );
 
   const onDismiss = useCallback(
     async (id: string) => {
-      if (!token) return;
       setDismissingId(id);
-      // Optimistically remove it; restore on failure.
-      const snapshot = notices;
-      setNotices((prev) => prev.filter((n) => n.id !== id));
       try {
-        await dismissNotice({ token, id });
+        await dismiss(id);
       } catch {
-        setNotices(snapshot);
+        // The context restores the notice on failure; nothing more to do here.
       } finally {
         setDismissingId(null);
       }
     },
-    [token, notices]
+    [dismiss]
   );
 
   if (notices.length === 0) return null;

@@ -5,6 +5,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { useInsets } from "@/hooks/useInsets";
+import { useNotices } from "@/contexts/NoticesContext";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
@@ -27,6 +28,7 @@ type TabBarProps = Pick<BottomTabBarProps, "state" | "navigation">;
 
 export function TabBar({ state, navigation }: TabBarProps) {
   const insets = useInsets();
+  const { hasUnread } = useNotices();
 
   const routesByName = Object.fromEntries(state.routes.map((r) => [r.name, r]));
 
@@ -59,15 +61,21 @@ export function TabBar({ state, navigation }: TabBarProps) {
 
             const color = focused ? colors.primary : colors.mutedForeground;
             const iconName = focused ? conf.icon.nameFocused : conf.icon.name;
+            // A pending moderation notice (warning or block) shows a dot on the
+            // Circle tab so the member notices it from any screen.
+            const showBadge = name === "community" && hasUnread;
 
             return (
               <Pressable key={name} style={styles.item} onPress={onPress}>
                 <View style={[styles.itemInner, focused && styles.itemInnerActive]}>
-                  {conf.icon.lib === "ion" ? (
-                    <Ionicons name={iconName as keyof typeof Ionicons.glyphMap} size={22} color={color} />
-                  ) : (
-                    <MaterialCommunityIcons name={iconName as keyof typeof MaterialCommunityIcons.glyphMap} size={22} color={color} />
-                  )}
+                  <View style={styles.iconWrap}>
+                    {conf.icon.lib === "ion" ? (
+                      <Ionicons name={iconName as keyof typeof Ionicons.glyphMap} size={22} color={color} />
+                    ) : (
+                      <MaterialCommunityIcons name={iconName as keyof typeof MaterialCommunityIcons.glyphMap} size={22} color={color} />
+                    )}
+                    {showBadge ? <View style={styles.badge} /> : null}
+                  </View>
                   <Text numberOfLines={1} style={[styles.label, { color }, focused && styles.labelActive]}>{conf.label}</Text>
                 </View>
               </Pressable>
@@ -110,6 +118,18 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   item: { flex: 1, alignItems: "center" },
+  iconWrap: { position: "relative" },
+  badge: {
+    position: "absolute",
+    top: -3,
+    right: -5,
+    width: 9,
+    height: 9,
+    borderRadius: 999,
+    backgroundColor: colors.danger,
+    borderWidth: 1.5,
+    borderColor: colors.tabBarGlassBorder,
+  },
   itemInner: {
     alignItems: "center",
     justifyContent: "center",
