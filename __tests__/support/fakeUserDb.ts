@@ -21,6 +21,7 @@ export type FakeDb = {
   communityNotifications: Row[];
   notices: Row[];
   adminBlocks: Map<string, Row>;
+  pushTokens: Map<string, Row>;
   seedUser: (u: Partial<Row> & { id: string; email: string }) => Row;
   seedExercise: (
     e: Partial<Row> & { video_object_path: string }
@@ -40,6 +41,7 @@ export type FakeDb = {
   ) => Row;
   seedNotice: (n: Partial<Row> & { user_id: string }) => Row;
   seedAdminBlock: (b: Partial<Row> & { user_id: string }) => Row;
+  seedPushToken: (p: Partial<Row> & { token: string; user_id: string }) => Row;
 };
 
 function dupKeyError(): Error & { code: string } {
@@ -82,6 +84,7 @@ export function installFakeDb(): FakeDb {
   const communityNotifications: Row[] = [];
   const notices: Row[] = [];
   const adminBlocks = new Map<string, Row>();
+  const pushTokens = new Map<string, Row>();
 
   async function query(
     text: string,
@@ -184,28 +187,6 @@ export function installFakeDb(): FakeDb {
       return { rows };
     }
 
-    // --- community_notifications (scheduled age-based delete sweep) ---------
-    // The notification cleanup helper issues exactly two shapes: a COUNT of rows
-    // past the cutoff (dry run) and a DELETE of those same rows (real run). Both
-    // filter on `created_at < $1`. This guard is scoped to that `created_at < $1`
-    // shape so the inbox INSERT/UPDATE/COUNT/list (handled further down) is not
-    // swallowed here.
-    if (/community_notifications/i.test(sql) && /created_at\s*<\s*\$1/i.test(sql)) {
-      const cutoff = params[0];
-      if (/DELETE\s+FROM\s+community_notifications/i.test(sql)) {
-        const before = communityNotifications.length;
-        for (let i = communityNotifications.length - 1; i >= 0; i--) {
-          if (communityNotifications[i].created_at < cutoff) {
-            communityNotifications.splice(i, 1);
-          }
-        }
-        return { rows: [], rowCount: before - communityNotifications.length };
-      }
-      // SELECT COUNT(*) ... WHERE created_at < $1
-      const n = communityNotifications.filter((r) => r.created_at < cutoff).length;
-      return { rows: [{ n: String(n) }] };
-    }
-
     // --- exercises (media paths the cleanup sweep reconciles against) -------
     if (/FROM\s+exercises/i.test(sql)) {
       return {
@@ -216,10 +197,22 @@ export function installFakeDb(): FakeDb {
       };
     }
 
-    // --- community_notifications (in-app like/comment activity inbox) -------
+    // --- community_notifications (in-app like/comment inbox + age sweep) ----
     // Checked before the generic community_posts handler because the inbox read
-    // JOINs community_posts, and before getPostMeta for the same reason.
+    // JOINs community_posts, and before getPostMeta for the same reason. Also
+    // serves the scheduled age-based cleanup (DELETE / COUNT on created_at < $1).
     if (/community_notifications/i.test(sql)) {
+      if (/DELETE\s+FROM\s+community_notifications/i.test(sql)) {
+        // scheduled age-based sweep: DELETE ... WHERE created_at < $1
+        const cutoff = params[0];
+        const before = communityNotifications.length;
+        for (let i = communityNotifications.length - 1; i >= 0; i--) {
+          if (communityNotifications[i].created_at < cutoff) {
+            communityNotifications.splice(i, 1);
+          }
+        }
+        return { rows: [], rowCount: before - communityNotifications.length };
+      }
       if (/INSERT\s+INTO\s+community_notifications/i.test(sql)) {
         // notifyPostAuthor column order: id, recipient_id, actor_id, post_id,
         // type, created_at (read is the literal FALSE in the INSERT).
@@ -249,13 +242,19 @@ export function installFakeDb(): FakeDb {
         return { rows: [], rowCount: updated };
       }
       if (/COUNT\(\*\)/i.test(sql)) {
-        // countUnreadNotifications: recipient_id = $1 AND read = FALSE
-        //   AND created_at >= $2 (the 90-day soft cap).
-        const [recipientId, since] = params as [string, number];
-        const n = communityNotifications.filter(
-          (x) => x.recipient_id === recipientId && !x.read && x.created_at >= since
-        ).length;
-        return { rows: [{ n }] };
+        if (/recipient_id/i.test(sql)) {
+          // countUnreadNotifications: recipient_id = $1 AND read = FALSE
+          //   AND created_at >= $2 (the 90-day soft cap).
+          const [recipientId, since] = params as [string, number];
+          const n = communityNotifications.filter(
+            (x) => x.recipient_id === recipientId && !x.read && x.created_at >= since
+          ).length;
+          return { rows: [{ n }] };
+        }
+        // scheduled age-based sweep dry run: COUNT(*) WHERE created_at < $1
+        const cutoff = params[0];
+        const n = communityNotifications.filter((r) => r.created_at < cutoff).length;
+        return { rows: [{ n: String(n) }] };
       }
       // listNotifications: JOIN users (actor) + community_posts (body), drop a
       // row whose actor or post no longer exists, newest first, capped.
@@ -491,6 +490,41 @@ export function installFakeDb(): FakeDb {
       };
     }
 
+    // --- push_tokens (device tokens a moderation push fans out to) ----------
+    if (/push_tokens/i.test(sql)) {
+      if (/INSERT\s+INTO\s+push_tokens/i.test(sql)) {
+        // savePushToken: token, user_id, platform, updated_at (upsert on token)
+        const [token, user_id, platform, updated_at] = params;
+        pushTokens.set(token, { token, user_id, platform, updated_at });
+        return { rows: [], rowCount: 1 };
+      }
+      if (/DELETE\s+FROM\s+push_tokens/i.test(sql)) {
+        if (/token\s*=\s*ANY/i.test(sql)) {
+          // deletePushTokens: token = ANY($1::text[])
+          const list: string[] = params[0] ?? [];
+          let removed = 0;
+          for (const t of list) {
+            if (pushTokens.delete(t)) removed++;
+          }
+          return { rows: [], rowCount: removed };
+        }
+        // removePushToken: token = $1 AND user_id = $2
+        const [token, userId] = params;
+        const row = pushTokens.get(token);
+        if (row && row.user_id === userId) {
+          pushTokens.delete(token);
+          return { rows: [], rowCount: 1 };
+        }
+        return { rows: [], rowCount: 0 };
+      }
+      // listPushTokensForUser: SELECT token FROM push_tokens WHERE user_id = $1
+      const userId = params[0];
+      const rows = [...pushTokens.values()]
+        .filter((r) => r.user_id === userId)
+        .map((r) => ({ token: r.token }));
+      return { rows };
+    }
+
     // --- app_settings ------------------------------------------------------
     if (/FROM\s+app_settings/i.test(sql)) {
       const value = settings.get(params[0]);
@@ -607,6 +641,7 @@ export function installFakeDb(): FakeDb {
     communityNotifications,
     notices,
     adminBlocks,
+    pushTokens,
     seedUser(u) {
       const row: Row = {
         id: u.id,
@@ -708,6 +743,16 @@ export function installFakeDb(): FakeDb {
         created_at: b.created_at ?? Date.now(),
       };
       adminBlocks.set(row.user_id, row);
+      return row;
+    },
+    seedPushToken(p) {
+      const row: Row = {
+        token: p.token,
+        user_id: p.user_id,
+        platform: p.platform ?? "ios",
+        updated_at: p.updated_at ?? Date.now(),
+      };
+      pushTokens.set(row.token, row);
       return row;
     },
   };

@@ -1,5 +1,6 @@
 import { requireSession } from "@/lib/adminAuth";
 import { adminBlockUser, adminUnblockUser } from "@/lib/communityStore";
+import { sendModerationPush } from "@/lib/push";
 
 // Global moderation block, applied by an admin (coach) from the reported-posts
 // review queue. Unlike /api/community-block (a per-viewer mute), a block here
@@ -27,6 +28,9 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     await adminBlockUser({ userId: authorId, blockedBy: session.sub });
+    // Best-effort out-of-app nudge so the member learns of the block even if
+    // they never open the app. Never blocks or fails the block if push is down.
+    await sendModerationPush({ userId: authorId, kind: "block" });
     return Response.json({ ok: true });
   } catch (e: any) {
     console.error("community-author-block POST error:", e?.message ?? e);

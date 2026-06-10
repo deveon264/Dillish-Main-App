@@ -252,6 +252,28 @@ export function ensureSchema(): Promise<void> {
              ON community_notifications (recipient_id, read, created_at DESC)`
         )
       )
+      // Device push tokens, so a moderation action (warning/block) can reach a
+      // member even when the app is closed. One row per device token; the same
+      // token re-registers to whichever member last signed in on that device
+      // (ON CONFLICT updates user_id), which keeps a shared phone correct. A
+      // token is pruned when Expo reports it as no longer registered (the app
+      // was uninstalled) or when the member signs out.
+      .then(() =>
+        pool.query(
+          `CREATE TABLE IF NOT EXISTS push_tokens (
+            token TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            platform TEXT NOT NULL DEFAULT '',
+            updated_at BIGINT NOT NULL
+          )`
+        )
+      )
+      .then(() =>
+        pool.query(
+          `CREATE INDEX IF NOT EXISTS idx_push_tokens_user
+             ON push_tokens (user_id)`
+        )
+      )
       // Feed reads order by (created_at DESC, id DESC) with a keyset cursor;
       // comment/like reads are scoped to a post. These indexes back those paths.
       .then(() =>

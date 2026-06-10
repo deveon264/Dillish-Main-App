@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import { AppState } from "react-native";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import {
   fetchMyNotices,
   dismissNotice as dismissNoticeApi,
@@ -89,6 +90,11 @@ export function NoticesProvider({ children }: { children: React.ReactNode }) {
     });
     return () => sub.remove();
   }, [token, refresh]);
+
+  // Register this device for moderation push notifications (so a warning/block
+  // reaches the member with the app closed), route a tapped push to the
+  // community feed, and refresh notices when a push arrives. Native-only.
+  usePushNotifications({ authToken: token, onModerationPush: refresh });
 
   const dismiss = useCallback(
     async (id: string) => {

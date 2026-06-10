@@ -1,5 +1,6 @@
 import { requireSession } from "@/lib/adminAuth";
 import { warnUser, withdrawWarnings } from "@/lib/communityStore";
+import { sendModerationPush } from "@/lib/push";
 
 const MAX_MESSAGE_CHARS = 500;
 
@@ -33,6 +34,9 @@ export async function POST(request: Request): Promise<Response> {
     if (message.length > MAX_MESSAGE_CHARS) message = message.slice(0, MAX_MESSAGE_CHARS);
 
     await warnUser({ userId: authorId, message, warnedBy: session.sub });
+    // Best-effort out-of-app nudge so the member sees the warning even if they
+    // never open the app. Never blocks or fails the warning if push is down.
+    await sendModerationPush({ userId: authorId, kind: "warning", message });
     return Response.json({ ok: true });
   } catch (e: any) {
     console.error("community-author-warn POST error:", e?.message ?? e);
