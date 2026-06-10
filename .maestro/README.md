@@ -35,7 +35,34 @@ fails fast without a device.
    (An EAS build works too.)
 4. A test account that exists on the server the build points at and has finished
    onboarding, plus a workout whose **first exercise has a short uploaded
-   video** (a few seconds keeps the "play to end" step fast).
+   video** (a few seconds keeps the "play to end" step fast). Prerequisite (4) is
+   provisioned for you by the seed script below, so you do not have to set it up
+   by hand.
+
+## Seeding the prerequisites
+
+`npm run e2e:seed` (wraps `scripts/seed-e2e.mjs`) provisions prerequisite (4)
+against a target server so a fresh environment is ready for a run:
+
+- Creates (or reuses) the QA account and marks it onboarding-complete.
+- Uploads a short demo clip (`.maestro/assets/qa-clip.mp4`, ~3s) to the first
+  exercise of the workout, unless one is already there.
+
+It is idempotent and safe to re-run. It talks to the app over HTTP, so point it
+at the same server the build uses:
+
+```bash
+SEED_APP_URL=https://your-app.replit.app \
+MAESTRO_EMAIL=qa@florish.fit \
+MAESTRO_PASSWORD=FlorishQA123! \
+MAESTRO_WORKOUT_ID=reformer-pilates \
+  npm run e2e:seed
+```
+
+`SESSION_SECRET` must be set (it already is in this environment) so the script
+can mint the admin token the upload route verifies. In development `SEED_APP_URL`
+defaults to `REPLIT_DEV_DOMAIN`, so `npm run e2e:seed` alone targets the dev
+server.
 
 ## Running
 

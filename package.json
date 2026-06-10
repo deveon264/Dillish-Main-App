@@ -71,7 +71,8 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "tsx --test __tests__/*.test.ts",
-    "e2e": "scripts/e2e-workout.sh"
+    "e2e": "scripts/e2e-workout.sh",
+    "e2e:seed": "node scripts/seed-e2e.mjs"
   },
   "private": true
 }
