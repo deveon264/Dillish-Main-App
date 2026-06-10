@@ -134,7 +134,17 @@ export function useStreakSyncCore(deps: StreakSyncDeps): StreakSyncResult {
             // the union of both windows wins: the offline days survive into the
             // cache, the live union streak recovers, and the next push carries
             // them to the server.
-            const sane = mergeWindow(sanitizeStreakState(server), localStreak.recentDays);
+            const merged = mergeWindow(sanitizeStreakState(server), localStreak.recentDays);
+            // The server is authoritative for the persisted count/frontier, but
+            // the local cache can hold a higher personal best the stale server
+            // has not caught up to (e.g. an offline run that pushed the best up
+            // never landed before the cold start). A personal best must never
+            // decrease on reconcile, so keep the larger `longest` rather than
+            // adopting the bare server value: otherwise the "new personal best"
+            // baseline/celebration would silently re-baseline down over time.
+            const bestLongest = Math.max(merged.longest, localStreak.longest);
+            const sane =
+              bestLongest > merged.longest ? { ...merged, longest: bestLongest } : merged;
             finalStreak = sane;
             setStreakState(sane);
             saveLocal(sane);

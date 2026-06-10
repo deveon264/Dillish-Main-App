@@ -370,6 +370,38 @@ test("cold start after offline use: a non-null server GET does not drop the offl
   }
 });
 
+test("cold start: a local best ahead of a stale server streak preserves the higher best", async () => {
+  // The local cache holds a personal best the server has not caught up to: the
+  // offline run that pushed the best up never landed before the member fully
+  // quit and reopened the app. The hydrate GET returns a stale, lower server
+  // streak. The reconcile must keep the larger `longest`, not silently adopt the
+  // bare (lower) server value, or the "new personal best" baseline drifts down.
+  const local: StreakState = {
+    count: 3,
+    longest: 12,
+    lastActiveDay: "2026-06-08",
+    recentDays: ["2026-06-06", "2026-06-07", "2026-06-08"],
+    updatedAt: 9,
+  };
+  const server: StreakState = {
+    count: 2,
+    longest: 5,
+    lastActiveDay: "2026-06-08",
+    recentDays: ["2026-06-07", "2026-06-08"],
+    updatedAt: 2,
+  };
+  const env = makeEnv({ localStreak: local, serverStreak: server, ready: false });
+
+  const { result } = renderHook(env.deps);
+  await flush();
+
+  // The higher local best survives the reconcile against the stale server.
+  assert.equal(result.current.streakState.longest, 12);
+  // And it is persisted back to the device cache and seeded into the baseline.
+  assert.equal((env.disk.streak as StreakState).longest, 12);
+  assert.equal(env.reconciled[0].state.longest, 12);
+});
+
 test("a failed push keeps today in the local cache for the next retry", async () => {
   const local: StreakState = {
     count: 1,
