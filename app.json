@@ -15,8 +15,10 @@
     "android": {
       "package": "com.florish.fitness",
       "adaptiveIcon": {
-        "backgroundColor": "#2C2422",
-        "foregroundImage": "./assets/images/android-icon-foreground.png"
+        "backgroundColor": "#DD8DA0",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false
     },
