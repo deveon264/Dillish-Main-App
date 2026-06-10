@@ -1,5 +1,5 @@
 import { requireSession } from "@/lib/adminAuth";
-import { addComment, listComments } from "@/lib/communityStore";
+import { addComment, listComments, notifyPostAuthor } from "@/lib/communityStore";
 
 const MAX_COMMENT_CHARS = 1000;
 
@@ -46,6 +46,15 @@ export async function POST(request: Request): Promise<Response> {
 
     const comment = await addComment({ postId, authorId: session.sub, body: text });
     if (!comment) return Response.json({ error: "Post not found" }, { status: 404 });
+
+    // Notify the post's author of the new comment (skipped when commenting on
+    // your own post). Best-effort: a failure here must not fail the comment.
+    try {
+      await notifyPostAuthor({ postId, actorId: session.sub, type: "comment" });
+    } catch (e: any) {
+      console.error("community-comments notify error:", e?.message ?? e);
+    }
+
     return Response.json({ comment }, { status: 201 });
   } catch (e: any) {
     console.error("community-comments POST error:", e?.message ?? e);

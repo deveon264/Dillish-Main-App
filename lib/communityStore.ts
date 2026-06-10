@@ -611,6 +611,122 @@ export async function acknowledgeNotice(input: {
   return (rowCount ?? 0) > 0;
 }
 
+// In-app activity notification shown to a post's author: another member liked
+// or commented on their post. The actor's live identity is JOINed at read time
+// (never snapshotted), matching the rest of the feed, and a short excerpt of the
+// post body is included so the inbox row reads on its own.
+export type CommunityNotification = {
+  id: string;
+  type: "like" | "comment";
+  postId: string;
+  read: boolean;
+  createdAt: number;
+  actor: CommunityAuthor;
+  postExcerpt: string;
+};
+
+// How long an in-app notification stays visible. A soft cap: older rows are
+// never returned, but there is no sweep that deletes them.
+const NOTIFICATION_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
+
+// Longest post excerpt carried on a notification row, so inbox payloads stay
+// small. The screen still clamps to one line.
+const NOTIFICATION_EXCERPT_CHARS = 140;
+
+function excerptOf(body: string): string {
+  const text = (body ?? "").replace(/\s+/g, " ").trim();
+  if (text.length <= NOTIFICATION_EXCERPT_CHARS) return text;
+  return text.slice(0, NOTIFICATION_EXCERPT_CHARS).trimEnd() + "...";
+}
+
+// Records a notification for a post's author when someone else acts on their
+// post. Looks up the live author so the caller does not need it, and skips the
+// self-action case (liking/commenting on your own post never notifies). A
+// missing post (already deleted) is a no-op. Best-effort: callers should not
+// fail the like/comment if this throws.
+export async function notifyPostAuthor(input: {
+  postId: string;
+  actorId: string;
+  type: "like" | "comment";
+}): Promise<void> {
+  await ensureSchema();
+  const meta = await getPostMeta(input.postId);
+  if (!meta) return;
+  if (meta.authorId === input.actorId) return;
+  await getPool().query(
+    `INSERT INTO community_notifications (id, recipient_id, actor_id, post_id, type, read, created_at)
+     VALUES ($1, $2, $3, $4, $5, FALSE, $6)`,
+    [uuid(), meta.authorId, input.actorId, input.postId, input.type, Date.now()]
+  );
+}
+
+// The signed-in member's notifications, newest first. JOINs the actor's live
+// identity and the post's body for an excerpt; a notification whose post or
+// actor account no longer exists is dropped by the JOINs. Rows older than the
+// 90-day soft cap are excluded. Capped at `limit` rows.
+export async function listNotifications(opts: {
+  recipientId: string;
+  limit: number;
+}): Promise<CommunityNotification[]> {
+  await ensureSchema();
+  const limit = Math.max(1, Math.min(100, opts.limit));
+  const since = Date.now() - NOTIFICATION_MAX_AGE_MS;
+  const { rows } = await getPool().query(
+    `SELECT n.id, n.type, n.post_id, n.read, n.created_at,
+       au.id AS author_id, au.name AS author_name,
+       CASE WHEN au.avatar_object_path IS NULL THEN au.avatar ELSE NULL END AS author_avatar,
+       au.avatar_object_path AS author_avatar_path,
+       p.body AS post_body
+     FROM community_notifications n
+     JOIN users au ON au.id = n.actor_id
+     JOIN community_posts p ON p.id = n.post_id
+     WHERE n.recipient_id = $1 AND n.created_at >= $2
+     ORDER BY n.created_at DESC, n.id DESC
+     LIMIT $3`,
+    [opts.recipientId, since, limit]
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    type: r.type === "comment" ? "comment" : "like",
+    postId: r.post_id,
+    read: !!r.read,
+    createdAt: Number(r.created_at),
+    actor: mapAuthor(r),
+    postExcerpt: excerptOf(r.post_body ?? ""),
+  }));
+}
+
+// Count of the member's unread notifications, used to drive the tab badge.
+// Bounded by the same 90-day soft cap so it matches what the inbox shows.
+export async function countUnreadNotifications(recipientId: string): Promise<number> {
+  await ensureSchema();
+  const since = Date.now() - NOTIFICATION_MAX_AGE_MS;
+  const { rows } = await getPool().query(
+    `SELECT COUNT(*) AS n FROM community_notifications
+       WHERE recipient_id = $1 AND read = FALSE AND created_at >= $2`,
+    [recipientId, since]
+  );
+  return Number(rows[0]?.n ?? 0);
+}
+
+// Marks the given notifications read, scoped to the member's own id so a member
+// can only touch their own rows. Returns how many rows changed.
+export async function markNotificationsRead(input: {
+  recipientId: string;
+  ids: string[];
+}): Promise<number> {
+  await ensureSchema();
+  const ids = input.ids.filter((id) => typeof id === "string" && id.length > 0);
+  if (ids.length === 0) return 0;
+  const { rowCount } = await getPool().query(
+    `UPDATE community_notifications
+       SET read = TRUE
+       WHERE recipient_id = $1 AND read = FALSE AND id = ANY($2::text[])`,
+    [input.recipientId, ids]
+  );
+  return rowCount ?? 0;
+}
+
 // One globally blocked member, for the admin "blocked members" screen.
 export type AdminBlockedMember = {
   member: CommunityAuthor;

@@ -21,6 +21,7 @@ import { PostCard } from "@/components/community/PostCard";
 import { PostMenu } from "@/components/community/PostMenu";
 import { POST_TYPE_META } from "@/components/community/postTypes";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNotifications } from "@/contexts/NotificationsContext";
 import { useInsets } from "@/hooks/useInsets";
 import { confirmAction, notify } from "@/lib/confirm";
 import {
@@ -58,6 +59,7 @@ export default function Community() {
   const insets = useInsets();
   const router = useRouter();
   const { token, user } = useAuth();
+  const { unreadCount } = useNotifications();
 
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [cursor, setCursor] = useState<FeedCursor | null>(null);
@@ -217,7 +219,30 @@ export default function Community() {
 
   const header = (
     <View>
-      <PageHeader eyebrow="COMMUNITY" title="Your" accent="Circle" action={<HelpButton {...HELP} />} />
+      <PageHeader
+        eyebrow="COMMUNITY"
+        title="Your"
+        accent="Circle"
+        action={
+          <View style={styles.headerActions}>
+            <Pressable
+              hitSlop={8}
+              onPress={() => router.push("/community/notifications")}
+              style={styles.bellBtn}
+            >
+              <Ionicons name="notifications-outline" size={22} color={colors.foreground} />
+              {unreadCount > 0 ? (
+                <View style={styles.bellBadge}>
+                  <Text style={styles.bellBadgeText} numberOfLines={1}>
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </Text>
+                </View>
+              ) : null}
+            </Pressable>
+            <HelpButton {...HELP} />
+          </View>
+        }
+      />
 
       <ScrollView
         horizontal
@@ -345,6 +370,23 @@ export default function Community() {
 
 const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: "center", justifyContent: "center" },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 8 },
+  bellBtn: { width: 38, height: 38, alignItems: "center", justifyContent: "center" },
+  bellBadge: {
+    position: "absolute",
+    top: 2,
+    right: 2,
+    minWidth: 17,
+    height: 17,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    backgroundColor: colors.danger,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: colors.background,
+  },
+  bellBadgeText: { fontFamily: fonts.sansBold, fontSize: 10, lineHeight: 13, color: colors.onPrimary },
   chipsRow: { marginTop: 18, marginHorizontal: -20 },
   chips: { gap: 8, paddingHorizontal: 20 },
   chip: {

@@ -258,6 +258,42 @@ export type ReportGroup = {
   authorWarned: boolean;
 };
 
+// An in-app activity notification: another member liked or commented on one of
+// the signed-in member's posts.
+export type CommunityNotification = {
+  id: string;
+  type: "like" | "comment";
+  postId: string;
+  read: boolean;
+  createdAt: number;
+  actor: CommunityAuthor;
+  postExcerpt: string;
+};
+
+// The signed-in member's notifications (newest first) plus the count still
+// unread, so the badge and the inbox come from one request.
+export async function fetchNotifications(opts: {
+  token: string;
+}): Promise<{ notifications: CommunityNotification[]; unreadCount: number }> {
+  return authed<{ notifications: CommunityNotification[]; unreadCount: number }>(
+    `/api/community-notifications`,
+    { token: opts.token, fallback: "Could not load notifications" }
+  );
+}
+
+// Marks the given notifications read and returns the member's new unread count.
+export async function markNotificationsRead(opts: {
+  token: string;
+  ids: string[];
+}): Promise<{ unreadCount: number }> {
+  return authed<{ ok: boolean; unreadCount: number }>(`/api/community-notifications`, {
+    token: opts.token,
+    method: "PATCH",
+    body: { ids: opts.ids },
+    fallback: "Could not update notifications",
+  });
+}
+
 // A moderation notice the signed-in member should see: a warning an admin sent,
 // or a notice that they have been blocked.
 export type MemberNotice = {

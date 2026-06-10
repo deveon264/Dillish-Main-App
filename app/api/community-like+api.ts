@@ -1,5 +1,5 @@
 import { requireSession } from "@/lib/adminAuth";
-import { toggleLike } from "@/lib/communityStore";
+import { notifyPostAuthor, toggleLike } from "@/lib/communityStore";
 
 // Toggles the signed-in member's like on a post and returns the new state and
 // total. Answers 404 if the post no longer exists.
@@ -20,6 +20,18 @@ export async function POST(request: Request): Promise<Response> {
 
     const result = await toggleLike({ postId, userId: session.sub });
     if (!result) return Response.json({ error: "Post not found" }, { status: 404 });
+
+    // Notify the post's author when the like is toggled on (never on un-like,
+    // and never for liking your own post). Best-effort: a failure here must not
+    // fail the like itself.
+    if (result.liked) {
+      try {
+        await notifyPostAuthor({ postId, actorId: session.sub, type: "like" });
+      } catch (e: any) {
+        console.error("community-like notify error:", e?.message ?? e);
+      }
+    }
+
     return Response.json(result);
   } catch (e: any) {
     console.error("community-like POST error:", e?.message ?? e);

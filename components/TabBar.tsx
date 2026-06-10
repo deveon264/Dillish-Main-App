@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { View, Text, StyleSheet, Pressable, Platform } from "react-native";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -6,6 +6,7 @@ import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { useInsets } from "@/hooks/useInsets";
 import { useNotices } from "@/contexts/NoticesContext";
+import { useNotifications } from "@/contexts/NotificationsContext";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
@@ -29,8 +30,16 @@ type TabBarProps = Pick<BottomTabBarProps, "state" | "navigation">;
 export function TabBar({ state, navigation }: TabBarProps) {
   const insets = useInsets();
   const { hasUnread } = useNotices();
+  const { unreadCount, refreshUnread } = useNotifications();
 
   const routesByName = Object.fromEntries(state.routes.map((r) => [r.name, r]));
+
+  // Refresh the unread badge whenever the member lands on the Circle tab, so a
+  // like/comment that arrived while they were elsewhere shows up promptly.
+  const activeRoute = state.routes[state.index]?.name;
+  useEffect(() => {
+    if (activeRoute === "community") refreshUnread();
+  }, [activeRoute, refreshUnread]);
 
   return (
     <View style={[styles.wrap, { paddingBottom: insets.bottom + 3 }]}>
@@ -61,9 +70,12 @@ export function TabBar({ state, navigation }: TabBarProps) {
 
             const color = focused ? colors.primary : colors.mutedForeground;
             const iconName = focused ? conf.icon.nameFocused : conf.icon.name;
-            // A pending moderation notice (warning or block) shows a dot on the
-            // Circle tab so the member notices it from any screen.
-            const showBadge = name === "community" && hasUnread;
+            // The Circle tab carries two signals. An unread like/comment count
+            // bubble takes priority; when there are none, a pending moderation
+            // notice (warning or block) shows a dot so the member notices it
+            // from any screen.
+            const showCount = name === "community" && unreadCount > 0;
+            const showDot = name === "community" && !showCount && hasUnread;
 
             return (
               <Pressable key={name} style={styles.item} onPress={onPress}>
@@ -74,7 +86,14 @@ export function TabBar({ state, navigation }: TabBarProps) {
                     ) : (
                       <MaterialCommunityIcons name={iconName as keyof typeof MaterialCommunityIcons.glyphMap} size={22} color={color} />
                     )}
-                    {showBadge ? <View style={styles.badge} /> : null}
+                    {showCount ? (
+                      <View style={styles.badge}>
+                        <Text style={styles.badgeText} numberOfLines={1}>
+                          {unreadCount > 9 ? "9+" : unreadCount}
+                        </Text>
+                      </View>
+                    ) : null}
+                    {showDot ? <View style={styles.dot} /> : null}
                   </View>
                   <Text numberOfLines={1} style={[styles.label, { color }, focused && styles.labelActive]}>{conf.label}</Text>
                 </View>
@@ -119,7 +138,7 @@ const styles = StyleSheet.create({
   },
   item: { flex: 1, alignItems: "center" },
   iconWrap: { position: "relative" },
-  badge: {
+  dot: {
     position: "absolute",
     top: -3,
     right: -5,
@@ -147,4 +166,24 @@ const styles = StyleSheet.create({
   },
   label: { fontFamily: fonts.sansMedium, fontSize: 10 },
   labelActive: { fontFamily: fonts.sansSemibold },
+  badge: {
+    position: "absolute",
+    top: -6,
+    right: -9,
+    minWidth: 17,
+    height: 17,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    backgroundColor: colors.danger,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: colors.background,
+  },
+  badgeText: {
+    fontFamily: fonts.sansBold,
+    fontSize: 10,
+    lineHeight: 13,
+    color: colors.onPrimary,
+  },
 });

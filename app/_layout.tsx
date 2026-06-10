@@ -26,6 +26,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { DataProvider } from "@/contexts/DataContext";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { NoticesProvider } from "@/contexts/NoticesContext";
+import { NotificationsProvider } from "@/contexts/NotificationsContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { colors } from "@/constants/colors";
 
@@ -94,6 +95,7 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <ErrorBoundary>
             <AuthProvider>
+              <NotificationsProvider>
               <DataProvider>
                 <SubscriptionProvider>
                 <NoticesProvider>
@@ -113,10 +115,12 @@ export default function RootLayout() {
                     options={{ presentation: "modal", animation: "slide_from_bottom" }}
                   />
                   <Stack.Screen name="community/[id]" />
+                  <Stack.Screen name="community/notifications" />
                 </Stack>
                 </NoticesProvider>
                 </SubscriptionProvider>
               </DataProvider>
+              </NotificationsProvider>
             </AuthProvider>
           </ErrorBoundary>
         </QueryClientProvider>

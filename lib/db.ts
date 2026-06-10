@@ -224,6 +224,34 @@ export function ensureSchema(): Promise<void> {
              ON community_notices (user_id, created_at DESC)`
         )
       )
+      // In-app activity notifications: when another member likes or comments on
+      // a member's post, a row here lets the author see it (a tab badge + an
+      // inbox screen). The app has no push infrastructure, so this is the only
+      // delivery channel. Like the rest of this file the schema uses no FK
+      // constraints; a deleted post's notifications are simply hidden by the
+      // JOIN to community_posts at read time, and rows older than 90 days are
+      // never shown (a soft cap, no sweep needed).
+      .then(() =>
+        pool.query(
+          `CREATE TABLE IF NOT EXISTS community_notifications (
+            id TEXT PRIMARY KEY,
+            recipient_id TEXT NOT NULL,
+            actor_id TEXT NOT NULL,
+            post_id TEXT NOT NULL,
+            type TEXT NOT NULL,
+            read BOOLEAN NOT NULL DEFAULT FALSE,
+            created_at BIGINT NOT NULL
+          )`
+        )
+      )
+      // Backs the unread-count and inbox reads (filter by recipient, then by
+      // read flag, ordered newest-first).
+      .then(() =>
+        pool.query(
+          `CREATE INDEX IF NOT EXISTS idx_community_notifications_recipient
+             ON community_notifications (recipient_id, read, created_at DESC)`
+        )
+      )
       // Feed reads order by (created_at DESC, id DESC) with a keyset cursor;
       // comment/like reads are scoped to a post. These indexes back those paths.
       .then(() =>
