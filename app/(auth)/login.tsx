@@ -54,6 +54,7 @@ export default function Login() {
 
           <View style={styles.form}>
             <Input
+              testID="login-email"
               icon="mail-outline"
               placeholder="Email address"
               keyboardType="email-address"
@@ -62,6 +63,7 @@ export default function Login() {
               onChangeText={setEmail}
             />
             <Input
+              testID="login-password"
               icon="lock-closed-outline"
               placeholder="Password"
               password
@@ -84,7 +86,7 @@ export default function Login() {
               </View>
             ) : null}
 
-            <Button label="Sign In" onPress={onSubmit} loading={loading} style={{ marginTop: 6 }} />
+            <Button testID="login-submit" label="Sign In" onPress={onSubmit} loading={loading} style={{ marginTop: 6 }} />
           </View>
 
           <Pressable style={styles.footer} onPress={() => router.replace("/(auth)/signup")}>

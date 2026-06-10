@@ -162,7 +162,7 @@ export default function Workouts() {
             {filtered.map((w) => {
               const fav = isFavorite(w.id);
               return (
-              <Pressable key={w.id} style={styles.card} onPress={() => router.push(`/workout/${w.id}`)}>
+              <Pressable key={w.id} testID={`workout-card-${w.id}`} style={styles.card} onPress={() => router.push(`/workout/${w.id}`)}>
                 <ImageBackground source={w.image} style={styles.cardImg} imageStyle={styles.cardImgRadius}>
                   <LinearGradient colors={["rgba(16,17,17,0.05)", "rgba(16,17,17,0.85)"]} style={StyleSheet.absoluteFill} />
                   <Pressable

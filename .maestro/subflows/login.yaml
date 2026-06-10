@@ -1,0 +1,25 @@
+appId: com.florish.fitness
+---
+# Sign in with the test account so the protected workout player is reachable.
+# Skipped automatically when a previous session is still signed in (the welcome
+# screen, and therefore "Already have an account", is not on screen).
+- runFlow:
+    when:
+      visible: "Already have an account"
+    commands:
+      - tapOn: "Sign in"
+      - assertVisible: "Welcome back"
+      - tapOn:
+          id: "login-email"
+      - inputText: "${MAESTRO_EMAIL}"
+      - tapOn:
+          id: "login-password"
+      - inputText: "${MAESTRO_PASSWORD}"
+      - hideKeyboard
+      - tapOn:
+          id: "login-submit"
+# Wait for the authenticated home (the bottom tab bar) to settle, whether we
+# just signed in or were already signed in.
+- extendedWaitUntil:
+    visible: "Workouts"
+    timeout: 20000

@@ -1,0 +1,6 @@
+# Maestro project config. `subflows/` holds reusable building blocks (login),
+# so only top-level flows are treated as runnable suites.
+flows:
+  - "*.yaml"
+includeTags: []
+excludeTags: []

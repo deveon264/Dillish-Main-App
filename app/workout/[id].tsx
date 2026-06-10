@@ -484,7 +484,7 @@ export default function WorkoutPlayer() {
     const restPct = `${restGap > 0 ? Math.max(0, Math.min(100, Math.round(((restGap - restRemaining) / restGap) * 100))) : 0}%` as const;
     return (
       <GradientBackground>
-        <View style={styles.restScreen}>
+        <View testID="rest-screen" style={styles.restScreen}>
           <ExpoImage
             source={next.image ?? workout.image}
             style={StyleSheet.absoluteFill}
@@ -507,7 +507,7 @@ export default function WorkoutPlayer() {
 
           <View style={styles.restBody}>
             <Text style={styles.restEyebrow}>REST</Text>
-            <Text style={styles.restCount}>{restRemaining}</Text>
+            <Text testID="rest-count" style={styles.restCount}>{restRemaining}</Text>
             <Text style={styles.restCountUnit}>seconds</Text>
             <View style={styles.restTrack}>
               <View style={[styles.restFill, { width: restPct }]} />
@@ -626,21 +626,21 @@ export default function WorkoutPlayer() {
               </View>
 
               <View style={[styles.playerControls, { pointerEvents: "box-none" }]}>
-                <Pressable style={styles.playerCtrl} onPress={() => seekRelative(-SEEK_STEP)} hitSlop={8}>
+                <Pressable testID="player-seek-back" style={styles.playerCtrl} onPress={() => seekRelative(-SEEK_STEP)} hitSlop={8}>
                   <Ionicons name="play-back" size={24} color={colors.onPrimary} />
                   <Text style={styles.seekLabel}>15</Text>
                 </Pressable>
-                <Pressable style={styles.playerPlay} onPress={togglePause}>
+                <Pressable testID="player-play-toggle" style={styles.playerPlay} onPress={togglePause}>
                   <Ionicons name={paused ? "play" : "pause"} size={34} color={colors.onPrimary} />
                 </Pressable>
-                <Pressable style={styles.playerCtrl} onPress={() => seekRelative(SEEK_STEP)} hitSlop={8}>
+                <Pressable testID="player-seek-forward" style={styles.playerCtrl} onPress={() => seekRelative(SEEK_STEP)} hitSlop={8}>
                   <Ionicons name="play-forward" size={24} color={colors.onPrimary} />
                   <Text style={styles.seekLabel}>15</Text>
                 </Pressable>
               </View>
 
               <View style={[styles.playerBar, { pointerEvents: "none" }]}>
-                <Text style={styles.playerTime}>{fmt(barElapsed)}</Text>
+                <Text testID="player-elapsed" style={styles.playerTime}>{fmt(barElapsed)}</Text>
                 <View style={styles.playerTrack}>
                   <View style={[styles.playerFill, { width: barPct }]} />
                   <View style={[styles.playerThumb, { left: barPct }]} />
@@ -712,7 +712,7 @@ export default function WorkoutPlayer() {
               </View>
               <View style={styles.statCard}>
                 <Ionicons name="list" size={18} color={colors.accent} />
-                <Text style={styles.statNum}>{index + 1}/{total}</Text>
+                <Text testID="exercise-counter" style={styles.statNum}>{index + 1}/{total}</Text>
                 <Text style={styles.statLbl}>exercises</Text>
               </View>
             </View>
@@ -757,6 +757,7 @@ export default function WorkoutPlayer() {
                   return (
                     <Pressable
                       key={e.id}
+                      testID={`exercise-card-${i}`}
                       disabled={isCurrent}
                       onPress={() => (locked ? showToast("Complete the current exercise first") : jumpTo(i))}
                       style={({ pressed }) => [
@@ -778,7 +779,7 @@ export default function WorkoutPlayer() {
                       )}
                       <ExpoImage source={e.image ?? workout.image} style={styles.exThumb} contentFit="cover" transition={150} cachePolicy="memory-disk" />
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        {isCurrent && <Text style={styles.exEyebrow}>EXERCISE {i + 1}</Text>}
+                        {isCurrent && <Text testID="current-exercise-eyebrow" style={styles.exEyebrow}>EXERCISE {i + 1}</Text>}
                         <Text style={[styles.exCardTitle, done && styles.exCardTitleDone]}>{e.name}</Text>
                         <View style={styles.exCardMeta}>
                           <Text style={styles.exCardMetaText}>{e.sets} sets · {e.seconds} sec</Text>
@@ -1009,7 +1010,7 @@ export default function WorkoutPlayer() {
         <View style={styles.doneIcon}>
           <Ionicons name="checkmark" size={48} color={colors.onPrimaryStrong} />
         </View>
-        <Text style={styles.doneTitle}>Beautifully done</Text>
+        <Text testID="workout-complete" style={styles.doneTitle}>Beautifully done</Text>
         <Text style={styles.doneSub}>You completed {workout.title}. Take a breath and feel proud.</Text>
         {newBestToday != null && (
           <Animated.View

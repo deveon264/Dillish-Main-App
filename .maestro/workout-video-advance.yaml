@@ -1,0 +1,98 @@
+appId: com.florish.fitness
+env:
+  # The test account (must already exist on the target server and have finished
+  # onboarding). Override at the CLI with: maestro test -e MAESTRO_EMAIL=...
+  MAESTRO_EMAIL: "qa@florish.fit"
+  MAESTRO_PASSWORD: "FlorishQA123!"
+  # A workout whose FIRST exercise has a real uploaded video. Keep that clip
+  # short (a few seconds) so "play to end" does not stall the run.
+  MAESTRO_WORKOUT_ID: "reformer-pilates"
+tags:
+  - workout
+  - video
+---
+# On-device end-to-end proof that the REAL expo-video native module drives the
+# workout player. The node:test harness (__tests__/workout-video-integration.test.ts)
+# simulates the player's timeUpdate / statusChange / playToEnd events; this flow
+# runs against an actual device build so those native events are exercised for
+# real: a clip plays to its end and the player advances, pause/resume stops the
+# video AND the countdown together, and tapping an earlier exercise replays it.
+- launchApp:
+    clearState: true
+- runFlow:
+    file: subflows/login.yaml
+    env:
+      MAESTRO_EMAIL: "${MAESTRO_EMAIL}"
+      MAESTRO_PASSWORD: "${MAESTRO_PASSWORD}"
+
+# Open the test workout from the Workouts tab.
+- tapOn: "Workouts"
+- scrollUntilVisible:
+    element:
+      id: "workout-card-${MAESTRO_WORKOUT_ID}"
+    direction: DOWN
+- tapOn:
+    id: "workout-card-${MAESTRO_WORKOUT_ID}"
+- assertVisible:
+    id: "exercise-counter"
+    text: "1/.*"
+- assertVisible:
+    id: "current-exercise-eyebrow"
+
+# Start the session: the inline clip begins playing (first tap un-pauses).
+- tapOn:
+    id: "player-play-toggle"
+- assertVisible: "Resumed"
+
+# === Pause / resume stop the video AND the countdown together ============
+# Pause, snapshot the clip position, and confirm it is frozen while paused.
+- tapOn:
+    id: "player-play-toggle"
+- assertVisible: "Paused"
+- copyTextFrom:
+    id: "player-elapsed"
+- waitForAnimationToEnd:
+    timeout: 2500
+- assertVisible:
+    id: "player-elapsed"
+    text: "${maestro.copiedText}"
+# Resume and confirm the position moves again (both restart in lockstep). The
+# 2s check stays inside the 3s controls auto-hide window so the readout is still
+# on screen.
+- tapOn:
+    id: "player-play-toggle"
+- assertVisible: "Resumed"
+- waitForAnimationToEnd:
+    timeout: 2000
+- assertNotVisible:
+    id: "player-elapsed"
+    text: "${maestro.copiedText}"
+
+# === The clip plays to its end -> the rest gap opens =====================
+# The native "playToEnd" event must flow through the onVideoEndRef bridge and
+# open the rest countdown. Generous timeout so a short clip finishes naturally.
+- extendedWaitUntil:
+    visible:
+      id: "rest-screen"
+    timeout: 60000
+- assertVisible: "REST"
+
+# === The rest gap advances to the NEXT exercise ==========================
+- tapOn: "Start now"
+- assertVisible:
+    id: "exercise-counter"
+    text: "2/.*"
+- assertVisible:
+    id: "current-exercise-eyebrow"
+
+# === Tapping an earlier (completed) exercise replays it ==================
+- scrollUntilVisible:
+    element:
+      id: "exercise-card-0"
+    direction: DOWN
+- tapOn:
+    id: "exercise-card-0"
+- assertVisible: "Replaying.*"
+- assertVisible:
+    id: "exercise-counter"
+    text: "1/.*"
