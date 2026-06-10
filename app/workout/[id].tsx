@@ -22,6 +22,7 @@ import { useInsets } from "@/hooks/useInsets";
 import { useFullscreenOrientation } from "@/hooks/useFullscreenOrientation";
 import { useWorkoutAdvanceCore } from "@/hooks/useWorkoutAdvanceCore";
 import { tickExerciseRemaining } from "@/lib/workoutAdvance";
+import { loadExerciseClip } from "@/lib/workoutClipLoader";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
@@ -313,40 +314,28 @@ export default function WorkoutPlayer() {
   // play/pause toggle. The player only plays here if the user has ALREADY
   // started the session — opening a workout stays paused.
   useEffect(() => {
-    const seq = ++loadSeq.current;
-    const isStale = () => seq !== loadSeq.current;
-    setVideoTime(0);
-    setVideoDuration(0);
-    // No clip confirmed-loaded until the swap below succeeds.
-    loadedVideoIdRef.current = null;
-    (async () => {
-      if (!currentVideo) {
-        try {
-          await player.replaceAsync(null);
-        } catch {
-          // ignore
-        }
-        return;
-      }
-      try {
-        let finalUrl = videoUrl(currentVideo.id);
-        if (Platform.OS !== "web") {
-          const resp = await fetch(finalUrl, {
+    void loadExerciseClip(
+      { loadSeq, loadedVideoId: loadedVideoIdRef },
+      {
+        currentVideo: currentVideo ?? null,
+        isWeb: Platform.OS === "web",
+        videoUrl,
+        probe: async (url) => {
+          const resp = await fetch(url, {
             redirect: "follow",
             headers: { Range: "bytes=0-0" },
           });
-          if (!resp.ok) throw new Error(`status ${resp.status}`);
-          finalUrl = resp.url || finalUrl;
-        }
-        if (isStale()) return;
-        await player.replaceAsync(finalUrl);
-        if (isStale()) return;
-        loadedVideoIdRef.current = currentVideo.id;
-        if (!pausedRef.current) player.play();
-      } catch {
-        // Leave the header image fallback in place if the video can't load.
-      }
-    })();
+          return { ok: resp.ok, status: resp.status, url: resp.url };
+        },
+        replaceAsync: (src) => player.replaceAsync(src),
+        play: () => player.play(),
+        isPaused: () => pausedRef.current,
+        resetVideoProgress: () => {
+          setVideoTime(0);
+          setVideoDuration(0);
+        },
+      },
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentVideo?.id]);
 
