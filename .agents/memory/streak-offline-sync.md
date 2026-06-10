@@ -9,16 +9,19 @@ The streak sync logic lives in a deps-injectable hook so it can be tested with
 react-test-renderer (no RN). It hydrates the AsyncStorage cache first, reconciles
 against the server streak, then records today and pushes the local rolling window.
 
-## Offline-gap recovery only works when the GET does NOT clobber local
-**Rule:** offline days survive and reconcile *only* via the POST carrying the
-local `recentDays` window. The hydrate GET overwrites the local cache with the
-bare server response. So if a (stale) non-null server streak comes back on a
-fresh hydrate, the local offline window is lost *before* the record/push reads it.
-**Why:** server is treated as source of truth on GET; it does not merge local in.
-**How to apply:** real recovery happens when GET returns null (server has no
-streak yet) OR via the foreground re-record path within a live session (no
-intervening GET). Don't write a test asserting offline-gap recovery with a
-non-null server GET, it contradicts the real flow.
+## Hydrate GET folds the local window into the server response (no longer clobbers)
+**Rule:** on hydrate, when the server returns a non-null streak the device folds
+its local `recentDays` into the server response via `mergeWindow` before saving,
+so the union of both windows wins. Offline days now survive a cold start (full
+quit + reopen) and reconcile up on the next push; recovery no longer depends on
+the GET returning null or on staying in the foreground.
+**Why:** the previous code blindly overwrote the local cache with the bare server
+GET, dropping offline-recorded days before the record/push could read them, so a
+cold start with a stale non-null server streak silently reset the streak lower.
+**How to apply:** keep the merge in the hydrate path; the server count/frontier is
+still authoritative, but the live union over the merged window carries the real
+streak. Cold-start-after-offline is covered by a regression test in
+`__tests__/streak-sync-device.test.ts`.
 
 ## Splitting the hydrate+record effect needs an internal `hydrated` gate
 **Rule:** if you split the single hydrate effect into separate hydrate and

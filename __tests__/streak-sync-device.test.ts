@@ -307,6 +307,69 @@ test("offline-gap recovery: days recorded offline reconcile into the window on n
   }
 });
 
+test("cold start after offline use: a non-null server GET does not drop the offline days", async () => {
+  // The member used the app offline for several days, then fully QUIT and
+  // reopened it (a cold start, not a foreground resume). The device cache holds
+  // the offline window, but the account already has a (now stale) server streak
+  // from before the offline gap, so the hydrate GET returns a non-null streak.
+  // It must fold the local window in rather than blindly overwriting the cache,
+  // or those offline days are lost before the record/push can reconcile them up.
+  const local: StreakState = {
+    count: 5,
+    longest: 5,
+    lastActiveDay: "2026-06-08",
+    recentDays: ["2026-06-04", "2026-06-05", "2026-06-06", "2026-06-07", "2026-06-08"],
+    updatedAt: 9,
+  };
+  // The server only knows the day before the offline gap began.
+  const server: StreakState = {
+    count: 1,
+    longest: 5,
+    lastActiveDay: "2026-06-03",
+    recentDays: ["2026-06-03"],
+    updatedAt: 2,
+  };
+  const env = makeEnv({ localStreak: local, serverStreak: server, ready: true });
+
+  const { result } = renderHook(env.deps);
+  await flush();
+
+  // Every offline day survived the reconcile into the displayed window (plus
+  // today), instead of being clobbered by the bare server response.
+  for (const d of [
+    "2026-06-04",
+    "2026-06-05",
+    "2026-06-06",
+    "2026-06-07",
+    "2026-06-08",
+    TODAY,
+  ]) {
+    assert.ok(
+      result.current.streakState.recentDays.includes(d),
+      `reconciled window should keep offline day ${d}`
+    );
+  }
+  // And those offline days were pushed up so the server reconciles them too.
+  assert.equal(env.pushes.length, 1);
+  for (const d of [
+    "2026-06-04",
+    "2026-06-05",
+    "2026-06-06",
+    "2026-06-07",
+    "2026-06-08",
+    TODAY,
+  ]) {
+    assert.ok(env.pushes[0].recentDays.includes(d), `push window should include ${d}`);
+  }
+  // The reconciled window is persisted back to the device cache.
+  for (const d of ["2026-06-04", "2026-06-08", TODAY]) {
+    assert.ok(
+      (env.disk.streak as StreakState).recentDays.includes(d),
+      `device cache should include ${d}`
+    );
+  }
+});
+
 test("a failed push keeps today in the local cache for the next retry", async () => {
   const local: StreakState = {
     count: 1,

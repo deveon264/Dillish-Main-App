@@ -6,6 +6,7 @@ import {
   DEFAULT_STREAK_STATE,
   sanitizeStreakState,
   recordActiveDay,
+  mergeWindow,
 } from "@/lib/streak";
 
 // Device-side glue that ties the AsyncStorage streak cache to the server streak
@@ -109,7 +110,8 @@ export function useStreakSyncCore(deps: StreakSyncDeps): StreakSyncResult {
       // Local-first: show the cached streak before any network round-trip.
       const localRaw = await loadLocal();
       if (!active) return;
-      let finalStreak = sanitizeStreakState(localRaw);
+      const localStreak = sanitizeStreakState(localRaw);
+      let finalStreak = localStreak;
       setStreakState(finalStreak);
 
       // Loaded alongside the streak so the baseline can be seeded atomically
@@ -123,7 +125,16 @@ export function useStreakSyncCore(deps: StreakSyncDeps): StreakSyncResult {
           const server = await fetchServer();
           if (!active) return;
           if (server) {
-            const sane = sanitizeStreakState(server);
+            // The server is the source of truth for the persisted count, but the
+            // local cache may hold active days recorded offline that the server
+            // has not seen yet. A cold start (full quit + reopen) used to blindly
+            // overwrite the local cache with the bare server response, dropping
+            // those offline days before the record/push below could reconcile
+            // them up. Fold the local rolling window into the server response so
+            // the union of both windows wins: the offline days survive into the
+            // cache, the live union streak recovers, and the next push carries
+            // them to the server.
+            const sane = mergeWindow(sanitizeStreakState(server), localStreak.recentDays);
             finalStreak = sane;
             setStreakState(sane);
             saveLocal(sane);
