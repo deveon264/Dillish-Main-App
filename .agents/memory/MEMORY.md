@@ -18,3 +18,4 @@
 - [Fullscreen video orientation](fullscreen-orientation.md) — app is portrait via app.json only (no runtime lock); native video fullscreen rotates via useFullscreenOrientation hook covering unmount + background edge cases.
 - [Streak offline-to-online sync](streak-offline-sync.md) — hydrate GET clobbers local, so offline-gap recovery only works via the POST window when GET is null; splitting hydrate/record needs an internal `hydrated` gate + ref (not eager-state-computation) for shouldSync.
 - [Push notifications (Expo)](push-notifications.md) — moderation warn/block push; web is intentional no-op, getExpoPushTokenAsync needs EAS projectId, send is best-effort never-throws, token PK re-points on shared device.
+- [Community count/block consistency](community-count-block-consistency.md) — feed like/comment counts, listComments, and toggleLike's COUNT must all apply the viewer's community_blocks filter in lockstep, or totals drift/flicker.

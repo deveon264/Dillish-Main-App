@@ -107,12 +107,25 @@ function mapComment(r: any): CommunityComment {
 }
 
 // $1 is always the viewer id (drives liked_by_me). Counts come from scalar
-// subqueries so the whole feed is one round-trip with no N+1.
+// subqueries so the whole feed is one round-trip with no N+1. Both counts
+// exclude likes/comments from members the viewer has blocked, so the header
+// totals match what that viewer actually sees (the comment list and feed apply
+// the same block filter).
 const POST_SELECT = `
   SELECT p.id, p.type, p.body, p.photo_object_path, p.created_at,
     ${AUTHOR_SELECT},
-    (SELECT COUNT(*) FROM community_likes l WHERE l.post_id = p.id) AS like_count,
-    (SELECT COUNT(*) FROM community_comments c WHERE c.post_id = p.id) AS comment_count,
+    (SELECT COUNT(*) FROM community_likes l
+       WHERE l.post_id = p.id
+         AND NOT EXISTS (
+           SELECT 1 FROM community_blocks b
+           WHERE b.blocker_id = $1 AND b.blocked_id = l.user_id
+         )) AS like_count,
+    (SELECT COUNT(*) FROM community_comments c
+       WHERE c.post_id = p.id
+         AND NOT EXISTS (
+           SELECT 1 FROM community_blocks b
+           WHERE b.blocker_id = $1 AND b.blocked_id = c.author_id
+         )) AS comment_count,
     EXISTS (SELECT 1 FROM community_likes l2 WHERE l2.post_id = p.id AND l2.user_id = $1) AS liked_by_me
   FROM community_posts p
   JOIN users u ON u.id = p.author_id`;
@@ -318,9 +331,16 @@ export async function toggleLike(input: {
     ]);
     liked = false;
   }
+  // Count excludes likers the viewer has blocked, matching the feed/detail
+  // like_count so the optimistic reconcile after a tap lands on the same total.
   const { rows } = await getPool().query(
-    `SELECT COUNT(*) AS n FROM community_likes WHERE post_id = $1`,
-    [input.postId]
+    `SELECT COUNT(*) AS n FROM community_likes l
+       WHERE l.post_id = $1
+         AND NOT EXISTS (
+           SELECT 1 FROM community_blocks b
+           WHERE b.blocker_id = $2 AND b.blocked_id = l.user_id
+         )`,
+    [input.postId, input.userId]
   );
   return { liked, likeCount: Number(rows[0].n) };
 }

@@ -18,6 +18,7 @@ export type FakeDb = {
   communityReports: Row[];
   communityLikes: Row[];
   communityComments: Row[];
+  communityBlocks: Row[];
   communityNotifications: Row[];
   notices: Row[];
   adminBlocks: Map<string, Row>;
@@ -41,6 +42,9 @@ export type FakeDb = {
   ) => Row;
   seedNotice: (n: Partial<Row> & { user_id: string }) => Row;
   seedAdminBlock: (b: Partial<Row> & { user_id: string }) => Row;
+  seedCommunityBlock: (
+    b: Partial<Row> & { blocker_id: string; blocked_id: string }
+  ) => Row;
   seedPushToken: (p: Partial<Row> & { token: string; user_id: string }) => Row;
 };
 
@@ -81,6 +85,7 @@ export function installFakeDb(): FakeDb {
   const communityReports: Row[] = [];
   const communityLikes: Row[] = [];
   const communityComments: Row[] = [];
+  const communityBlocks: Row[] = [];
   const communityNotifications: Row[] = [];
   const notices: Row[] = [];
   const adminBlocks = new Map<string, Row>();
@@ -306,6 +311,92 @@ export function installFakeDb(): FakeDb {
       };
     }
 
+    // The member feed / single-post read (listPosts + getPost share POST_SELECT).
+    // $1 is the viewer; like_count and comment_count exclude likes/comments from
+    // members the viewer has blocked, mirroring the scalar subqueries. Must
+    // precede the community_likes / community_comments handlers because those
+    // subqueries name those tables. getPost adds `WHERE p.id = $2`; listPosts
+    // drops blocked + admin-blocked authors, applies an optional type and keyset
+    // cursor, orders newest-first, and limits.
+    if (/FROM\s+community_posts\s+p\b/i.test(sql) && /liked_by_me/i.test(sql)) {
+      const viewerId = params[0];
+      const buildRow = (post: Row): Row => {
+        const author = users.get(post.author_id)!;
+        const likeCount = communityLikes.filter(
+          (l) =>
+            l.post_id === post.id &&
+            !communityBlocks.some(
+              (b) => b.blocker_id === viewerId && b.blocked_id === l.user_id
+            )
+        ).length;
+        const commentCount = communityComments.filter(
+          (c) =>
+            c.post_id === post.id &&
+            !communityBlocks.some(
+              (b) => b.blocker_id === viewerId && b.blocked_id === c.author_id
+            )
+        ).length;
+        const likedByMe = communityLikes.some(
+          (l) => l.post_id === post.id && l.user_id === viewerId
+        );
+        return {
+          id: post.id,
+          type: post.type ?? "progress",
+          body: post.body ?? "",
+          photo_object_path: post.photo_object_path ?? null,
+          created_at: post.created_at,
+          author_id: author.id,
+          author_name: author.name,
+          author_avatar:
+            author.avatar_object_path == null ? (author.avatar ?? null) : null,
+          author_avatar_path: author.avatar_object_path ?? null,
+          like_count: likeCount,
+          comment_count: commentCount,
+          liked_by_me: likedByMe,
+        };
+      };
+
+      // getPost: WHERE p.id = $2 (returns the post regardless of blocks).
+      if (/WHERE\s+p\.id\s*=\s*\$2/i.test(sql)) {
+        const post = communityPosts.find((p) => p.id === params[1]);
+        if (!post || !users.get(post.author_id)) return { rows: [] };
+        return { rows: [buildRow(post)] };
+      }
+
+      // listPosts: drop posts whose author no longer exists (INNER JOIN users),
+      // whose author the viewer blocked, or who is globally admin-blocked.
+      let list = communityPosts.filter(
+        (p) =>
+          !!users.get(p.author_id) &&
+          !communityBlocks.some(
+            (b) => b.blocker_id === viewerId && b.blocked_id === p.author_id
+          ) &&
+          !adminBlocks.has(p.author_id)
+      );
+      const typeMatch = /p\.type\s*=\s*\$(\d+)/i.exec(sql);
+      if (typeMatch) {
+        const t = params[Number(typeMatch[1]) - 1];
+        list = list.filter((p) => (p.type ?? "progress") === t);
+      }
+      const curMatch =
+        /p\.created_at\s*<\s*\$(\d+)\s+OR\s+\(p\.created_at\s*=\s*\$\d+\s+AND\s+p\.id\s*<\s*\$(\d+)\)/i.exec(
+          sql
+        );
+      if (curMatch) {
+        const ca = params[Number(curMatch[1]) - 1];
+        const ci = params[Number(curMatch[2]) - 1];
+        list = list.filter(
+          (p) => p.created_at < ca || (p.created_at === ca && p.id < ci)
+        );
+      }
+      list.sort((a, b) => {
+        if (b.created_at !== a.created_at) return b.created_at - a.created_at;
+        return a.id < b.id ? 1 : a.id > b.id ? -1 : 0; // id DESC
+      });
+      const limit = Number(params[params.length - 1]);
+      return { rows: list.slice(0, limit).map(buildRow) };
+    }
+
     // --- community_likes (toggleLike: insert-or-delete + count) ------------
     // toggleLike inserts with ON CONFLICT DO NOTHING (rowCount 1 when newly
     // liked, 0 when already liked), then deletes on the un-like path, then
@@ -334,8 +425,17 @@ export function installFakeDb(): FakeDb {
         }
         return { rows: [], rowCount: before - communityLikes.length };
       }
-      // SELECT COUNT(*) AS n FROM community_likes WHERE post_id = $1
-      const n = communityLikes.filter((l) => l.post_id === params[0]).length;
+      // SELECT COUNT(*) AS n FROM community_likes l WHERE l.post_id = $1
+      //   AND NOT EXISTS (community_blocks b WHERE b.blocker_id = $2
+      //   AND b.blocked_id = l.user_id) — excludes likers the viewer blocked.
+      const [countPostId, countViewerId] = params;
+      const n = communityLikes.filter(
+        (l) =>
+          l.post_id === countPostId &&
+          !communityBlocks.some(
+            (b) => b.blocker_id === countViewerId && b.blocked_id === l.user_id
+          )
+      ).length;
       return { rows: [{ n: String(n) }] };
     }
 
@@ -638,6 +738,7 @@ export function installFakeDb(): FakeDb {
     communityReports,
     communityLikes,
     communityComments,
+    communityBlocks,
     communityNotifications,
     notices,
     adminBlocks,
@@ -743,6 +844,15 @@ export function installFakeDb(): FakeDb {
         created_at: b.created_at ?? Date.now(),
       };
       adminBlocks.set(row.user_id, row);
+      return row;
+    },
+    seedCommunityBlock(b) {
+      const row: Row = {
+        blocker_id: b.blocker_id,
+        blocked_id: b.blocked_id,
+        created_at: b.created_at ?? Date.now(),
+      };
+      communityBlocks.push(row);
       return row;
     },
     seedPushToken(p) {
