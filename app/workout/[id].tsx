@@ -15,6 +15,7 @@ import { Button } from "@/components/Button";
 import { getWorkout } from "@/constants/workouts";
 import { listWorkoutExercises, videoUrl, posterUrl } from "@/lib/exercises";
 import { computeWorkoutProgress } from "@/lib/workoutProgress";
+import { decideExerciseCompletion } from "@/lib/workoutAdvance";
 import { useData } from "@/contexts/DataContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { todayKey, getJSON, setJSON } from "@/lib/storage";
@@ -500,16 +501,25 @@ export default function WorkoutPlayer() {
   // completion is ignored unless the clip that ended is the one loaded for the
   // current exercise (defends against stale end events during a transition).
   const completeExercise = (source: "video" | "timer") => {
-    if (phase !== "active" || !current) return;
-    if (source === "video" && (!currentVideo || loadedVideoIdRef.current !== currentVideo.id)) return;
-    if (completedIndexRef.current === index) return;
-    completedIndexRef.current = index;
+    const decision = decideExerciseCompletion({
+      phase,
+      hasCurrent: !!current,
+      source,
+      currentVideoId: currentVideo?.id ?? null,
+      loadedVideoId: loadedVideoIdRef.current,
+      completedIndex: completedIndexRef.current,
+      index,
+      total,
+      restGap,
+    });
+    if (decision.action === "ignore") return;
+    completedIndexRef.current = decision.completedIndex!;
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (index + 1 >= total) {
+    if (decision.action === "finish") {
       finish();
       return;
     }
-    if (restGap <= 0) {
+    if (decision.action === "advance") {
       goNext();
       return;
     }
