@@ -151,7 +151,10 @@ export default function BlockedMembers() {
                     <Text style={styles.memberName} numberOfLines={1}>
                       {item.member.name}
                     </Text>
-                    <Text style={styles.memberMeta}>Blocked {timeAgo(item.blockedAt)}</Text>
+                    <Text style={styles.memberMeta}>
+                      Blocked {timeAgo(item.blockedAt)}
+                      {item.blockedByName ? ` by ${item.blockedByName}` : ""}
+                    </Text>
                   </View>
                 </View>
 

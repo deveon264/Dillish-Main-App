@@ -353,6 +353,9 @@ export async function dismissNotice(opts: { token: string; id: string }): Promis
 export type AdminBlockedMember = {
   member: CommunityAuthor;
   blockedAt: number;
+  // Name of the admin who applied the block, or null when that admin's account
+  // no longer exists (or the block predates blocked_by tracking).
+  blockedByName: string | null;
 };
 
 // Admin-only: every globally blocked member, newest block first. Unlike the

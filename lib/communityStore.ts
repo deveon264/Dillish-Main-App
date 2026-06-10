@@ -616,24 +616,32 @@ export type AdminBlockedMember = {
   member: CommunityAuthor;
   // When the block was applied.
   blockedAt: number;
+  // The name of the admin who applied the block, or null when that admin's
+  // account no longer exists (or the block predates blocked_by tracking).
+  blockedByName: string | null;
 };
 
 // Admin moderation: every globally blocked member, newest block first. Unlike
 // the report queue, this survives after a member's reports are dismissed or
 // their posts deleted, so a coach always has a way to restore them. The JOIN to
-// users drops any orphaned block row whose account no longer exists.
+// users drops any orphaned block row whose account no longer exists. The LEFT
+// JOIN on blocked_by resolves the acting admin's name, staying null when that
+// admin's account is gone.
 export async function listAdminBlocked(): Promise<AdminBlockedMember[]> {
   await ensureSchema();
   const { rows } = await getPool().query(
     `SELECT
        ${AUTHOR_SELECT},
-       ab.created_at AS blocked_at
+       ab.created_at AS blocked_at,
+       bb.name AS blocked_by_name
      FROM community_admin_blocks ab
      JOIN users u ON u.id = ab.user_id
+     LEFT JOIN users bb ON bb.id = ab.blocked_by
      ORDER BY ab.created_at DESC`
   );
   return rows.map((r) => ({
     member: mapAuthor(r),
     blockedAt: Number(r.blocked_at),
+    blockedByName: r.blocked_by_name ?? null,
   }));
 }
