@@ -21,3 +21,4 @@
 - [Community count/block consistency](community-count-block-consistency.md) — feed like/comment counts, listComments, and toggleLike's COUNT must all apply the viewer's community_blocks filter in lockstep, or totals drift/flicker.
 - [Maestro on-device E2E](maestro-e2e-workout.md) — .maestro/ workout-video flow can't run in Replit (no emulator); testID-drift guarded by __tests__/e2e-flows.test.ts in npm test.
 - [Standalone admin-token scripts](standalone-admin-token-scripts.md) — scripts/*.mjs (cleanup-cron, seed-e2e) reimplement adminAuth's HMAC token in node:crypto; change SIGN_INFO/payload in lockstep or 403.
+- [GitHub sync limits for agents](git-github-sync-limits.md) — agent can't push/pull or prune refs; fixes for stale tracking refs / remote-URL drift are user-only (Shell `git fetch --prune` or Git-panel reconnect).
