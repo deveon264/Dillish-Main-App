@@ -5,8 +5,8 @@ import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useEventListener } from "expo";
-import * as ScreenOrientation from "expo-screen-orientation";
 import { GradientBackground } from "@/components/GradientBackground";
+import { useFullscreenOrientation } from "@/hooks/useFullscreenOrientation";
 import { useInsets } from "@/hooks/useInsets";
 import { videoUrl, posterUrl } from "@/lib/exercises";
 import { findExerciseImage } from "@/constants/workouts";
@@ -80,32 +80,11 @@ export default function ExercisePlayer() {
     if (status === "readyToPlay") setShowPoster(false);
   });
 
-  // Fullscreen lets a member watch the demo in landscape. The app is locked to
-  // portrait, so we unlock orientation while the native fullscreen view is open
-  // (letting the device rotate to landscape) and re-lock to portrait on exit so
-  // the rest of the screen stays upright. Web has no orientation lock and falls
-  // back to the browser's own fullscreen.
-  const onFullscreenEnter =
-    Platform.OS === "web"
-      ? undefined
-      : () => {
-          ScreenOrientation.unlockAsync().catch(() => {});
-        };
-  const onFullscreenExit =
-    Platform.OS === "web"
-      ? undefined
-      : () => {
-          ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
-        };
-  // Safety net: if the screen unmounts (e.g. the member navigates back) while
-  // still in fullscreen, restore portrait so the rest of the app isn't left
-  // sideways.
-  useEffect(() => {
-    if (Platform.OS === "web") return;
-    return () => {
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
-    };
-  }, []);
+  // Fullscreen lets a member watch the demo in landscape while the rest of the
+  // app stays locked to portrait. The shared hook unlocks on fullscreen enter,
+  // re-locks portrait on exit, and covers the back-navigation and backgrounding
+  // edge cases.
+  const { onFullscreenEnter, onFullscreenExit } = useFullscreenOrientation();
 
   return (
     <GradientBackground>

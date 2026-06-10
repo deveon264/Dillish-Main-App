@@ -6,7 +6,6 @@ import * as Haptics from "expo-haptics";
 import { Platform } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
-import * as ScreenOrientation from "expo-screen-orientation";
 import { Image as ExpoImage } from "expo-image";
 import { Asset } from "expo-asset";
 import { useEventListener } from "expo";
@@ -20,6 +19,7 @@ import { useData } from "@/contexts/DataContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { todayKey, getJSON, setJSON } from "@/lib/storage";
 import { useInsets } from "@/hooks/useInsets";
+import { useFullscreenOrientation } from "@/hooks/useFullscreenOrientation";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
@@ -113,32 +113,11 @@ export default function WorkoutPlayer() {
     onVideoEndRef.current();
   });
 
-  // Fullscreen lets a member watch the demo in landscape. The app is locked to
-  // portrait, so we unlock orientation while the native fullscreen view is open
-  // (letting the device rotate to landscape) and re-lock to portrait on exit so
-  // the inline player and the countdown/rest flow stay upright. Web has no
-  // orientation lock and falls back to the browser's own fullscreen.
-  const onFullscreenEnter =
-    Platform.OS === "web"
-      ? undefined
-      : () => {
-          ScreenOrientation.unlockAsync().catch(() => {});
-        };
-  const onFullscreenExit =
-    Platform.OS === "web"
-      ? undefined
-      : () => {
-          ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
-        };
-  // Safety net: if the screen unmounts (e.g. the member navigates back) while
-  // still in fullscreen, restore portrait so the rest of the app isn't left
-  // sideways.
-  useEffect(() => {
-    if (Platform.OS === "web") return;
-    return () => {
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
-    };
-  }, []);
+  // Fullscreen lets a member watch the demo in landscape while the inline player
+  // and the countdown/rest flow stay locked to portrait. The shared hook unlocks
+  // on fullscreen enter, re-locks portrait on exit, and covers the
+  // back-navigation and backgrounding edge cases.
+  const { onFullscreenEnter, onFullscreenExit } = useFullscreenOrientation();
 
   const overlayOpacity = useRef(new Animated.Value(1)).current;
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
