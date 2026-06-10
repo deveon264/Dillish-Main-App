@@ -15,6 +15,7 @@ import { useInsets } from "@/hooks/useInsets";
 import { getApiUrl } from "@/lib/api";
 import { todayKey } from "@/lib/storage";
 import { getCalorieInsight } from "@/lib/calorieInsights";
+import { CalorieInsightBody, insightMacroColor, type InsightBodyComponents } from "@/components/trackers/CalorieInsightCard";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
@@ -139,12 +140,7 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
       }),
     [totals, profile.calorieGoal, goalProtein, goalCarbs, goalFats]
   );
-  const insightMacroColor =
-    insight.featuredMacro === "carbs"
-      ? colors.carbs
-      : insight.featuredMacro === "fats"
-        ? colors.fats
-        : colors.protein;
+  const insightColor = insightMacroColor(insight.featuredMacro);
 
   const week = useMemo(() => {
     const base = new Date();
@@ -678,30 +674,7 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
             </View>
             <Text style={styles.insightEyebrow}>AI INSIGHT</Text>
           </View>
-          <Text style={styles.insightText}>
-            {insight.segments.map((seg, i) =>
-              seg.strong ? (
-                <Text key={i} style={styles.insightStrong}>
-                  {seg.text}
-                </Text>
-              ) : (
-                seg.text
-              )
-            )}
-          </Text>
-          <View style={styles.insightChips}>
-            {insight.chips.map((chip, i) => (
-              <View key={i} style={styles.insightChip}>
-                <Ionicons name={chip.icon} size={14} color={insightMacroColor} />
-                <Text style={styles.insightChipName} numberOfLines={1}>
-                  {chip.name}
-                </Text>
-                <Text style={[styles.insightChipVal, { color: insightMacroColor }]}>
-                  +{chip.value}g
-                </Text>
-              </View>
-            ))}
-          </View>
+          <CalorieInsightBody insight={insight} components={INSIGHT_COMPONENTS} color={insightColor} />
         </Card>
 
         <Card style={styles.weekCard}>
@@ -1060,3 +1033,24 @@ const styles = StyleSheet.create({
   chartBarToday: { backgroundColor: colors.accent },
   chartXLabel: { fontFamily: fonts.sans, fontSize: 11, color: colors.muted },
 });
+
+// React-native host elements the insight card renders through. Kept here so the
+// styling stays with the screen, while the wiring (segments + chips) lives in
+// the testable, RN-free CalorieInsightBody.
+const INSIGHT_COMPONENTS: InsightBodyComponents = {
+  Text: ({ children }) => <Text style={styles.insightText}>{children}</Text>,
+  Strong: ({ children }) => <Text style={styles.insightStrong}>{children}</Text>,
+  ChipsRow: ({ children }) => <View style={styles.insightChips}>{children}</View>,
+  Chip: ({ children }) => <View style={styles.insightChip}>{children}</View>,
+  ChipIcon: ({ name, color }) => (
+    <Ionicons name={name as keyof typeof Ionicons.glyphMap} size={14} color={color} />
+  ),
+  ChipName: ({ numberOfLines, children }) => (
+    <Text style={styles.insightChipName} numberOfLines={numberOfLines}>
+      {children}
+    </Text>
+  ),
+  ChipValue: ({ color, children }) => (
+    <Text style={[styles.insightChipVal, { color }]}>{children}</Text>
+  ),
+};
