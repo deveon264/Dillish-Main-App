@@ -120,6 +120,16 @@ export function installFakeDb(): FakeDb {
           const p2 = communityPosts.find((p) => p.id === r2.post_id);
           return !!p2 && p2.author_id === post.author_id;
         }).length;
+        // author_blocked / author_warned mirror the SQL subqueries: a global
+        // admin block row for the author, and any outstanding (un-acknowledged)
+        // 'warning' notice for the author.
+        const authorBlocked = adminBlocks.has(post.author_id);
+        const authorWarned = notices.some(
+          (n) =>
+            n.user_id === post.author_id &&
+            n.kind === "warning" &&
+            n.acknowledged_at == null
+        );
         rows.push({
           report_id: rep.id,
           report_reason: rep.reason ?? null,
@@ -143,8 +153,8 @@ export function installFakeDb(): FakeDb {
           comment_count: 0,
           liked_by_me: false,
           author_report_count: authorReportCount,
-          author_blocked: false,
-          author_warned: false,
+          author_blocked: authorBlocked,
+          author_warned: authorWarned,
         });
       }
       return { rows };

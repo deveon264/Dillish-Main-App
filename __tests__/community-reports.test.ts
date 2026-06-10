@@ -121,6 +121,81 @@ test("dismissReportsForPost returns 0 when the post has no reports", async () =>
   assert.equal(dismissed, 0);
 });
 
+test("authorReportCount sums an author's reports across all their posts", async () => {
+  db.seedUser({ id: "author", email: "author@example.com", name: "Author" });
+  db.seedUser({ id: "clean", email: "clean@example.com", name: "Clean Author" });
+  db.seedUser({ id: "rep-a", email: "a@example.com", name: "Reporter A" });
+  db.seedUser({ id: "rep-b", email: "b@example.com", name: "Reporter B" });
+
+  // "author" has two reported posts; "clean" has one.
+  db.seedCommunityPost({ id: "post-1", author_id: "author", body: "one" });
+  db.seedCommunityPost({ id: "post-2", author_id: "author", body: "two" });
+  db.seedCommunityPost({ id: "post-3", author_id: "clean", body: "three" });
+
+  // post-1: two reports, post-2: one report -> author has 3 reports total.
+  db.seedReport({ post_id: "post-1", reporter_id: "rep-a", created_at: 100 });
+  db.seedReport({ post_id: "post-1", reporter_id: "rep-b", created_at: 200 });
+  db.seedReport({ post_id: "post-2", reporter_id: "rep-a", created_at: 300 });
+  // post-3 (different author): one report -> that author has 1.
+  db.seedReport({ post_id: "post-3", reporter_id: "rep-b", created_at: 400 });
+
+  const groups = await listReports({ viewerId: ADMIN_ID, limit: 100 });
+  const byPost = new Map(groups.map((g) => [g.post.id, g]));
+
+  // Every group for "author" reports the author-wide total (3), not just the
+  // count of reports grouped under that single post.
+  assert.equal(byPost.get("post-1")!.reportCount, 2);
+  assert.equal(byPost.get("post-1")!.authorReportCount, 3);
+  assert.equal(byPost.get("post-2")!.reportCount, 1);
+  assert.equal(byPost.get("post-2")!.authorReportCount, 3);
+  // The other author's count is scoped to their own posts only.
+  assert.equal(byPost.get("post-3")!.authorReportCount, 1);
+});
+
+test("authorBlocked reflects a global admin block on the post's author", async () => {
+  db.seedUser({ id: "blocked", email: "blocked@example.com", name: "Blocked" });
+  db.seedUser({ id: "ok", email: "ok@example.com", name: "OK" });
+  db.seedUser({ id: "rep-a", email: "a@example.com", name: "Reporter A" });
+  db.seedCommunityPost({ id: "post-blocked", author_id: "blocked", body: "x" });
+  db.seedCommunityPost({ id: "post-ok", author_id: "ok", body: "y" });
+  db.seedReport({ post_id: "post-blocked", reporter_id: "rep-a", created_at: 100 });
+  db.seedReport({ post_id: "post-ok", reporter_id: "rep-a", created_at: 200 });
+
+  // A global admin block exists only for "blocked".
+  db.seedAdminBlock({ user_id: "blocked", blocked_by: ADMIN_ID, created_at: 50 });
+
+  const groups = await listReports({ viewerId: ADMIN_ID, limit: 100 });
+  const byPost = new Map(groups.map((g) => [g.post.id, g]));
+
+  assert.equal(byPost.get("post-blocked")!.authorBlocked, true);
+  assert.equal(byPost.get("post-ok")!.authorBlocked, false);
+});
+
+test("authorWarned is true only while a warning is unacknowledged", async () => {
+  db.seedUser({ id: "warned", email: "warned@example.com", name: "Warned" });
+  db.seedUser({ id: "acked", email: "acked@example.com", name: "Acked" });
+  db.seedUser({ id: "clean", email: "clean@example.com", name: "Clean" });
+  db.seedUser({ id: "rep-a", email: "a@example.com", name: "Reporter A" });
+  db.seedCommunityPost({ id: "post-warned", author_id: "warned", body: "x" });
+  db.seedCommunityPost({ id: "post-acked", author_id: "acked", body: "y" });
+  db.seedCommunityPost({ id: "post-clean", author_id: "clean", body: "z" });
+  db.seedReport({ post_id: "post-warned", reporter_id: "rep-a", created_at: 100 });
+  db.seedReport({ post_id: "post-acked", reporter_id: "rep-a", created_at: 200 });
+  db.seedReport({ post_id: "post-clean", reporter_id: "rep-a", created_at: 300 });
+
+  // "warned" has an outstanding warning; "acked" already acknowledged theirs;
+  // "clean" has none.
+  db.seedNotice({ user_id: "warned", kind: "warning", acknowledged_at: null });
+  db.seedNotice({ user_id: "acked", kind: "warning", acknowledged_at: 999 });
+
+  const groups = await listReports({ viewerId: ADMIN_ID, limit: 100 });
+  const byPost = new Map(groups.map((g) => [g.post.id, g]));
+
+  assert.equal(byPost.get("post-warned")!.authorWarned, true);
+  assert.equal(byPost.get("post-acked")!.authorWarned, false);
+  assert.equal(byPost.get("post-clean")!.authorWarned, false);
+});
+
 test("reportPost records a report only when the post exists", async () => {
   db.seedUser({ id: "author", email: "author@example.com", name: "Author" });
   db.seedUser({ id: "rep-a", email: "a@example.com", name: "Reporter A" });
