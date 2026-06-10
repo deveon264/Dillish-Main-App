@@ -15,7 +15,12 @@ import { Button } from "@/components/Button";
 import { getWorkout } from "@/constants/workouts";
 import { listWorkoutExercises, videoUrl, posterUrl } from "@/lib/exercises";
 import { computeWorkoutProgress } from "@/lib/workoutProgress";
-import { decideExerciseCompletion } from "@/lib/workoutAdvance";
+import {
+  decideExerciseCompletion,
+  decideRestTick,
+  decideAdvanceTarget,
+  decideJump,
+} from "@/lib/workoutAdvance";
 import { useData } from "@/contexts/DataContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { todayKey, getJSON, setJSON } from "@/lib/storage";
@@ -145,7 +150,7 @@ export default function WorkoutPlayer() {
   };
 
   const jumpTo = (i: number) => {
-    if (i >= index) return;
+    if (decideJump({ target: i, index }) === "ignore") return;
     setPhase("active");
     setRestRemaining(0);
     setIndex(i);
@@ -437,8 +442,9 @@ export default function WorkoutPlayer() {
   // Rest countdown between exercises. Ticks down once per second (pausable), then
   // advances to the next exercise and auto-plays its video.
   useEffect(() => {
-    if (phase !== "rest" || paused) return;
-    if (restRemaining <= 0) {
+    const tick = decideRestTick({ phase, paused, restRemaining });
+    if (tick === "idle") return;
+    if (tick === "advance") {
       goNext();
       return;
     }
@@ -484,8 +490,9 @@ export default function WorkoutPlayer() {
   }
 
   const goNext = () => {
-    if (index + 1 < total) {
-      const ni = index + 1;
+    const decision = decideAdvanceTarget({ index, total });
+    if (decision.action === "advance") {
+      const ni = decision.nextIndex;
       setRestRemaining(0);
       setPhase("active");
       setIndex(ni);

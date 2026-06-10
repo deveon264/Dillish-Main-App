@@ -1,7 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { decideExerciseCompletion, type CompletionInput } from "@/lib/workoutAdvance";
+import {
+  decideExerciseCompletion,
+  decideRestTick,
+  decideAdvanceTarget,
+  decideJump,
+  type CompletionInput,
+} from "@/lib/workoutAdvance";
 
 // A mid-workout snapshot: on exercise 0 of a 3-exercise workout, nothing
 // completed yet, rest gap on, no video involved. Override per case.
@@ -123,4 +129,86 @@ test("a timer is unaffected by the loaded-clip guard (only video completions che
   );
   assert.equal(d.action, "advance");
   assert.equal(d.completedIndex, 0);
+});
+
+// --- (4) the rest countdown ticks then auto-advances ----------------------
+
+test("rest tick: with time left and not paused, the countdown ticks one second", () => {
+  assert.equal(decideRestTick({ phase: "rest", paused: false, restRemaining: 10 }), "tick");
+});
+
+test("rest tick: when the countdown hits zero, it advances to the next exercise", () => {
+  assert.equal(decideRestTick({ phase: "rest", paused: false, restRemaining: 0 }), "advance");
+});
+
+test("rest tick: a negative remaining (overshoot) still advances rather than tick", () => {
+  assert.equal(decideRestTick({ phase: "rest", paused: false, restRemaining: -1 }), "advance");
+});
+
+test("rest tick: pausing during rest freezes the countdown (no tick, no advance)", () => {
+  assert.equal(decideRestTick({ phase: "rest", paused: true, restRemaining: 10 }), "idle");
+  // Even at zero, a paused rest does nothing until play resumes.
+  assert.equal(decideRestTick({ phase: "rest", paused: true, restRemaining: 0 }), "idle");
+});
+
+test("rest tick: outside the rest phase the countdown is idle", () => {
+  assert.equal(decideRestTick({ phase: "active", paused: false, restRemaining: 10 }), "idle");
+  assert.equal(decideRestTick({ phase: "done", paused: false, restRemaining: 0 }), "idle");
+});
+
+// --- (5) advancing steps to the next exercise or finishes -----------------
+
+test("advance target: a mid-workout exercise steps to the next index", () => {
+  const d = decideAdvanceTarget({ index: 0, total: 3 });
+  assert.equal(d.action, "advance");
+  assert.equal(d.nextIndex, 1);
+});
+
+test("advance target: the second-to-last exercise still advances to the last", () => {
+  const d = decideAdvanceTarget({ index: 1, total: 3 });
+  assert.equal(d.action, "advance");
+  assert.equal(d.nextIndex, 2);
+});
+
+test("advance target: finishing the last exercise ends the workout (no next index)", () => {
+  const d = decideAdvanceTarget({ index: 2, total: 3 });
+  assert.equal(d.action, "finish");
+  assert.equal(d.nextIndex, null);
+});
+
+test("advance target: a single-exercise workout finishes on its only exercise", () => {
+  const d = decideAdvanceTarget({ index: 0, total: 1 });
+  assert.equal(d.action, "finish");
+  assert.equal(d.nextIndex, null);
+});
+
+test("rest then advance: a rest countdown landing on a non-final exercise advances", () => {
+  // The rest countdown reaching zero advances...
+  assert.equal(decideRestTick({ phase: "rest", paused: false, restRemaining: 0 }), "advance");
+  // ...and from exercise 0 of 3 that lands on exercise 1.
+  const d = decideAdvanceTarget({ index: 0, total: 3 });
+  assert.equal(d.action, "advance");
+  assert.equal(d.nextIndex, 1);
+});
+
+test("rest then finish: a rest countdown after the final exercise finishes the workout", () => {
+  assert.equal(decideRestTick({ phase: "rest", paused: false, restRemaining: 0 }), "advance");
+  const d = decideAdvanceTarget({ index: 2, total: 3 });
+  assert.equal(d.action, "finish");
+});
+
+// --- (6) the replay / jump-back guard -------------------------------------
+
+test("jump: tapping an earlier exercise jumps back to replay it", () => {
+  assert.equal(decideJump({ target: 0, index: 2 }), "jump");
+  assert.equal(decideJump({ target: 1, index: 2 }), "jump");
+});
+
+test("jump: tapping the current exercise is ignored (no needless restart)", () => {
+  assert.equal(decideJump({ target: 2, index: 2 }), "ignore");
+});
+
+test("jump: tapping a later exercise is ignored (can't skip ahead)", () => {
+  assert.equal(decideJump({ target: 3, index: 1 }), "ignore");
+  assert.equal(decideJump({ target: 4, index: 0 }), "ignore");
 });

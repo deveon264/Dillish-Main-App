@@ -95,3 +95,85 @@ export function decideExerciseCompletion(input: CompletionInput): CompletionDeci
   if (restGap <= 0) return { action: "advance", completedIndex: index };
   return { action: "rest", completedIndex: index };
 }
+
+// --- Rest countdown -> auto-advance ---------------------------------------
+//
+// After an exercise completes with rest "on", the player enters the "rest"
+// phase and ticks a countdown down once per second. When the countdown reaches
+// zero it advances to the next exercise (or finishes). The countdown pauses
+// with the rest of the player. This helper decides, from a snapshot, what the
+// rest-countdown effect should do on each render.
+
+export type RestTickInput = {
+  // Current player phase. Only the "rest" phase ticks.
+  phase: WorkoutPhase;
+  // Whether the player is paused (the rest countdown pauses too).
+  paused: boolean;
+  // Seconds left on the rest countdown.
+  restRemaining: number;
+};
+
+export type RestTickAction =
+  // Not resting (or paused): do nothing.
+  | "idle"
+  // Countdown is exhausted: move on to the next exercise (or finish).
+  | "advance"
+  // Countdown still has time left: tick one second down.
+  | "tick";
+
+export function decideRestTick(input: RestTickInput): RestTickAction {
+  const { phase, paused, restRemaining } = input;
+  if (phase !== "rest" || paused) return "idle";
+  if (restRemaining <= 0) return "advance";
+  return "tick";
+}
+
+// --- Advance target (next exercise vs finish) ----------------------------
+//
+// Moving on from the current exercise (after the rest countdown, or straight
+// away when rest is "Off") either steps to the next exercise or, if this was
+// the last one, finishes the workout. Computes which, plus the index to land on.
+
+export type AdvanceInput = {
+  // Index of the exercise being left.
+  index: number;
+  // Total number of exercises in the workout.
+  total: number;
+};
+
+export type AdvanceDecision =
+  // The current exercise was the last one: finish the workout.
+  | { action: "finish"; nextIndex: null }
+  // Step forward to `nextIndex`.
+  | { action: "advance"; nextIndex: number };
+
+export function decideAdvanceTarget(input: AdvanceInput): AdvanceDecision {
+  const { index, total } = input;
+  if (index + 1 < total) return { action: "advance", nextIndex: index + 1 };
+  return { action: "finish", nextIndex: null };
+}
+
+// --- Replay / jump-back guard --------------------------------------------
+//
+// Tapping an exercise in the list replays it, but only an EARLIER exercise:
+// you can jump back to redo a move, never skip ahead past the current one. A
+// tap on the current exercise, or one further along, is ignored.
+
+export type JumpInput = {
+  // The exercise index the member tapped.
+  target: number;
+  // The index currently playing.
+  index: number;
+};
+
+export type JumpAction =
+  // Target is the current or a later exercise: ignore (no skipping ahead).
+  | "ignore"
+  // Target is an earlier exercise: jump back to replay it.
+  | "jump";
+
+export function decideJump(input: JumpInput): JumpAction {
+  const { target, index } = input;
+  if (target >= index) return "ignore";
+  return "jump";
+}
