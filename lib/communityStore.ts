@@ -625,9 +625,11 @@ export type CommunityNotification = {
   postExcerpt: string;
 };
 
-// How long an in-app notification stays visible. A soft cap: older rows are
-// never returned, but there is no sweep that deletes them.
-const NOTIFICATION_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
+// How long an in-app notification stays visible. A soft cap on reads (older
+// rows are never returned) that the scheduled sweep below also uses as its
+// delete threshold, so a row is only ever deleted once it can no longer appear
+// in the inbox or the unread count.
+export const NOTIFICATION_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
 
 // Longest post excerpt carried on a notification row, so inbox payloads stay
 // small. The screen still clamps to one line.
@@ -725,6 +727,39 @@ export async function markNotificationsRead(input: {
     [input.recipientId, ids]
   );
   return rowCount ?? 0;
+}
+
+// Scheduled maintenance that permanently removes notification rows the inbox can
+// no longer show. Reads already exclude rows older than NOTIFICATION_MAX_AGE_MS
+// (both listNotifications and countUnreadNotifications), so deleting them frees
+// the row without changing anything a member can see. Without this sweep the
+// `community_notifications` table grows forever.
+//
+// `scanned` is how many rows are past the cutoff (eligible for deletion);
+// `deleted` is how many were actually removed (always 0 on a dry run). The two
+// are equal on a real run. Pass `dryRun: true` to preview the count without
+// deleting.
+export async function deleteOldNotifications(opts: {
+  dryRun: boolean;
+}): Promise<{ scanned: number; deleted: number }> {
+  await ensureSchema();
+  const cutoff = Date.now() - NOTIFICATION_MAX_AGE_MS;
+  const pool = getPool();
+
+  if (opts.dryRun) {
+    const { rows } = await pool.query(
+      `SELECT COUNT(*) AS n FROM community_notifications WHERE created_at < $1`,
+      [cutoff]
+    );
+    return { scanned: Number(rows[0]?.n ?? 0), deleted: 0 };
+  }
+
+  const { rowCount } = await pool.query(
+    `DELETE FROM community_notifications WHERE created_at < $1`,
+    [cutoff]
+  );
+  const deleted = rowCount ?? 0;
+  return { scanned: deleted, deleted };
 }
 
 // One globally blocked member, for the admin "blocked members" screen.

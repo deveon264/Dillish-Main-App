@@ -22,6 +22,9 @@ export type FakeDb = {
   notices: Row[];
   adminBlocks: Map<string, Row>;
   seedUser: (u: Partial<Row> & { id: string; email: string }) => Row;
+  seedNotification: (
+    n: Partial<Row> & { recipient_id: string; created_at: number }
+  ) => Row;
   seedExercise: (
     e: Partial<Row> & { video_object_path: string }
   ) => Row;
@@ -182,6 +185,26 @@ export function installFakeDb(): FakeDb {
         });
       }
       return { rows };
+    }
+
+    // --- community_notifications (scheduled age-based delete sweep) ---------
+    // The notification cleanup helper issues exactly two shapes: a COUNT of rows
+    // past the cutoff (dry run) and a DELETE of those same rows (real run). Both
+    // filter on `created_at < $1`.
+    if (/community_notifications/i.test(sql)) {
+      const cutoff = params[0];
+      if (/DELETE\s+FROM\s+community_notifications/i.test(sql)) {
+        const before = communityNotifications.length;
+        for (let i = communityNotifications.length - 1; i >= 0; i--) {
+          if (communityNotifications[i].created_at < cutoff) {
+            communityNotifications.splice(i, 1);
+          }
+        }
+        return { rows: [], rowCount: before - communityNotifications.length };
+      }
+      // SELECT COUNT(*) ... WHERE created_at < $1
+      const n = communityNotifications.filter((r) => r.created_at < cutoff).length;
+      return { rows: [{ n: String(n) }] };
     }
 
     // --- exercises (media paths the cleanup sweep reconciles against) -------
@@ -489,6 +512,7 @@ export function installFakeDb(): FakeDb {
   let commentSeq = 0;
   let notificationSeq = 0;
   let noticeSeq = 0;
+  let notificationSeq = 0;
   return {
     users,
     settings,
@@ -500,6 +524,19 @@ export function installFakeDb(): FakeDb {
     communityNotifications,
     notices,
     adminBlocks,
+    seedNotification(n) {
+      const row: Row = {
+        id: n.id ?? `notif-${++notificationSeq}`,
+        recipient_id: n.recipient_id,
+        actor_id: n.actor_id ?? "actor",
+        post_id: n.post_id ?? "post",
+        type: n.type ?? "like",
+        read: n.read ?? false,
+        created_at: n.created_at,
+      };
+      communityNotifications.push(row);
+      return row;
+    },
     seedUser(u) {
       const row: Row = {
         id: u.id,

@@ -6,10 +6,11 @@ Metro's Node runtime). Exercise videos are stored as bytes in Replit Object
 Storage; Postgres holds only metadata. Admins authenticate with a server-only
 passcode that mints a short-lived HMAC admin token.
 
-# Scheduled storage cleanup
+# Scheduled cleanup
 
-Three storage sweeps run automatically on a schedule via
-`scripts/cleanup-cron.mjs` (one cron run triggers all three):
+Several cleanup sweeps run automatically on a schedule via
+`scripts/cleanup-cron.mjs` (one cron run triggers all of them): four storage
+sweeps and one database sweep.
 
 - **Exercise media** — orphaned exercise-video/poster objects (uploaded to
   storage but never linked to an `exercises` row) are reclaimed by
@@ -39,6 +40,13 @@ Three storage sweeps run automatically on a schedule via
   no user references. Like the exercise and community sweeps, it only removes
   objects older than a 1-hour grace window, so an avatar that is still being
   saved is never deleted out from under itself.
+- **Notification records** (database, not storage) are reclaimed by
+  `POST /api/notification-cleanup`. The inbox already hides
+  `community_notifications` rows older than its 90-day display window (both the
+  inbox list and the unread tab badge), but those rows were never deleted, so the
+  table grew forever. This sweep deletes any row older than that same 90-day
+  window. Because a row is only removed once it can no longer appear anywhere a
+  member can see, deleting it changes nothing visible.
 
 How it works:
 - `scripts/cleanup-cron.mjs` is a standalone Node script. It mints the same
@@ -47,8 +55,9 @@ How it works:
   A failure of one sweep does not skip the others.
 - Each run logs a one-line summary both from the script and from the server
   (`exercise-cleanup by ...: scanned=… deleted=…`,
-  `meal-photo-cleanup by ...: scanned=… deleted=… maxAgeDays=90`, and
-  `community-photo-cleanup by ...: scanned=… referenced=… deleted=…`), visible
+  `meal-photo-cleanup by ...: scanned=… deleted=… maxAgeDays=90`,
+  `community-photo-cleanup by ...: scanned=… referenced=… deleted=…`, and
+  `notification-cleanup by ...: scanned=… deleted=… maxAgeDays=90`), visible
   in the deployment logs so an admin can confirm it ran.
 - `CLEANUP_DRY_RUN=1` previews without deleting (applies to all sweeps).
 

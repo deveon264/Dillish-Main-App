@@ -15,6 +15,9 @@
 //                                    (reconciled against the `community_posts` table)
 //   - POST /api/profile-avatar-cleanup reclaims orphaned profile avatars
 //                                    (reconciled against the `users` table)
+//   - POST /api/notification-cleanup deletes community_notifications rows older
+//                                    than the inbox's 90-day display window
+//                                    (DB-only, reclaimed purely by age)
 //
 // Auth: rather than introducing a new machine secret, it mints the very same
 // HMAC-signed admin Bearer token the endpoint already verifies, using the
@@ -108,6 +111,7 @@ async function main() {
     "meal-photo-cleanup",
     "community-photo-cleanup",
     "profile-avatar-cleanup",
+    "notification-cleanup",
   ]) {
     const ok = await triggerCleanup(`${root}/api/${path}${query}`, token, dryRun);
     if (!ok) worstExit = 1;
