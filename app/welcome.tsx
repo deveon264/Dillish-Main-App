@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef } from "react";
-import { View, Text, StyleSheet, Image, Pressable, Animated, Platform } from "react-native";
+import { View, Text, StyleSheet, Pressable, Animated, Platform } from "react-native";
+import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -9,6 +10,14 @@ import { useInsets } from "@/hooks/useInsets";
 import { useScale } from "@/hooks/useScale";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
+
+const heroSource = require("@/assets/images/photos/welcomehero.webp");
+
+// Tiny blurred LQIP of the hero (32px JPEG, ~0.7KB). Shown the instant the
+// screen mounts so a cache miss reveals a soft brand-toned version of the photo
+// instead of the plain cream background, fading to the full image.
+const HERO_PLACEHOLDER =
+  "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAA4KCw0LCQ4NDA0QDw4RFiQXFhQUFiwgIRokNC43NjMuMjI6QVNGOj1OPjIySGJJTlZYXV5dOEVmbWVabFNbXVn/2wBDAQ8QEBYTFioXFypZOzI7WVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVn/wAARCAA5ACADASIAAhEBAxEB/8QAGgABAAMAAwAAAAAAAAAAAAAABAIDBQABBv/EAC0QAAIBAwEHAgUFAAAAAAAAAAECAwAEERIFEyEiMUFhMpEGFFFSgXGx0eHw/8QAGAEBAQEBAQAAAAAAAAAAAAAAAQIAAwT/xAAcEQACAgIDAAAAAAAAAAAAAAAAAQIhETEDElH/2gAMAwEAAhEDEQA/AGor+DVwV/tHvU4irEDByavcrCFLq2gniwGQvk+PNcMHoyGEODluc/TsK4+B15vA6U2eHEee1XfJpEQJCBzLnHDgapRDsHsbdBZu+nm1kZ9qPtq/m2dawm3iWWWaURhWBPDBLHA68BSbCWUx7j5aTSWLGQjAH+xUPiCzF9PY20D6JYn3xwPSunTqP5PD606QbZDZk6z7NdF6RSaRxzhTxA/GcVtzLiUY+9f2Nea2bqt5ZrY4lEZxvkGFYfzWpcbUkckpFGBngSTmiDwrK5Y3RUdtwwQGFnDTKCd0g1E+1Da62hcwOlvavFNcYM9xJhcDsF+gFQjA3ZdWCt349f1pC3KCLnjRW7MKFL0pJLSDnZBWJIhdFU6sFXqfeurfZ+gTxRzkLHMV657CkC55hh8DxViFEuJ3jwrF/UAMkYrKynOTVmTHNy4q4yjdYoUNIPpNQBKKQ5/qlh+pz1NZsfrpa9KYmZ//2Q==";
 
 const TRUST = [
   { icon: "sparkles-outline" as const, label: "AI Tracking" },
@@ -90,9 +99,14 @@ export default function Welcome() {
   return (
     <View style={[styles.bg, webFill]}>
       <Image
-        source={require("@/assets/images/photos/welcomehero.webp")}
+        source={heroSource}
         style={styles.heroImg}
-        resizeMode="cover"
+        contentFit="cover"
+        placeholder={{ uri: HERO_PLACEHOLDER }}
+        placeholderContentFit="cover"
+        priority="high"
+        cachePolicy="memory-disk"
+        transition={200}
       />
       <LinearGradient
         colors={colors.welcomeScrim}

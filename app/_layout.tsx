@@ -4,6 +4,8 @@ import * as Font from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import * as SystemUI from "expo-system-ui";
 import { StatusBar } from "expo-status-bar";
+import { Image as ExpoImage } from "expo-image";
+import { Asset } from "expo-asset";
 import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -47,6 +49,11 @@ const fontMap: Record<string, number> = {
   DMSans_700Bold,
 };
 
+// Warmed into the image cache while the splash screen is up (alongside fonts),
+// so the welcome screen paints its hero on first frame instead of flashing the
+// cream background. Tiny (~68KB); failures never block app startup.
+const welcomeHeroSource = require("@/assets/images/photos/welcomehero.webp");
+
 export default function RootLayout() {
   const [ready, setReady] = useState(false);
 
@@ -61,11 +68,20 @@ export default function RootLayout() {
     // Cormorant italics) even though the @font-face CSS is already injected and rendering.
     // useFonts batches them with Promise.all, so sibling rejections become unhandled
     // errors (the red overlay). Loading per-font with its own catch avoids that.
-    Promise.all(
-      Object.entries(fontMap).map(([name, mod]) =>
-        Font.loadAsync({ [name]: mod }).catch(() => {}),
-      ),
-    ).finally(finish);
+    const fontTasks = Object.entries(fontMap).map(([name, mod]) =>
+      Font.loadAsync({ [name]: mod }).catch(() => {}),
+    );
+    // Warm the welcome hero before first paint: resolve the bundled asset's URI
+    // (cross-platform via expo-asset), then prime the expo-image cache. A failure
+    // (or a platform where this is a no-op) must not block readiness.
+    const heroTask = Asset.fromModule(welcomeHeroSource)
+      .downloadAsync()
+      .then((asset) => {
+        const uri = asset.localUri ?? asset.uri;
+        return uri ? ExpoImage.prefetch(uri, { cachePolicy: "memory-disk" }) : undefined;
+      })
+      .catch(() => {});
+    Promise.all([...fontTasks, heroTask]).finally(finish);
 
     // Fallback only on web, where fontfaceobserver can take up to 6s. Native
     // loads bundled TTFs quickly and reliably (failures are caught above), so we
