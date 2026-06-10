@@ -15,7 +15,6 @@ import { Button } from "@/components/Button";
 import { getWorkout } from "@/constants/workouts";
 import { listWorkoutExercises, videoUrl, posterUrl } from "@/lib/exercises";
 import { computeWorkoutProgress } from "@/lib/workoutProgress";
-import { decideExerciseCompletion } from "@/lib/workoutAdvance";
 import { useData } from "@/contexts/DataContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { todayKey, getJSON, setJSON } from "@/lib/storage";
@@ -45,9 +44,6 @@ export default function WorkoutPlayer() {
   const [paused, setPaused] = useState(true);
   // Rest gap between exercises (device preference) and the live rest countdown.
   const [restGap, setRestGap] = useState<number>(DEFAULT_REST_GAP);
-  // Guards an exercise from being "completed" twice (e.g. video end + countdown).
-  // Reset whenever the exercise index changes.
-  const completedIndexRef = useRef<number>(-1);
   // Holds the latest completion handler so the video "playToEnd" listener (set up
   // once, before the early returns) always calls the current-closure version.
   const onVideoEndRef = useRef<() => void>(() => {});
@@ -147,19 +143,28 @@ export default function WorkoutPlayer() {
     index,
     remaining,
     restRemaining,
-    setPhase,
-    setIndex,
     setRemaining,
     setRestRemaining,
     goNext,
     jumpTo,
     finish,
+    completeExercise,
   } = useWorkoutAdvanceCore({
     total: workout?.exercises.length ?? 0,
     restGap,
     paused,
     durationAt: (i) => workout?.exercises[i]?.seconds ?? 0,
     initialRemaining: workout?.exercises[0]?.seconds ?? 0,
+    videoIdAt: (i) => {
+      const ex = workout?.exercises[i];
+      const v = ex ? videoMap[ex.id] : undefined;
+      return v?.id ?? null;
+    },
+    getLoadedVideoId: () => loadedVideoIdRef.current,
+    videoDuration,
+    onComplete: () => {
+      if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    },
     onFinish: () => {
       if (timer.current) clearInterval(timer.current);
       if (!savedRef.current && workout) {
@@ -275,11 +280,6 @@ export default function WorkoutPlayer() {
       on = false;
     };
   }, []);
-
-  // A new exercise can be completed again (clears the double-fire guard).
-  useEffect(() => {
-    completedIndexRef.current = -1;
-  }, [index]);
 
   // Fetch the videos uploaded for this workout and map each to its exercise.
   // Newest first from the server, so the first row per exercise wins.
@@ -445,18 +445,6 @@ export default function WorkoutPlayer() {
     };
   }, [phase, paused, index, current]);
 
-  // For exercises with no playable video, the countdown reaching zero is the
-  // completion signal. When a video IS loaded, the "playToEnd" event drives it
-  // instead (so a clip shorter/longer than the set time advances at the clip's
-  // real end rather than leaving the player idle).
-  useEffect(() => {
-    if (phase !== "active" || remaining !== 0 || !current) return;
-    const hasLoadedVideo = !!currentVideo && videoDuration > 0.1;
-    if (hasLoadedVideo) return;
-    completeExercise("timer");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [remaining, phase, index, current, currentVideo, videoDuration]);
-
   // Warm this workout's exercise photos into the image cache the moment the
   // player opens, so the header and the rest "up next" backgrounds appear
   // instantly instead of popping in one screen at a time.
@@ -488,37 +476,9 @@ export default function WorkoutPlayer() {
     );
   }
 
-  // Marks the current exercise complete (from a video end or a countdown). Guards
-  // against firing twice for the same exercise, then either finishes the workout,
-  // advances immediately (rest "Off"), or opens the rest countdown. A "video"
-  // completion is ignored unless the clip that ended is the one loaded for the
-  // current exercise (defends against stale end events during a transition).
-  const completeExercise = (source: "video" | "timer") => {
-    const decision = decideExerciseCompletion({
-      phase,
-      hasCurrent: !!current,
-      source,
-      currentVideoId: currentVideo?.id ?? null,
-      loadedVideoId: loadedVideoIdRef.current,
-      completedIndex: completedIndexRef.current,
-      index,
-      total,
-      restGap,
-    });
-    if (decision.action === "ignore") return;
-    completedIndexRef.current = decision.completedIndex!;
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (decision.action === "finish") {
-      finish();
-      return;
-    }
-    if (decision.action === "advance") {
-      goNext();
-      return;
-    }
-    setRestRemaining(restGap);
-    setPhase("rest");
-  };
+  // Bridge the clip's "playToEnd" event (listener wired once, above the early
+  // returns) to the completion machine, which guards against a double-fire and a
+  // stale clip end before finishing, advancing, or opening the rest countdown.
   onVideoEndRef.current = () => completeExercise("video");
 
   if (phase === "rest" && current && index + 1 < total) {

@@ -26,7 +26,7 @@ type Props = { total: number; restGap: number; paused: boolean };
 // rest-countdown effect re-runs exactly as it does on device.
 function renderHook(initial: Props, overrides: Partial<WorkoutAdvanceDeps> = {}) {
   const result: { current: WorkoutAdvanceCore } = { current: {} as WorkoutAdvanceCore };
-  const calls = { finish: 0, replay: [] as number[], restTicks: [] as number[] };
+  const calls = { finish: 0, replay: [] as number[], restTicks: [] as number[], complete: 0 };
   let props = { ...initial };
 
   function Harness(p: Props) {
@@ -44,6 +44,9 @@ function renderHook(initial: Props, overrides: Partial<WorkoutAdvanceDeps> = {})
       },
       onRestTick: (rr) => {
         calls.restTicks.push(rr);
+      },
+      onComplete: () => {
+        calls.complete += 1;
       },
       ...overrides,
     });
@@ -234,4 +237,158 @@ test("jumpTo ignores the current and later exercises", () => {
   assert.equal(h.result.current.index, 1);
   assert.equal(h.result.current.phase, "active");
   assert.deepEqual(h.calls.replay, []);
+});
+
+// =========================================================================
+// completeExercise outcome 1 (rest on, mid-workout): opens the rest countdown
+// before the next exercise, seeding it from the configured rest gap.
+// =========================================================================
+
+test("completeExercise opens the rest gap (rest on, mid-workout)", () => {
+  const h = renderHook({ total: 3, restGap: 15, paused: true });
+
+  act(() => h.result.current.completeExercise("timer"));
+
+  assert.equal(h.result.current.phase, "rest");
+  assert.equal(h.result.current.restRemaining, 15);
+  assert.equal(h.result.current.index, 0);
+  assert.equal(h.calls.finish, 0);
+  assert.equal(h.calls.complete, 1);
+});
+
+// =========================================================================
+// completeExercise outcome 2 (rest off): advances straight to the next
+// exercise, resetting the phase, index and per-exercise countdown, no rest.
+// =========================================================================
+
+test("completeExercise advances immediately when rest is off", () => {
+  const h = renderHook({ total: 3, restGap: 0, paused: true });
+
+  act(() => h.result.current.completeExercise("timer"));
+
+  assert.equal(h.result.current.phase, "active");
+  assert.equal(h.result.current.index, 1);
+  assert.equal(h.result.current.remaining, DURATIONS[1]);
+  assert.equal(h.result.current.restRemaining, 0);
+  assert.equal(h.calls.finish, 0);
+  assert.equal(h.calls.complete, 1);
+});
+
+// =========================================================================
+// completeExercise outcome 3 (last exercise): finishes the workout, firing the
+// finish side effect once and landing on the done phase.
+// =========================================================================
+
+test("completeExercise on the last exercise finishes the workout", () => {
+  const h = renderHook({ total: 3, restGap: 15, paused: true });
+
+  act(() => h.result.current.setIndex(2));
+  act(() => h.result.current.completeExercise("timer"));
+
+  assert.equal(h.result.current.phase, "done");
+  assert.equal(h.calls.finish, 1);
+  assert.equal(h.calls.complete, 1);
+});
+
+// =========================================================================
+// The countdown-zero effect: an exercise with no playable video completes when
+// its per-exercise countdown hits zero (the "timer" completion path).
+// =========================================================================
+
+test("the countdown reaching zero completes an exercise with no video", () => {
+  const h = renderHook({ total: 3, restGap: 15, paused: true });
+
+  // No video mapped (default videoIdAt is undefined): the timer drives it.
+  act(() => h.result.current.setRemaining(0));
+
+  assert.equal(h.result.current.phase, "rest");
+  assert.equal(h.result.current.restRemaining, 15);
+  assert.equal(h.calls.complete, 1);
+});
+
+// =========================================================================
+// The countdown-zero effect bows out when a clip is loaded: with a playable
+// video the "playToEnd" event (not the timer) drives the completion, so the
+// countdown hitting zero must NOT complete the exercise on its own.
+// =========================================================================
+
+test("the countdown reaching zero does not complete when a clip is loaded", () => {
+  let loadedId: string | null = "v0";
+  const h = renderHook(
+    { total: 3, restGap: 15, paused: true },
+    {
+      videoIdAt: (i) => ["v0", "v1", "v2"][i] ?? null,
+      getLoadedVideoId: () => loadedId,
+      videoDuration: 5,
+    },
+  );
+
+  // Countdown exhausts while a clip is loaded: the timer effect bows out.
+  act(() => h.result.current.setRemaining(0));
+  assert.equal(h.result.current.phase, "active");
+  assert.equal(h.result.current.index, 0);
+  assert.equal(h.calls.complete, 0);
+
+  // The clip's "playToEnd" for the loaded current clip drives it instead.
+  act(() => h.result.current.completeExercise("video"));
+  assert.equal(h.result.current.phase, "rest");
+  assert.equal(h.calls.complete, 1);
+});
+
+// =========================================================================
+// Double-fire guard: when the countdown and the clip both signal completion for
+// the SAME exercise (e.g. the clip ends as the countdown hits zero), the
+// exercise advances exactly once, never skipping the next exercise.
+// =========================================================================
+
+test("a timer and a video completion for the same exercise count once", () => {
+  const h = renderHook(
+    { total: 3, restGap: 0, paused: true },
+    {
+      videoIdAt: (i) => ["v0", "v1", "v2"][i] ?? null,
+      getLoadedVideoId: () => "v0",
+      videoDuration: 5,
+    },
+  );
+
+  // Both signals fire before React flushes the advance: the second must be
+  // dropped by the double-fire guard so the index moves by exactly one.
+  act(() => {
+    h.result.current.completeExercise("timer");
+    h.result.current.completeExercise("video");
+  });
+
+  assert.equal(h.result.current.index, 1);
+  assert.equal(h.result.current.phase, "active");
+  assert.equal(h.calls.complete, 1);
+});
+
+// =========================================================================
+// Stale-clip guard: a "playToEnd" from an outgoing clip, fired mid-transition
+// while the next exercise's clip is still loading (loadedVideoId is null), is
+// dropped so it cannot complete (and skip) the exercise now showing.
+// =========================================================================
+
+test("a playToEnd from an outgoing clip during a load does not advance", () => {
+  let loadedId: string | null = "v1";
+  const h = renderHook(
+    { total: 3, restGap: 15, paused: true },
+    {
+      videoIdAt: (i) => ["v0", "v1", "v2"][i] ?? null,
+      getLoadedVideoId: () => loadedId,
+      videoDuration: 5,
+    },
+  );
+
+  // Mid-transition to exercise 1: the new clip has not confirmed-loaded yet.
+  act(() => h.result.current.setIndex(1));
+  loadedId = null;
+
+  // A late "playToEnd" from the outgoing clip arrives: it must be ignored.
+  act(() => h.result.current.completeExercise("video"));
+
+  assert.equal(h.result.current.phase, "active");
+  assert.equal(h.result.current.index, 1);
+  assert.equal(h.calls.complete, 0);
+  assert.equal(h.calls.finish, 0);
 });
