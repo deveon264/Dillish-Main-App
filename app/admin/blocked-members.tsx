@@ -32,6 +32,17 @@ function notify(title: string, message: string) {
   else Alert.alert(title, message);
 }
 
+function confirmAction(title: string, message: string, confirmLabel: string, run: () => void) {
+  if (Platform.OS === "web") {
+    if (window.confirm(`${title}\n\n${message}`)) run();
+  } else {
+    Alert.alert(title, message, [
+      { text: "Cancel", style: "cancel" },
+      { text: confirmLabel, onPress: run },
+    ]);
+  }
+}
+
 export default function BlockedMembers() {
   const router = useRouter();
   const insets = useInsets();
@@ -79,17 +90,26 @@ export default function BlockedMembers() {
 
   const unblock = (item: AdminBlockedMember) => {
     if (!token) return;
-    setBusyId(item.member.id);
-    void (async () => {
-      try {
-        await unblockAuthor({ token, authorId: item.member.id });
-        setBlocked((prev) => (prev ? prev.filter((b) => b.member.id !== item.member.id) : prev));
-      } catch (e: any) {
-        notify("Could not unblock member", e?.message ?? "Please try again.");
-      } finally {
-        setBusyId(null);
+    confirmAction(
+      "Unblock member",
+      `${item.member.name}'s posts will be restored to everyone's feed. You can block them again anytime.`,
+      "Unblock",
+      () => {
+        setBusyId(item.member.id);
+        void (async () => {
+          try {
+            await unblockAuthor({ token, authorId: item.member.id });
+            setBlocked((prev) =>
+              prev ? prev.filter((b) => b.member.id !== item.member.id) : prev
+            );
+          } catch (e: any) {
+            notify("Could not unblock member", e?.message ?? "Please try again.");
+          } finally {
+            setBusyId(null);
+          }
+        })();
       }
-    })();
+    );
   };
 
   return (
