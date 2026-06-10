@@ -112,8 +112,12 @@ jobs:
     name: Workout video flow (iOS simulator)
     # macOS runners are the only GitHub-hosted runners with Xcode + the iOS
     # simulator. NOTE: macOS minutes bill at 10x the Linux rate, so this job is
-    # the most expensive part of the pipeline -- keep it gated on the same
-    # triggers as the Android job rather than every push.
+    # the most expensive part of the pipeline. To cap spend it runs ONLY on a
+    # published release and on manual dispatch -- never on the every-`main`-push
+    # trigger that the cheap Android job uses. GitHub Actions has no per-job
+    # `on:`, so the cost gate lives in this `if:`: `push` events skip iOS while
+    # still running Android. See .maestro/README.md for the rationale.
+    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
     runs-on: macos-14
     timeout-minutes: 60
 

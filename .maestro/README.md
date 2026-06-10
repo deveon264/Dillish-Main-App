@@ -101,15 +101,28 @@ platforms, because `expo-video` and the player UI can behave differently on each
   same `scripts/e2e-workout.sh`.
 
 > **Cost note:** the iOS job needs a macOS runner, and GitHub bills macOS minutes
-> at **10x** the Linux rate. It is therefore the most expensive job in the
-> pipeline; it stays gated on the same triggers as the Android job (release,
-> `main` pushes that touch the app/flow, and manual dispatch) rather than running
-> on every push.
+> at **10x** the Linux rate, so it is by far the most expensive job in the
+> pipeline. To keep that cost bounded, the two jobs are deliberately triggered
+> **differently**:
+>
+> - **Android (`e2e`)** runs on all three triggers: `release: published`,
+>   pushes to `main` that touch the app/flow, and manual dispatch. Linux minutes
+>   are cheap, so it stays as the early-regression catcher on every relevant push.
+> - **iOS (`e2e-ios`)** runs **only** on `release: published` and manual
+>   dispatch. It is skipped on the `main`-push trigger so routine pushes never
+>   burn 10x macOS minutes; device-level iOS coverage still gates every release
+>   and is available on demand before cutting one.
+>
+> GitHub Actions has no per-job `on:`, so this gate is implemented as an `if:`
+> on the `e2e-ios` job
+> (`github.event_name == 'release' || github.event_name == 'workflow_dispatch'`):
+> on a `push` event the iOS job is skipped while Android still runs.
 
 Both jobs use the same `MAESTRO_EMAIL` / `MAESTRO_PASSWORD` / `MAESTRO_WORKOUT_ID`
-secrets. They trigger on `release: published` (so a red flow blocks the release
-when the publish job is gated on it), on pushes to `main` that touch the app or
-flow, and on demand via **workflow_dispatch**.
+secrets. Android triggers on `release: published` (so a red flow blocks the
+release when the publish job is gated on it), on pushes to `main` that touch the
+app or flow, and on demand via **workflow_dispatch**; iOS triggers on
+`release: published` and **workflow_dispatch** only.
 
 ### Required CI secrets
 
