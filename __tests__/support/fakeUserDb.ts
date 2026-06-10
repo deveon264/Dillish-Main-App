@@ -18,6 +18,7 @@ export type FakeDb = {
   communityReports: Row[];
   communityLikes: Row[];
   communityComments: Row[];
+  communityNotifications: Row[];
   notices: Row[];
   adminBlocks: Map<string, Row>;
   seedUser: (u: Partial<Row> & { id: string; email: string }) => Row;
@@ -33,6 +34,9 @@ export type FakeDb = {
   seedLike: (l: Partial<Row> & { post_id: string; user_id: string }) => Row;
   seedComment: (
     c: Partial<Row> & { post_id: string; author_id: string }
+  ) => Row;
+  seedNotification: (
+    n: Partial<Row> & { recipient_id: string; actor_id: string; post_id: string }
   ) => Row;
   seedNotice: (n: Partial<Row> & { user_id: string }) => Row;
   seedAdminBlock: (b: Partial<Row> & { user_id: string }) => Row;
@@ -75,6 +79,7 @@ export function installFakeDb(): FakeDb {
   const communityReports: Row[] = [];
   const communityLikes: Row[] = [];
   const communityComments: Row[] = [];
+  const communityNotifications: Row[] = [];
   const notices: Row[] = [];
   const adminBlocks = new Map<string, Row>();
 
@@ -186,6 +191,97 @@ export function installFakeDb(): FakeDb {
           video_object_path: e.video_object_path,
           poster_object_path: e.poster_object_path ?? null,
         })),
+      };
+    }
+
+    // --- community_notifications (in-app like/comment activity inbox) -------
+    // Checked before the generic community_posts handler because the inbox read
+    // JOINs community_posts, and before getPostMeta for the same reason.
+    if (/community_notifications/i.test(sql)) {
+      if (/INSERT\s+INTO\s+community_notifications/i.test(sql)) {
+        // notifyPostAuthor column order: id, recipient_id, actor_id, post_id,
+        // type, created_at (read is the literal FALSE in the INSERT).
+        const [id, recipient_id, actor_id, post_id, type, created_at] = params;
+        communityNotifications.push({
+          id,
+          recipient_id,
+          actor_id,
+          post_id,
+          type,
+          read: false,
+          created_at,
+        });
+        return { rows: [], rowCount: 1 };
+      }
+      if (/UPDATE\s+community_notifications/i.test(sql)) {
+        // markNotificationsRead: SET read = TRUE
+        //   WHERE recipient_id = $1 AND read = FALSE AND id = ANY($2::text[])
+        const [recipientId, ids] = params as [string, string[]];
+        let updated = 0;
+        for (const n of communityNotifications) {
+          if (n.recipient_id === recipientId && !n.read && ids.includes(n.id)) {
+            n.read = true;
+            updated++;
+          }
+        }
+        return { rows: [], rowCount: updated };
+      }
+      if (/COUNT\(\*\)/i.test(sql)) {
+        // countUnreadNotifications: recipient_id = $1 AND read = FALSE
+        //   AND created_at >= $2 (the 90-day soft cap).
+        const [recipientId, since] = params as [string, number];
+        const n = communityNotifications.filter(
+          (x) => x.recipient_id === recipientId && !x.read && x.created_at >= since
+        ).length;
+        return { rows: [{ n }] };
+      }
+      // listNotifications: JOIN users (actor) + community_posts (body), drop a
+      // row whose actor or post no longer exists, newest first, capped.
+      const [recipientId, since, limit] = params as [string, number, number];
+      const matching = communityNotifications.filter(
+        (x) => x.recipient_id === recipientId && x.created_at >= since
+      );
+      const joined: { n: Row; actor: Row; post: Row }[] = [];
+      for (const n of matching) {
+        const actor = users.get(n.actor_id);
+        const post = communityPosts.find((p) => p.id === n.post_id);
+        if (!actor || !post) continue; // INNER JOINs
+        joined.push({ n, actor, post });
+      }
+      joined.sort((a, b) => {
+        if (b.n.created_at !== a.n.created_at) return b.n.created_at - a.n.created_at;
+        return a.n.id < b.n.id ? 1 : a.n.id > b.n.id ? -1 : 0; // id DESC
+      });
+      const rows = joined.slice(0, limit).map(({ n, actor, post }) => ({
+        id: n.id,
+        type: n.type,
+        post_id: n.post_id,
+        read: n.read,
+        created_at: n.created_at,
+        author_id: actor.id,
+        author_name: actor.name,
+        author_avatar: actor.avatar_object_path == null ? (actor.avatar ?? null) : null,
+        author_avatar_path: actor.avatar_object_path ?? null,
+        post_body: post.body ?? "",
+      }));
+      return { rows };
+    }
+
+    // getPostMeta: a single post's id/author/photo, used by notifyPostAuthor
+    // and toggleLike. Must precede the generic community_posts handler, which
+    // ignores the WHERE id filter.
+    if (/SELECT\s+id,\s*author_id,\s*photo_object_path\s+FROM\s+community_posts/i.test(sql)) {
+      const post = communityPosts.find((p) => p.id === params[0]);
+      return {
+        rows: post
+          ? [
+              {
+                id: post.id,
+                author_id: post.author_id,
+                photo_object_path: post.photo_object_path ?? null,
+              },
+            ]
+          : [],
       };
     }
 
@@ -391,6 +487,7 @@ export function installFakeDb(): FakeDb {
   let postSeq = 0;
   let reportSeq = 0;
   let commentSeq = 0;
+  let notificationSeq = 0;
   let noticeSeq = 0;
   return {
     users,
@@ -400,6 +497,7 @@ export function installFakeDb(): FakeDb {
     communityReports,
     communityLikes,
     communityComments,
+    communityNotifications,
     notices,
     adminBlocks,
     seedUser(u) {
@@ -468,6 +566,19 @@ export function installFakeDb(): FakeDb {
         created_at: c.created_at ?? Date.now(),
       };
       communityComments.push(row);
+      return row;
+    },
+    seedNotification(n) {
+      const row: Row = {
+        id: n.id ?? `notif-${++notificationSeq}`,
+        recipient_id: n.recipient_id,
+        actor_id: n.actor_id,
+        post_id: n.post_id,
+        type: n.type ?? "like",
+        read: n.read ?? false,
+        created_at: n.created_at ?? Date.now(),
+      };
+      communityNotifications.push(row);
       return row;
     },
     seedNotice(n) {
