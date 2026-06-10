@@ -15,6 +15,8 @@ export type FakeDb = {
   settings: Map<string, string>;
   exercises: Row[];
   communityPosts: Row[];
+  notices: Row[];
+  adminBlocks: Map<string, Row>;
   seedUser: (u: Partial<Row> & { id: string; email: string }) => Row;
   seedExercise: (
     e: Partial<Row> & { video_object_path: string }
@@ -22,6 +24,8 @@ export type FakeDb = {
   seedCommunityPost: (
     p: Partial<Row> & { photo_object_path: string | null }
   ) => Row;
+  seedNotice: (n: Partial<Row> & { user_id: string }) => Row;
+  seedAdminBlock: (b: Partial<Row> & { user_id: string }) => Row;
 };
 
 function dupKeyError(): Error & { code: string } {
@@ -58,8 +62,13 @@ export function installFakeDb(): FakeDb {
   const settings = new Map<string, string>();
   const exercises: Row[] = [];
   const communityPosts: Row[] = [];
+  const notices: Row[] = [];
+  const adminBlocks = new Map<string, Row>();
 
-  async function query(text: string, params: any[] = []): Promise<{ rows: Row[] }> {
+  async function query(
+    text: string,
+    params: any[] = []
+  ): Promise<{ rows: Row[]; rowCount?: number }> {
     const sql = text.trim();
 
     // --- exercises (media paths the cleanup sweep reconciles against) -------
@@ -79,6 +88,96 @@ export function installFakeDb(): FakeDb {
         .filter((p) => !onlyWithPhoto || p.photo_object_path != null)
         .map((p) => ({ photo_object_path: p.photo_object_path ?? null }));
       return { rows };
+    }
+
+    // --- community_admin_blocks (global admin block; drives the block notice) -
+    if (/community_admin_blocks/i.test(sql)) {
+      if (/INSERT\s+INTO\s+community_admin_blocks/i.test(sql)) {
+        const [user_id, blocked_by, created_at] = params;
+        if (!adminBlocks.has(user_id)) {
+          adminBlocks.set(user_id, { user_id, blocked_by, created_at });
+        }
+        return { rows: [], rowCount: 1 };
+      }
+      if (/DELETE\s+FROM\s+community_admin_blocks/i.test(sql)) {
+        const existed = adminBlocks.delete(params[0]);
+        return { rows: [], rowCount: existed ? 1 : 0 };
+      }
+      // SELECT created_at FROM community_admin_blocks WHERE user_id = $1
+      const row = adminBlocks.get(params[0]);
+      return { rows: row ? [{ created_at: row.created_at }] : [] };
+    }
+
+    // --- community_notices (member-facing warnings) ------------------------
+    if (/community_notices/i.test(sql)) {
+      if (/INSERT\s+INTO\s+community_notices/i.test(sql)) {
+        // warnUser column order: id, user_id, message, created_by, created_at
+        // (kind is the literal 'warning' in the INSERT).
+        const [id, user_id, message, created_by, created_at] = params;
+        notices.push({
+          id,
+          user_id,
+          kind: "warning",
+          message,
+          created_by,
+          created_at,
+          acknowledged_at: null,
+        });
+        return { rows: [], rowCount: 1 };
+      }
+      if (/DELETE\s+FROM\s+community_notices/i.test(sql)) {
+        // withdrawWarnings: user_id = $1 AND kind = 'warning' AND acknowledged_at IS NULL
+        const userId = params[0];
+        let removed = 0;
+        for (let i = notices.length - 1; i >= 0; i--) {
+          const n = notices[i];
+          if (n.user_id === userId && n.kind === "warning" && n.acknowledged_at == null) {
+            notices.splice(i, 1);
+            removed++;
+          }
+        }
+        return { rows: [], rowCount: removed };
+      }
+      if (/UPDATE\s+community_notices/i.test(sql)) {
+        // acknowledgeNotice: SET acknowledged_at = $3
+        //   WHERE id = $1 AND user_id = $2 AND kind = 'warning' AND acknowledged_at IS NULL
+        const [id, userId, ackAt] = params;
+        let updated = 0;
+        for (const n of notices) {
+          if (
+            n.id === id &&
+            n.user_id === userId &&
+            n.kind === "warning" &&
+            n.acknowledged_at == null
+          ) {
+            n.acknowledged_at = ackAt;
+            updated++;
+          }
+        }
+        return { rows: [], rowCount: updated };
+      }
+      // SELECT paths (hasActiveWarning / listNoticesForMember warnings). Both
+      // scope to outstanding (un-acknowledged) warnings for one member.
+      const userId = params[0];
+      const active = notices.filter(
+        (n) => n.user_id === userId && n.kind === "warning" && n.acknowledged_at == null
+      );
+      if (/SELECT\s+1\s+FROM\s+community_notices/i.test(sql)) {
+        // hasActiveWarning: LIMIT 1, presence-only.
+        return { rows: active.slice(0, 1).map(() => ({ "?column?": 1 })) };
+      }
+      // listNoticesForMember: ORDER BY created_at DESC, id DESC.
+      const ordered = active.slice().sort((a, b) => {
+        if (b.created_at !== a.created_at) return b.created_at - a.created_at;
+        return a.id < b.id ? 1 : a.id > b.id ? -1 : 0;
+      });
+      return {
+        rows: ordered.map((n) => ({
+          id: n.id,
+          message: n.message,
+          created_at: n.created_at,
+        })),
+      };
     }
 
     // --- app_settings ------------------------------------------------------
@@ -182,11 +281,14 @@ export function installFakeDb(): FakeDb {
 
   let exerciseSeq = 0;
   let postSeq = 0;
+  let noticeSeq = 0;
   return {
     users,
     settings,
     exercises,
     communityPosts,
+    notices,
+    adminBlocks,
     seedUser(u) {
       const row: Row = {
         id: u.id,
@@ -218,6 +320,28 @@ export function installFakeDb(): FakeDb {
         photo_object_path: p.photo_object_path ?? null,
       };
       communityPosts.push(row);
+      return row;
+    },
+    seedNotice(n) {
+      const row: Row = {
+        id: n.id ?? `notice-${++noticeSeq}`,
+        user_id: n.user_id,
+        kind: n.kind ?? "warning",
+        message: n.message ?? "",
+        created_by: n.created_by ?? "admin",
+        created_at: n.created_at ?? Date.now(),
+        acknowledged_at: n.acknowledged_at ?? null,
+      };
+      notices.push(row);
+      return row;
+    },
+    seedAdminBlock(b) {
+      const row: Row = {
+        user_id: b.user_id,
+        blocked_by: b.blocked_by ?? "admin",
+        created_at: b.created_at ?? Date.now(),
+      };
+      adminBlocks.set(row.user_id, row);
       return row;
     },
   };
