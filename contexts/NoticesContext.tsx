@@ -22,6 +22,13 @@ type NoticesContextType = {
   // True while the member has at least one un-acknowledged notice (warning or
   // block). Drives the community tab badge.
   hasUnread: boolean;
+  // How many un-acknowledged notices the member has. The tab badge shows this
+  // number once there is more than one, so a member can tell several warnings
+  // arrived rather than just "something".
+  unreadCount: number;
+  // True when at least one un-acknowledged notice is a block (the most severe
+  // kind). Lets the tab badge style a block differently from a warning.
+  hasBlock: boolean;
   // Re-fetch the member's notices from the server.
   refresh: () => Promise<void>;
   // Dismiss (acknowledge) a warning notice. Optimistic: removed locally first,
@@ -101,7 +108,14 @@ export function NoticesProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <NoticesContext.Provider
-      value={{ notices, hasUnread: notices.length > 0, refresh, dismiss }}
+      value={{
+        notices,
+        hasUnread: notices.length > 0,
+        unreadCount: notices.length,
+        hasBlock: notices.some((n) => n.kind === "block"),
+        refresh,
+        dismiss,
+      }}
     >
       {children}
     </NoticesContext.Provider>

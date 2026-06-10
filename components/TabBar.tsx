@@ -29,7 +29,7 @@ type TabBarProps = Pick<BottomTabBarProps, "state" | "navigation">;
 
 export function TabBar({ state, navigation }: TabBarProps) {
   const insets = useInsets();
-  const { hasUnread } = useNotices();
+  const { hasUnread, unreadCount: noticeCount, hasBlock } = useNotices();
   const { unreadCount, refreshUnread } = useNotifications();
 
   const routesByName = Object.fromEntries(state.routes.map((r) => [r.name, r]));
@@ -72,10 +72,17 @@ export function TabBar({ state, navigation }: TabBarProps) {
             const iconName = focused ? conf.icon.nameFocused : conf.icon.name;
             // The Circle tab carries two signals. An unread like/comment count
             // bubble takes priority; when there are none, a pending moderation
-            // notice (warning or block) shows a dot so the member notices it
-            // from any screen.
+            // notice (warning or block) shows its own indicator so the member
+            // notices it from any screen.
             const showCount = name === "community" && unreadCount > 0;
-            const showDot = name === "community" && !showCount && hasUnread;
+            // Moderation indicator (only when there's no like/comment bubble):
+            // a single notice is a dot, several show the count so the member can
+            // tell more than one warning arrived. A block (the most severe kind)
+            // tints it red; a warning-only state uses the softer amber tone.
+            const showNotice = name === "community" && !showCount && hasUnread;
+            const showNoticeCount = showNotice && noticeCount > 1;
+            const showNoticeDot = showNotice && !showNoticeCount;
+            const noticeColor = hasBlock ? colors.danger : colors.highlight;
 
             return (
               <Pressable key={name} style={styles.item} onPress={onPress}>
@@ -93,7 +100,14 @@ export function TabBar({ state, navigation }: TabBarProps) {
                         </Text>
                       </View>
                     ) : null}
-                    {showDot ? <View style={styles.dot} /> : null}
+                    {showNoticeCount ? (
+                      <View style={[styles.badge, { backgroundColor: noticeColor }]}>
+                        <Text style={styles.badgeText} numberOfLines={1}>
+                          {noticeCount > 9 ? "9+" : noticeCount}
+                        </Text>
+                      </View>
+                    ) : null}
+                    {showNoticeDot ? <View style={[styles.dot, { backgroundColor: noticeColor }]} /> : null}
                   </View>
                   <Text numberOfLines={1} style={[styles.label, { color }, focused && styles.labelActive]}>{conf.label}</Text>
                 </View>
