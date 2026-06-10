@@ -9,14 +9,13 @@ import {
   type PbCelebration,
   DEFAULT_STREAK_STATE,
   DEFAULT_PB_CELEBRATION,
-  sanitizeStreakState,
   sanitizePbCelebration,
-  recordActiveDay,
   combineDays,
   displayStreak,
   displayBest,
 } from "@/lib/streak";
 import { usePbCelebrationCore } from "@/hooks/usePbCelebrationCore";
+import { useStreakSyncCore } from "@/hooks/useStreakSyncCore";
 
 // Re-exported so existing importers (`@/contexts/DataContext`) keep working;
 // the canonical definition lives in `@/lib/profile` (server-safe).
@@ -215,7 +214,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [completions, setCompletions] = useState<WorkoutCompletion[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [notifReadIds, setNotifReadIds] = useState<string[]>([]);
-  const [streakState, setStreakState] = useState<StreakState>(DEFAULT_STREAK_STATE);
+  // The streak slice is owned by useStreakSyncCore and the personal-best
+  // celebration slice by usePbCelebrationCore (both below); neither is held
+  // inline here anymore.
 
   useEffect(() => {
     let active = true;
@@ -229,13 +230,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         setCompletions([]);
         setFavorites([]);
         setNotifReadIds([]);
-        setStreakState(DEFAULT_STREAK_STATE);
+        // useStreakSyncCore resets the streak on a null uid; clear the pb here.
         resetPb();
         setReady(false);
         return;
       }
       setReady(false);
-      const [p, w, wt, ph, c, wk, fav, nr, sk, pb] = await Promise.all([
+      const [p, w, wt, ph, c, wk, fav, nr] = await Promise.all([
         getJSON<Profile>(keyFor(uid, "profile"), DEFAULT_PROFILE),
         getJSON<WaterLog[]>(keyFor(uid, "water"), []),
         getJSON<WeightLog[]>(keyFor(uid, "weight"), []),
@@ -244,8 +245,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         getJSON<WorkoutCompletion[]>(keyFor(uid, "workouts"), []),
         getJSON<string[]>(keyFor(uid, "favorites"), []),
         getJSON<string[]>(keyFor(uid, "notifs_read"), []),
-        getJSON<StreakState>(keyFor(uid, "streak"), DEFAULT_STREAK_STATE),
-        getJSON<PbCelebration>(keyFor(uid, "streak_pb"), DEFAULT_PB_CELEBRATION),
       ]);
       if (!active) return;
 
@@ -253,14 +252,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       // bound) profile reconciliation below. Otherwise a meal/water/workout
       // logged while that fetch is in flight would be clobbered when this load
       // finally calls its setters with the stale snapshot read from disk.
+      // The streak cache (device-local) and its server reconciliation are owned
+      // by useStreakSyncCore below; it hydrates local-first on the same uid.
       setWaterLogs(w);
       setProgressPhotos([...ph].sort((a, b) => b.ts - a.ts));
       setCalorieLogs(c);
       setCompletions(wk);
       setFavorites(fav);
       setNotifReadIds(nr);
-      let finalStreak = sanitizeStreakState(sk);
-      setStreakState(finalStreak);
 
       let mergedProfile = { ...DEFAULT_PROFILE, ...p };
 
@@ -300,30 +299,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         } catch {
           // offline / transient: keep the local cache.
         }
-
-        // Streak state is reconciled separately from the profile so a profile
-        // error doesn't skip it. The server is the source of truth so the streak
-        // follows the member across devices / reinstalls; the local cache is the
-        // offline fallback.
-        try {
-          const resp = await fetch(`${getApiUrl()}/api/streak`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (resp.ok) {
-            const { streak: serverStreak } = (await resp.json()) as { streak: StreakState | null };
-            if (!active) return;
-            if (serverStreak) {
-              const sane = sanitizeStreakState(serverStreak);
-              finalStreak = sane;
-              setStreakState(sane);
-              setJSON(keyFor(uid, "streak"), sane);
-            }
-            // No server streak yet: the active-day recording effect will create
-            // it by POSTing today, so there's nothing to push up here.
-          }
-        } catch {
-          // offline / transient: keep the local cache.
-        }
       }
 
       if (!active) return;
@@ -342,13 +317,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       setWeightLogs(weightArr);
 
-      // Seed the personal-best celebration baseline once, after the streak has
-      // been reconciled but before today's active day is recorded (that runs in
-      // a separate effect once `ready` is true). Baselining at the pre-today
-      // best means an already-established record is never celebrated
-      // retroactively, while a record genuinely beaten today still fires.
-      hydratePb(sanitizePbCelebration(pb), finalStreak.longest);
-
+      // The personal-best celebration baseline is seeded once the streak hook
+      // finishes reconciling (see onStreakReconciled), so it baselines against
+      // the server-resolved `longest` and never congratulates an existing record
+      // retroactively, while a record genuinely beaten today still fires. The
+      // seed itself now runs in onStreakReconciled (fired by useStreakSyncCore
+      // once its server reconcile settles), so there is nothing to do here.
       setReady(true);
     })();
     return () => {
@@ -364,61 +338,57 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setJSON(keyFor(uid, "weight"), seeded);
   }, [uid, ready, weightLogs.length, profile.weight, profile.startWeight]);
 
-  // Records today as an active day toward the streak. De-duped: a day already
-  // recorded is a no-op (no state change, no network call). Updates the local
-  // cache optimistically so the UI is instant and offline-tolerant, then writes
-  // through to the server (sending the local window so any days recorded offline
-  // reconcile on this sync). On a network failure the local cache holds the day
-  // and the next hydrate / foreground retries.
-  const recordActiveDayNow = useCallback(async () => {
-    if (!uid) return;
-    const todayK = todayKey();
-    let shouldSync = false;
-    setStreakState((prev) => {
-      if (prev.lastActiveDay === todayK && prev.recentDays.includes(todayK)) return prev;
-      shouldSync = true;
-      const next = recordActiveDay(prev, todayK);
-      setJSON(keyFor(uid, "streak"), next);
-      return next;
-    });
-    if (!shouldSync || !token) return;
-    try {
-      const localWindow = await getJSON<StreakState>(keyFor(uid, "streak"), DEFAULT_STREAK_STATE);
+  // Seeds the personal-best celebration baseline once the streak hook finishes
+  // reconciling against the server. Baselining at the server-resolved `longest`
+  // (not the local cache) means a fresh-device restore never re-congratulates an
+  // existing record, while a record genuinely beaten today still fires. The
+  // actual seed is delegated to usePbCelebrationCore's hydratePb (defined
+  // further below). Because that hook also depends on this streak's `best`,
+  // there is a definition cycle: it is bridged with a ref, which is safe here
+  // since onReconciled only ever fires async (after the hydrate settles, long
+  // after both hooks have run and the ref has been populated).
+  const hydratePbRef = useRef<(loaded: PbCelebration, baselineBest: number) => void>(
+    () => {}
+  );
+  const onStreakReconciled = useCallback((state: StreakState, pbRaw: unknown) => {
+    hydratePbRef.current(sanitizePbCelebration(pbRaw), state.longest);
+  }, []);
+
+  // The device-side streak sync: hydrate the local cache first, reconcile against
+  // the server, record today optimistically, and push the local window so
+  // offline days reconcile on the next sync. The native fetch / storage /
+  // AppState wiring lives here; the testable logic lives in useStreakSyncCore.
+  const { streakState } = useStreakSyncCore({
+    uid,
+    token,
+    ready,
+    getToday: todayKey,
+    loadLocal: () => getJSON<StreakState>(keyFor(uid ?? "", "streak"), DEFAULT_STREAK_STATE),
+    loadPb: () => getJSON<PbCelebration>(keyFor(uid ?? "", "streak_pb"), DEFAULT_PB_CELEBRATION),
+    saveLocal: (s) => {
+      if (uid) setJSON(keyFor(uid, "streak"), s);
+    },
+    fetchServer: async () => {
+      const resp = await fetch(`${getApiUrl()}/api/streak`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!resp.ok) return null;
+      const { streak } = (await resp.json()) as { streak: StreakState | null };
+      return streak;
+    },
+    pushActiveDay: async (day, recentDays) => {
       const resp = await fetch(`${getApiUrl()}/api/streak`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ day: todayK, recentDays: localWindow.recentDays }),
+        body: JSON.stringify({ day, recentDays }),
       });
-      if (resp.ok) {
-        const { streak: saved } = (await resp.json()) as { streak: StreakState };
-        const sane = sanitizeStreakState(saved);
-        setStreakState(sane);
-        setJSON(keyFor(uid, "streak"), sane);
-      }
-    } catch {
-      // offline / transient: the local cache already holds today; the next
-      // successful sync (hydrate or foreground) reconciles it to the server.
-    }
-  }, [uid, token]);
-
-  // Record today on every hydrate (covers fresh login, signup and a restored
-  // session) and again whenever the app returns to the foreground on a NEW day,
-  // so a streak survives across days the app is simply left open.
-  const lastForegroundDay = useRef<string>(todayKey());
-  useEffect(() => {
-    if (!uid || !ready) return;
-    recordActiveDayNow();
-    lastForegroundDay.current = todayKey();
-    const sub = AppState.addEventListener("change", (state) => {
-      if (state !== "active") return;
-      const now = todayKey();
-      if (now !== lastForegroundDay.current) {
-        lastForegroundDay.current = now;
-        recordActiveDayNow();
-      }
-    });
-    return () => sub.remove();
-  }, [uid, ready, recordActiveDayNow]);
+      if (!resp.ok) return null;
+      const { streak } = (await resp.json()) as { streak: StreakState };
+      return streak;
+    },
+    addAppStateListener: (handler) => AppState.addEventListener("change", handler),
+    onReconciled: onStreakReconciled,
+  });
 
   const updateProfile = useCallback(
     async (patch: Partial<Profile>) => {
@@ -616,6 +586,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     streakBest,
     deps: pbDeps,
   });
+  // Bridge for onStreakReconciled (defined above), which seeds the pb baseline.
+  hydratePbRef.current = hydratePb;
 
   const notifications = useMemo<AppNotification[]>(() => {
     const base = buildNotifications({ waterLogs, calorieLogs, completions, profile, streak, newBest: newBestToday });
