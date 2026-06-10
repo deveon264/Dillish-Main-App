@@ -196,6 +196,39 @@ test("authorWarned is true only while a warning is unacknowledged", async () => 
   assert.equal(byPost.get("post-clean")!.authorWarned, false);
 });
 
+test("each group's post carries the correct like, comment, and likedByMe counts", async () => {
+  db.seedUser({ id: "author", email: "author@example.com", name: "Author" });
+  db.seedUser({ id: "rep-a", email: "a@example.com", name: "Reporter A" });
+  db.seedUser({ id: "liker-1", email: "l1@example.com", name: "Liker 1" });
+  db.seedUser({ id: "liker-2", email: "l2@example.com", name: "Liker 2" });
+  db.seedCommunityPost({ id: "post-hot", author_id: "author", body: "hot" });
+  db.seedCommunityPost({ id: "post-quiet", author_id: "author", body: "quiet" });
+  db.seedReport({ post_id: "post-hot", reporter_id: "rep-a", created_at: 200 });
+  db.seedReport({ post_id: "post-quiet", reporter_id: "rep-a", created_at: 100 });
+
+  // post-hot: liked by the admin viewer plus two others, with two comments.
+  db.seedLike({ post_id: "post-hot", user_id: ADMIN_ID });
+  db.seedLike({ post_id: "post-hot", user_id: "liker-1" });
+  db.seedLike({ post_id: "post-hot", user_id: "liker-2" });
+  db.seedComment({ post_id: "post-hot", author_id: "liker-1", body: "nice" });
+  db.seedComment({ post_id: "post-hot", author_id: "liker-2", body: "great" });
+  // post-quiet: one like from someone who is NOT the viewer, no comments.
+  db.seedLike({ post_id: "post-quiet", user_id: "liker-1" });
+
+  const groups = await listReports({ viewerId: ADMIN_ID, limit: 100 });
+  const byPost = new Map(groups.map((g) => [g.post.id, g]));
+
+  const hot = byPost.get("post-hot")!;
+  assert.equal(hot.post.likeCount, 3);
+  assert.equal(hot.post.commentCount, 2);
+  assert.equal(hot.post.likedByMe, true, "viewer liked post-hot");
+
+  const quiet = byPost.get("post-quiet")!;
+  assert.equal(quiet.post.likeCount, 1);
+  assert.equal(quiet.post.commentCount, 0);
+  assert.equal(quiet.post.likedByMe, false, "viewer did not like post-quiet");
+});
+
 test("reportPost records a report only when the post exists", async () => {
   db.seedUser({ id: "author", email: "author@example.com", name: "Author" });
   db.seedUser({ id: "rep-a", email: "a@example.com", name: "Reporter A" });

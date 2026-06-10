@@ -16,6 +16,8 @@ export type FakeDb = {
   exercises: Row[];
   communityPosts: Row[];
   communityReports: Row[];
+  communityLikes: Row[];
+  communityComments: Row[];
   notices: Row[];
   adminBlocks: Map<string, Row>;
   seedUser: (u: Partial<Row> & { id: string; email: string }) => Row;
@@ -27,6 +29,10 @@ export type FakeDb = {
   ) => Row;
   seedReport: (
     r: Partial<Row> & { post_id: string; reporter_id: string }
+  ) => Row;
+  seedLike: (l: Partial<Row> & { post_id: string; user_id: string }) => Row;
+  seedComment: (
+    c: Partial<Row> & { post_id: string; author_id: string }
   ) => Row;
   seedNotice: (n: Partial<Row> & { user_id: string }) => Row;
   seedAdminBlock: (b: Partial<Row> & { user_id: string }) => Row;
@@ -67,6 +73,8 @@ export function installFakeDb(): FakeDb {
   const exercises: Row[] = [];
   const communityPosts: Row[] = [];
   const communityReports: Row[] = [];
+  const communityLikes: Row[] = [];
+  const communityComments: Row[] = [];
   const notices: Row[] = [];
   const adminBlocks = new Map<string, Row>();
 
@@ -130,6 +138,17 @@ export function installFakeDb(): FakeDb {
             n.kind === "warning" &&
             n.acknowledged_at == null
         );
+        // like_count / comment_count / liked_by_me mirror the scalar subqueries
+        // in listReports: counts over community_likes/community_comments for the
+        // post, and whether the viewer ($1) is among the post's likers.
+        const viewerId = params[0];
+        const likeCount = communityLikes.filter((l) => l.post_id === post.id).length;
+        const commentCount = communityComments.filter(
+          (c) => c.post_id === post.id
+        ).length;
+        const likedByMe = communityLikes.some(
+          (l) => l.post_id === post.id && l.user_id === viewerId
+        );
         rows.push({
           report_id: rep.id,
           report_reason: rep.reason ?? null,
@@ -149,9 +168,9 @@ export function installFakeDb(): FakeDb {
           author_avatar:
             author.avatar_object_path == null ? (author.avatar ?? null) : null,
           author_avatar_path: author.avatar_object_path ?? null,
-          like_count: 0,
-          comment_count: 0,
-          liked_by_me: false,
+          like_count: likeCount,
+          comment_count: commentCount,
+          liked_by_me: likedByMe,
           author_report_count: authorReportCount,
           author_blocked: authorBlocked,
           author_warned: authorWarned,
@@ -371,6 +390,7 @@ export function installFakeDb(): FakeDb {
   let exerciseSeq = 0;
   let postSeq = 0;
   let reportSeq = 0;
+  let commentSeq = 0;
   let noticeSeq = 0;
   return {
     users,
@@ -378,6 +398,8 @@ export function installFakeDb(): FakeDb {
     exercises,
     communityPosts,
     communityReports,
+    communityLikes,
+    communityComments,
     notices,
     adminBlocks,
     seedUser(u) {
@@ -426,6 +448,26 @@ export function installFakeDb(): FakeDb {
         created_at: r.created_at ?? Date.now(),
       };
       communityReports.push(row);
+      return row;
+    },
+    seedLike(l) {
+      const row: Row = {
+        post_id: l.post_id,
+        user_id: l.user_id,
+        created_at: l.created_at ?? Date.now(),
+      };
+      communityLikes.push(row);
+      return row;
+    },
+    seedComment(c) {
+      const row: Row = {
+        id: c.id ?? `comment-${++commentSeq}`,
+        post_id: c.post_id,
+        author_id: c.author_id,
+        body: c.body ?? "",
+        created_at: c.created_at ?? Date.now(),
+      };
+      communityComments.push(row);
       return row;
     },
     seedNotice(n) {
