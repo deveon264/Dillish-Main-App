@@ -30,6 +30,15 @@ Three storage sweeps run automatically on a schedule via
   exercise sweep, it only removes objects older than a 1-hour grace window, so
   an upload that is still being turned into a post is never deleted out from
   under itself.
+- **Profile avatars** (`profile-avatars/<uuid>`) are reclaimed by
+  `POST /api/profile-avatar-cleanup`. When a member replaces their avatar, the
+  new object is written before `users.avatar_object_path` is updated and the old
+  object is deleted inline, so a crash or cut-off request between those steps can
+  orphan either object. This sweep reconciles storage against the
+  `users.avatar_object_path` column, deleting any `profile-avatars/*` object that
+  no user references. Like the exercise and community sweeps, it only removes
+  objects older than a 1-hour grace window, so an avatar that is still being
+  saved is never deleted out from under itself.
 
 How it works:
 - `scripts/cleanup-cron.mjs` is a standalone Node script. It mints the same

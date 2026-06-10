@@ -142,6 +142,15 @@ export function installFakeDb(): FakeDb {
       return { rows: [{ ...row }] };
     }
 
+    // --- users.avatar_object_path (paths the avatar cleanup reconciles) -----
+    if (/avatar_object_path\s+FROM\s+users/i.test(sql)) {
+      const onlyWithAvatar = /avatar_object_path\s+IS\s+NOT\s+NULL/i.test(sql);
+      const rows = [...users.values()]
+        .filter((u) => !onlyWithAvatar || u.avatar_object_path != null)
+        .map((u) => ({ avatar_object_path: u.avatar_object_path ?? null }));
+      return { rows };
+    }
+
     if (/SELECT\s+1\s+FROM\s+users/i.test(sql)) {
       // emailTaken: optional "AND id <> $2" excludes the caller's own row.
       const email = params[0];

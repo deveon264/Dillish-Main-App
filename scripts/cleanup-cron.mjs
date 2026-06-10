@@ -13,6 +13,8 @@
 //                                    so age — not a DB join — is the only signal)
 //   - POST /api/community-photo-cleanup reclaims orphaned community post photos
 //                                    (reconciled against the `community_posts` table)
+//   - POST /api/profile-avatar-cleanup reclaims orphaned profile avatars
+//                                    (reconciled against the `users` table)
 //
 // Auth: rather than introducing a new machine secret, it mints the very same
 // HMAC-signed admin Bearer token the endpoint already verifies, using the
@@ -105,6 +107,7 @@ async function main() {
     "exercise-cleanup",
     "meal-photo-cleanup",
     "community-photo-cleanup",
+    "profile-avatar-cleanup",
   ]) {
     const ok = await triggerCleanup(`${root}/api/${path}${query}`, token, dryRun);
     if (!ok) worstExit = 1;
