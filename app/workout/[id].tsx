@@ -15,21 +15,15 @@ import { Button } from "@/components/Button";
 import { getWorkout } from "@/constants/workouts";
 import { listWorkoutExercises, videoUrl, posterUrl } from "@/lib/exercises";
 import { computeWorkoutProgress } from "@/lib/workoutProgress";
-import {
-  decideExerciseCompletion,
-  decideRestTick,
-  decideAdvanceTarget,
-  decideJump,
-} from "@/lib/workoutAdvance";
+import { decideExerciseCompletion } from "@/lib/workoutAdvance";
 import { useData } from "@/contexts/DataContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { todayKey, getJSON, setJSON } from "@/lib/storage";
 import { useInsets } from "@/hooks/useInsets";
 import { useFullscreenOrientation } from "@/hooks/useFullscreenOrientation";
+import { useWorkoutAdvanceCore } from "@/hooks/useWorkoutAdvanceCore";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
-
-type Phase = "active" | "rest" | "done";
 
 const WEEK_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -48,13 +42,9 @@ export default function WorkoutPlayer() {
   const workout = getWorkout(id);
   const fav = workout ? isFavorite(workout.id) : false;
 
-  const [phase, setPhase] = useState<Phase>("active");
-  const [index, setIndex] = useState(0);
-  const [remaining, setRemaining] = useState(() => workout?.exercises[0]?.seconds ?? 0);
   const [paused, setPaused] = useState(true);
   // Rest gap between exercises (device preference) and the live rest countdown.
   const [restGap, setRestGap] = useState<number>(DEFAULT_REST_GAP);
-  const [restRemaining, setRestRemaining] = useState(0);
   // Guards an exercise from being "completed" twice (e.g. video end + countdown).
   // Reset whenever the exercise index changes.
   const completedIndexRef = useRef<number>(-1);
@@ -149,16 +139,44 @@ export default function WorkoutPlayer() {
     }, 1800);
   };
 
-  const jumpTo = (i: number) => {
-    if (decideJump({ target: i, index }) === "ignore") return;
-    setPhase("active");
-    setRestRemaining(0);
-    setIndex(i);
-    setRemaining(workout!.exercises[i].seconds);
-    setPaused(false);
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    showToast(`Replaying ${workout!.exercises[i].name}`, "reload");
-  };
+  // The active/rest/done advance machine (rest countdown -> auto-advance, replay
+  // jump-back, finish). Extracted to a deps-injectable hook so the wiring is
+  // unit-tested without a renderer; see hooks/useWorkoutAdvanceCore.ts.
+  const {
+    phase,
+    index,
+    remaining,
+    restRemaining,
+    setPhase,
+    setIndex,
+    setRemaining,
+    setRestRemaining,
+    goNext,
+    jumpTo,
+    finish,
+  } = useWorkoutAdvanceCore({
+    total: workout?.exercises.length ?? 0,
+    restGap,
+    paused,
+    durationAt: (i) => workout?.exercises[i]?.seconds ?? 0,
+    initialRemaining: workout?.exercises[0]?.seconds ?? 0,
+    onFinish: () => {
+      if (timer.current) clearInterval(timer.current);
+      if (!savedRef.current && workout) {
+        savedRef.current = true;
+        completeWorkout({ workoutId: workout.id, kcal: workout.kcal, durationMin: workout.durationMin });
+      }
+      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onReplay: (i) => {
+      if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setPaused(false);
+      if (workout) showToast(`Replaying ${workout.exercises[i].name}`, "reload");
+    },
+    onRestTick: (rr) => {
+      if (Platform.OS !== "web" && rr <= 4) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    },
+  });
 
   const changeRestGap = (v: number) => {
     setRestGap(v);
@@ -439,25 +457,6 @@ export default function WorkoutPlayer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remaining, phase, index, current, currentVideo, videoDuration]);
 
-  // Rest countdown between exercises. Ticks down once per second (pausable), then
-  // advances to the next exercise and auto-plays its video.
-  useEffect(() => {
-    const tick = decideRestTick({ phase, paused, restRemaining });
-    if (tick === "idle") return;
-    if (tick === "advance") {
-      goNext();
-      return;
-    }
-    const t = setTimeout(() => {
-      if (Platform.OS !== "web" && restRemaining <= 4) {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
-      setRestRemaining((r) => Math.max(0, r - 1));
-    }, 1000);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, paused, restRemaining]);
-
   // Warm this workout's exercise photos into the image cache the moment the
   // player opens, so the header and the rest "up next" backgrounds appear
   // instantly instead of popping in one screen at a time.
@@ -488,19 +487,6 @@ export default function WorkoutPlayer() {
       </GradientBackground>
     );
   }
-
-  const goNext = () => {
-    const decision = decideAdvanceTarget({ index, total });
-    if (decision.action === "advance") {
-      const ni = decision.nextIndex;
-      setRestRemaining(0);
-      setPhase("active");
-      setIndex(ni);
-      setRemaining(workout.exercises[ni].seconds);
-    } else {
-      finish();
-    }
-  };
 
   // Marks the current exercise complete (from a video end or a countdown). Guards
   // against firing twice for the same exercise, then either finishes the workout,
@@ -534,16 +520,6 @@ export default function WorkoutPlayer() {
     setPhase("rest");
   };
   onVideoEndRef.current = () => completeExercise("video");
-
-  const finish = () => {
-    if (timer.current) clearInterval(timer.current);
-    if (!savedRef.current) {
-      savedRef.current = true;
-      completeWorkout({ workoutId: workout.id, kcal: workout.kcal, durationMin: workout.durationMin });
-    }
-    if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setPhase("done");
-  };
 
   if (phase === "rest" && current && index + 1 < total) {
     const next = workout.exercises[index + 1];
