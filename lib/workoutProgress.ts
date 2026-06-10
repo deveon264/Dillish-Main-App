@@ -54,6 +54,19 @@ export type WorkoutProgress = {
 
 const pct = (n: number): Pct => `${Math.round(n * 100)}%`;
 
+// Formats a number of seconds as the "m:ss" clock shown on the player bar and
+// session stats. The same helper formats both the bar's elapsed/total (which in
+// video mode are fractional clip times, e.g. 8.5s, and in countdown mode are
+// whole exercise seconds) and the cumulative session stats. Fractional seconds
+// floor to the second on screen, and negatives clamp to 0:00 so an overshoot
+// (a stale timeUpdate, or remaining > total) can never render "-1:59".
+export function formatClock(seconds: number): string {
+  const s = Number.isFinite(seconds) ? Math.max(0, Math.floor(seconds)) : 0;
+  const mins = Math.floor(s / 60);
+  const secs = s % 60;
+  return `${mins}:${String(secs).padStart(2, "0")}`;
+}
+
 export function computeWorkoutProgress(input: WorkoutProgressInput): WorkoutProgress {
   const { exerciseSeconds, index, remaining, workoutKcal, hasVideo, videoTime, videoDuration } =
     input;

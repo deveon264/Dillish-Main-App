@@ -1,7 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { computeWorkoutProgress, type WorkoutProgressInput } from "@/lib/workoutProgress";
+import {
+  computeWorkoutProgress,
+  formatClock,
+  type WorkoutProgressInput,
+} from "@/lib/workoutProgress";
 
 // A 3-exercise workout: 30s, 60s, 30s = 120s total.
 function input(over: Partial<WorkoutProgressInput> = {}): WorkoutProgressInput {
@@ -141,4 +145,48 @@ test("empty workout (no exercises) never divides by zero", () => {
   assert.equal(p.overallPct, "0%");
   assert.equal(p.barPct, "0%");
   assert.equal(p.kcalBurned, 0);
+});
+
+// --- (4) formatClock: the "m:ss" clock on the bar and session stats --------
+
+test("formatClock: countdown mode (whole exercise seconds) formats m:ss", () => {
+  // Countdown mode feeds the bar whole seconds (currentSeconds - remaining).
+  assert.equal(formatClock(0), "0:00");
+  assert.equal(formatClock(5), "0:05");
+  assert.equal(formatClock(59), "0:59");
+  assert.equal(formatClock(60), "1:00");
+  assert.equal(formatClock(75), "1:15");
+  assert.equal(formatClock(600), "10:00");
+});
+
+test("formatClock: clip mode (fractional clip times) floors to the second", () => {
+  // Video mode feeds the bar fractional clip times (videoTime/videoDuration).
+  // They must floor to a whole second on screen, never round up early.
+  assert.equal(formatClock(8.5), "0:08");
+  assert.equal(formatClock(8.99), "0:08");
+  assert.equal(formatClock(59.9), "0:59");
+  assert.equal(formatClock(119.4), "1:59");
+});
+
+test("formatClock: negatives and non-finite inputs clamp to 0:00", () => {
+  // An overshoot (stale timeUpdate, or remaining > total) must never render a
+  // negative clock, and a not-yet-known duration (NaN) shows 0:00.
+  assert.equal(formatClock(-1), "0:00");
+  assert.equal(formatClock(-0.5), "0:00");
+  assert.equal(formatClock(NaN), "0:00");
+  assert.equal(formatClock(Infinity), "0:00");
+});
+
+test("formatClock: matches the bar values from computeWorkoutProgress in both modes", () => {
+  // The helper formats whatever the progress math produces. Prove the two flow
+  // together: clip mode (fractional) and countdown mode (whole seconds).
+  const clip = computeWorkoutProgress(
+    input({ index: 1, remaining: 45, hasVideo: true, videoTime: 8.7, videoDuration: 20 }),
+  );
+  assert.equal(formatClock(clip.barElapsed), "0:08");
+  assert.equal(formatClock(clip.barTotal), "0:20");
+
+  const countdown = computeWorkoutProgress(input({ index: 1, remaining: 45 }));
+  assert.equal(formatClock(countdown.barElapsed), "0:15");
+  assert.equal(formatClock(countdown.barTotal), "1:00");
 });

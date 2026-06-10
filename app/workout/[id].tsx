@@ -14,7 +14,7 @@ import { pageHeaderStyles } from "@/components/PageHeader";
 import { Button } from "@/components/Button";
 import { getWorkout } from "@/constants/workouts";
 import { listWorkoutExercises, videoUrl, posterUrl } from "@/lib/exercises";
-import { computeWorkoutProgress } from "@/lib/workoutProgress";
+import { computeWorkoutProgress, formatClock } from "@/lib/workoutProgress";
 import { useData } from "@/contexts/DataContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { todayKey, getJSON, setJSON } from "@/lib/storage";
@@ -565,7 +565,7 @@ export default function WorkoutPlayer() {
       const k = todayKey(d);
       return { label, active: streakDays.has(k), isToday: k === tkNow };
     });
-    const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+    const fmt = formatClock;
     const parts = workout.title.split(" ");
     const titleTail = parts.length > 1 ? parts.pop()! : "";
     const titleHead = parts.join(" ");
