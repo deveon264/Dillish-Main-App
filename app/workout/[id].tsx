@@ -23,6 +23,7 @@ import { useFullscreenOrientation } from "@/hooks/useFullscreenOrientation";
 import { useWorkoutAdvanceCore } from "@/hooks/useWorkoutAdvanceCore";
 import { tickExerciseRemaining } from "@/lib/workoutAdvance";
 import { loadExerciseClip } from "@/lib/workoutClipLoader";
+import { decidePlayPauseMirror, decideSeek } from "@/lib/workoutControls";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
@@ -253,21 +254,25 @@ export default function WorkoutPlayer() {
   const seekRelative = (delta: number) => {
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     showToast(delta > 0 ? "Forward 15s" : "Back 15s", delta > 0 ? "play-forward" : "play-back");
-    // Only seek the clip when a video is actually loaded (duration known). If a
-    // mapped video failed to load we fall through to nudging the countdown so
-    // the buttons stay responsive.
-    if (currentVideo && videoDuration > 0.1) {
+    // Seek the real clip when one is loaded, otherwise nudge the simulated
+    // countdown so the buttons stay responsive. The branch decision lives in
+    // `@/lib/workoutControls` so it can be unit-tested without expo-video.
+    const decision = decideSeek({
+      hasVideo: !!currentVideo,
+      videoDuration,
+      delta,
+      currentSeconds: current?.seconds ?? null,
+      remaining,
+    });
+    if (decision.action === "seek") {
       try {
-        player.seekBy(delta);
+        player.seekBy(decision.by);
       } catch {
         // ignore transient player state errors
       }
       return;
     }
-    setRemaining((r) => {
-      const max = current?.seconds ?? r;
-      return Math.max(0, Math.min(max, r - delta));
-    });
+    setRemaining(decision.remaining);
   };
 
   // Restore the saved rest-gap preference once on mount.
@@ -343,9 +348,10 @@ export default function WorkoutPlayer() {
   // (and the simulated countdown) drive it together. Keyed only on `paused` so
   // it reacts to user intent, not to exercise changes (those are handled above).
   useEffect(() => {
-    if (!currentVideo) return;
+    const action = decidePlayPauseMirror({ hasVideo: !!currentVideo, paused });
+    if (action === "none") return;
     try {
-      if (paused) player.pause();
+      if (action === "pause") player.pause();
       else player.play();
     } catch {
       // ignore transient player state errors
