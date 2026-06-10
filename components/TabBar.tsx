@@ -17,7 +17,7 @@ const CONF: Record<string, { label: string; icon: IconConf }> = {
   workouts: { label: "Workouts", icon: { lib: "mci", name: "dumbbell", nameFocused: "dumbbell" } },
   tracker: { label: "Tracker", icon: { lib: "ion", name: "flame-outline", nameFocused: "flame" } },
   progress: { label: "Progress", icon: { lib: "ion", name: "stats-chart-outline", nameFocused: "stats-chart" } },
-  community: { label: "Community", icon: { lib: "ion", name: "people-outline", nameFocused: "people" } },
+  community: { label: "Circle", icon: { lib: "ion", name: "people-outline", nameFocused: "people" } },
   profile: { label: "Profile", icon: { lib: "ion", name: "person-outline", nameFocused: "person" } },
 };
 
