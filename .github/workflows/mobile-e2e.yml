@@ -1,0 +1,109 @@
+name: Mobile E2E (workout video)
+
+# Runs the on-device Maestro flow (.maestro/workout-video-advance.yaml) on a real
+# Android emulator so the REAL expo-video native module is exercised before each
+# release. The Replit container has no emulator, so this is the automated home for
+# `npm run e2e` / scripts/e2e-workout.sh.
+#
+# A failing flow fails the job, which (because release publishing depends on it)
+# blocks the release.
+on:
+  # Block releases: this runs when a GitHub Release is published. Wire your
+  # release/publish job to `needs: e2e` (or require this check in branch
+  # protection) so a red flow stops the release.
+  release:
+    types: [published]
+  # Allow on-demand runs (e.g. before cutting a release).
+  workflow_dispatch:
+  # Catch regressions early on the default branch.
+  push:
+    branches: [main]
+    paths:
+      - ".maestro/**"
+      - "components/**"
+      - "app/**"
+      - "hooks/**"
+      - "scripts/e2e-workout.sh"
+      - ".github/workflows/mobile-e2e.yml"
+
+# Never let two device runs race the same emulator/build cache.
+concurrency:
+  group: mobile-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Workout video flow (Android emulator)
+    # ubuntu-latest exposes nested virtualization (KVM) for hardware-accelerated
+    # Android emulators on GitHub-hosted runners.
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      # Injected from repository/environment secrets. The flow falls back to the
+      # defaults baked into workout-video-advance.yaml if a secret is unset, but
+      # CI should always provide a dedicated QA account.
+      MAESTRO_EMAIL: ${{ secrets.MAESTRO_EMAIL }}
+      MAESTRO_PASSWORD: ${{ secrets.MAESTRO_PASSWORD }}
+      MAESTRO_WORKOUT_ID: ${{ secrets.MAESTRO_WORKOUT_ID }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Set up Java (Android Gradle build)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Generate the native android/ project from app.json. expo-video is a native
+      # module so Expo Go cannot run this flow; we build a real debug APK instead.
+      - name: Prebuild native Android project
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew :app:assembleDebug --no-daemon
+
+      - name: Install Maestro CLI
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      # Boot an emulator, install the freshly built APK, then run the flow. The
+      # reactivecircus action manages the AVD lifecycle and KVM acceleration.
+      - name: Run Maestro flow on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: |
+            adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+            scripts/e2e-workout.sh
+
+      - name: Upload Maestro debug output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-debug-output
+          path: ~/.maestro/tests/**
+          if-no-files-found: ignore
+          retention-days: 14

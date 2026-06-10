@@ -56,8 +56,42 @@ maestro test \
   .maestro/workout-video-advance.yaml
 ```
 
+## Running automatically in CI
+
+`.github/workflows/mobile-e2e.yml` runs this flow on a real Android emulator so
+the native `expo-video` module is exercised before each release (the Replit
+container cannot, since it has no emulator). The job:
+
+1. Installs deps, prebuilds the native `android/` project, and builds a debug APK
+   (`expo-video` is native, so Expo Go cannot run the flow).
+2. Boots a hardware-accelerated Android emulator, installs the APK, and runs
+   `scripts/e2e-workout.sh` (the same wrapper `npm run e2e` uses).
+
+It triggers on `release: published` (so a red flow blocks the release when the
+publish job is gated on it), on pushes to `main` that touch the app or flow, and
+on demand via **workflow_dispatch**.
+
+### Required CI secrets
+
+Set these as repository (or environment) secrets so the flow signs in to a real
+QA account:
+
+- `MAESTRO_EMAIL` - the QA test account email.
+- `MAESTRO_PASSWORD` - that account's password.
+- `MAESTRO_WORKOUT_ID` - a workout whose first exercise has a short uploaded clip.
+
+If a secret is unset the flow falls back to the defaults baked into
+`workout-video-advance.yaml`, but CI should always supply a dedicated QA account.
+
+### Blocking a release
+
+Because the job runs on `release: published`, require it as a status check (branch
+protection) or make your publish/EAS-submit job depend on it (`needs: e2e`) so a
+failing flow stops the release.
+
 ## Layout
 
 - `workout-video-advance.yaml` - the runnable flow.
 - `subflows/login.yaml` - reusable sign-in step (skipped when already signed in).
 - `config.yaml` - Maestro project config (treats top-level files as suites).
+- `../.github/workflows/mobile-e2e.yml` - the mobile CI job that runs this flow.

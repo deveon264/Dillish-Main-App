@@ -70,7 +70,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "tsx --test __tests__/*.test.ts"
+    "test": "tsx --test __tests__/*.test.ts",
+    "e2e": "scripts/e2e-workout.sh"
   },
   "private": true
 }
