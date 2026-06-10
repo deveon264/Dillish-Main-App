@@ -11,13 +11,12 @@ import {
   DEFAULT_PB_CELEBRATION,
   sanitizeStreakState,
   sanitizePbCelebration,
-  advancePbCelebration,
-  isCelebratingToday,
   recordActiveDay,
   combineDays,
   displayStreak,
   displayBest,
 } from "@/lib/streak";
+import { usePbCelebrationCore } from "@/hooks/usePbCelebrationCore";
 
 // Re-exported so existing importers (`@/contexts/DataContext`) keep working;
 // the canonical definition lives in `@/lib/profile` (server-safe).
@@ -217,7 +216,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [notifReadIds, setNotifReadIds] = useState<string[]>([]);
   const [streakState, setStreakState] = useState<StreakState>(DEFAULT_STREAK_STATE);
-  const [pbCelebration, setPbCelebration] = useState<PbCelebration>(DEFAULT_PB_CELEBRATION);
 
   useEffect(() => {
     let active = true;
@@ -232,7 +230,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         setFavorites([]);
         setNotifReadIds([]);
         setStreakState(DEFAULT_STREAK_STATE);
-        setPbCelebration(DEFAULT_PB_CELEBRATION);
+        resetPb();
         setReady(false);
         return;
       }
@@ -349,11 +347,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       // a separate effect once `ready` is true). Baselining at the pre-today
       // best means an already-established record is never celebrated
       // retroactively, while a record genuinely beaten today still fires.
-      const loadedPb = sanitizePbCelebration(pb);
-      const seededPb =
-        loadedPb.value < 0 ? { value: Math.max(0, finalStreak.longest), day: "" } : loadedPb;
-      if (seededPb !== loadedPb) setJSON(keyFor(uid, "streak_pb"), seededPb);
-      setPbCelebration(seededPb);
+      hydratePb(sanitizePbCelebration(pb), finalStreak.longest);
 
       setReady(true);
     })();
@@ -603,25 +597,25 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     [streakState, streak]
   );
 
-  // Stamp a new personal best the moment the displayed best climbs past the last
-  // value we baselined/celebrated. The baseline itself is seeded once in the
-  // hydrate effect above (so an existing record is never congratulated); this
-  // only advances it afterwards, de-duped to one stamp per record value.
-  useEffect(() => {
-    if (!uid || !ready) return;
-    setPbCelebration((prev) => {
-      if (prev.value < 0) return prev;
-      const next = advancePbCelebration(prev, streakBest, todayKey());
-      if (next === prev) return prev;
-      setJSON(keyFor(uid, "streak_pb"), next);
-      return next;
-    });
-  }, [uid, ready, streakBest]);
-
-  const newBestToday = useMemo(
-    () => (isCelebratingToday(pbCelebration, todayKey()) ? pbCelebration.value : null),
-    [pbCelebration]
+  // Personal-best celebration lifecycle (baseline-once + stamp-on-new-record),
+  // extracted into a deps-injectable hook so the orchestration can be unit
+  // tested. `pbDeps` is memoized once so the hook's stamping effect doesn't
+  // re-run every render; the helpers it closes over are module-stable. The
+  // hydrate effect above calls `hydratePb` / `resetPb` (both defined here) after
+  // their closures run post-commit.
+  const pbDeps = useMemo(
+    () => ({
+      persist: (id: string, rec: PbCelebration) => setJSON(keyFor(id, "streak_pb"), rec),
+      today: () => todayKey(),
+    }),
+    []
   );
+  const { pbCelebration, newBestToday, hydratePb, resetPb } = usePbCelebrationCore({
+    uid,
+    ready,
+    streakBest,
+    deps: pbDeps,
+  });
 
   const notifications = useMemo<AppNotification[]>(() => {
     const base = buildNotifications({ waterLogs, calorieLogs, completions, profile, streak, newBest: newBestToday });
