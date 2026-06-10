@@ -334,7 +334,8 @@ export function installFakeDb(): FakeDb {
             c.post_id === post.id &&
             !communityBlocks.some(
               (b) => b.blocker_id === viewerId && b.blocked_id === c.author_id
-            )
+            ) &&
+            !adminBlocks.has(c.author_id)
         ).length;
         const likedByMe = communityLikes.some(
           (l) => l.post_id === post.id && l.user_id === viewerId
@@ -466,9 +467,23 @@ export function installFakeDb(): FakeDb {
       // comment whose author account no longer exists (INNER JOIN users).
       const byId = /WHERE\s+c\.id\s*=\s*\$1/i.test(sql);
       const key = params[0];
-      const matching = communityComments.filter((c) =>
-        byId ? c.id === key : c.post_id === key
-      );
+      // listComments ($2 = viewer) hides comments from members the viewer
+      // blocked and members an admin has globally blocked; getComment (by id)
+      // applies neither so an author always gets their own new comment back.
+      const viewerId = byId ? undefined : params[1];
+      const matching = communityComments.filter((c) => {
+        if (byId ? c.id !== key : c.post_id !== key) return false;
+        if (byId) return true;
+        if (
+          communityBlocks.some(
+            (b) => b.blocker_id === viewerId && b.blocked_id === c.author_id
+          )
+        ) {
+          return false;
+        }
+        if (adminBlocks.has(c.author_id)) return false;
+        return true;
+      });
       const joined = matching
         .map((c) => ({ c, author: users.get(c.author_id) }))
         .filter((x): x is { c: Row; author: Row } => !!x.author);

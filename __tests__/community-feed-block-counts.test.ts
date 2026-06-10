@@ -1,7 +1,7 @@
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 
-import { listPosts, getPost, toggleLike } from "@/lib/communityStore";
+import { listPosts, getPost, toggleLike, listComments } from "@/lib/communityStore";
 
 import { installFakeDb, uninstallFakeDb, type FakeDb } from "./support/fakeUserDb";
 
@@ -74,6 +74,31 @@ test("the block is per-viewer: another member still sees the full counts", async
   const [post] = await listPosts({ viewerId: FRIEND, limit: 20 });
   assert.equal(post.likeCount, 2);
   assert.equal(post.commentCount, 2);
+});
+
+test("an admin-blocked member's comment is hidden from every viewer and the count", async () => {
+  const id = seedPostWithEngagement();
+  db.seedAdminBlock({ user_id: BLOCKED });
+
+  // The comment list drops the admin-blocked member's comment for everyone.
+  const comments = await listComments({ postId: id, viewerId: VIEWER });
+  assert.deepEqual(
+    comments.map((c) => c.author.name),
+    ["Fran"]
+  );
+
+  // FRIEND blocked no one personally, but the admin block still hides BLOCKED.
+  const friendView = await listComments({ postId: id, viewerId: FRIEND });
+  assert.deepEqual(
+    friendView.map((c) => c.author.name),
+    ["Fran"]
+  );
+
+  // The post header comment count matches the filtered list for every viewer.
+  const [post] = await listPosts({ viewerId: FRIEND, limit: 20 });
+  assert.equal(post.commentCount, 1);
+  const detail = await getPost(id, FRIEND);
+  assert.equal(detail?.commentCount, 1);
 });
 
 test("toggleLike returns a count that also excludes a blocked liker", async () => {

@@ -125,6 +125,9 @@ const POST_SELECT = `
          AND NOT EXISTS (
            SELECT 1 FROM community_blocks b
            WHERE b.blocker_id = $1 AND b.blocked_id = c.author_id
+         )
+         AND NOT EXISTS (
+           SELECT 1 FROM community_admin_blocks ab WHERE ab.user_id = c.author_id
          )) AS comment_count,
     EXISTS (SELECT 1 FROM community_likes l2 WHERE l2.post_id = p.id AND l2.user_id = $1) AS liked_by_me
   FROM community_posts p
@@ -299,6 +302,9 @@ export async function listComments(opts: {
        AND NOT EXISTS (
          SELECT 1 FROM community_blocks b
          WHERE b.blocker_id = $2 AND b.blocked_id = c.author_id
+       )
+       AND NOT EXISTS (
+         SELECT 1 FROM community_admin_blocks ab WHERE ab.user_id = c.author_id
        )
      ORDER BY c.created_at ASC, c.id ASC`,
     [opts.postId, opts.viewerId]
