@@ -22,9 +22,6 @@ export type FakeDb = {
   notices: Row[];
   adminBlocks: Map<string, Row>;
   seedUser: (u: Partial<Row> & { id: string; email: string }) => Row;
-  seedNotification: (
-    n: Partial<Row> & { recipient_id: string; created_at: number }
-  ) => Row;
   seedExercise: (
     e: Partial<Row> & { video_object_path: string }
   ) => Row;
@@ -39,7 +36,7 @@ export type FakeDb = {
     c: Partial<Row> & { post_id: string; author_id: string }
   ) => Row;
   seedNotification: (
-    n: Partial<Row> & { recipient_id: string; actor_id: string; post_id: string }
+    n: Partial<Row> & { recipient_id: string }
   ) => Row;
   seedNotice: (n: Partial<Row> & { user_id: string }) => Row;
   seedAdminBlock: (b: Partial<Row> & { user_id: string }) => Row;
@@ -190,8 +187,10 @@ export function installFakeDb(): FakeDb {
     // --- community_notifications (scheduled age-based delete sweep) ---------
     // The notification cleanup helper issues exactly two shapes: a COUNT of rows
     // past the cutoff (dry run) and a DELETE of those same rows (real run). Both
-    // filter on `created_at < $1`.
-    if (/community_notifications/i.test(sql)) {
+    // filter on `created_at < $1`. This guard is scoped to that `created_at < $1`
+    // shape so the inbox INSERT/UPDATE/COUNT/list (handled further down) is not
+    // swallowed here.
+    if (/community_notifications/i.test(sql) && /created_at\s*<\s*\$1/i.test(sql)) {
       const cutoff = params[0];
       if (/DELETE\s+FROM\s+community_notifications/i.test(sql)) {
         const before = communityNotifications.length;
@@ -306,6 +305,91 @@ export function installFakeDb(): FakeDb {
             ]
           : [],
       };
+    }
+
+    // --- community_likes (toggleLike: insert-or-delete + count) ------------
+    // toggleLike inserts with ON CONFLICT DO NOTHING (rowCount 1 when newly
+    // liked, 0 when already liked), then deletes on the un-like path, then
+    // counts. deletePostCascade also deletes every like for a post.
+    if (/community_likes/i.test(sql)) {
+      if (/INSERT\s+INTO\s+community_likes/i.test(sql)) {
+        const [post_id, user_id, created_at] = params;
+        const exists = communityLikes.some(
+          (l) => l.post_id === post_id && l.user_id === user_id
+        );
+        if (exists) return { rows: [], rowCount: 0 }; // ON CONFLICT DO NOTHING
+        communityLikes.push({ post_id, user_id, created_at });
+        return { rows: [], rowCount: 1 };
+      }
+      if (/DELETE\s+FROM\s+community_likes/i.test(sql)) {
+        // un-like: WHERE post_id = $1 AND user_id = $2
+        // cascade delete: WHERE post_id = $1 (no user filter)
+        const byUser = /user_id\s*=\s*\$2/i.test(sql);
+        const [postId, userId] = params;
+        const before = communityLikes.length;
+        for (let i = communityLikes.length - 1; i >= 0; i--) {
+          const l = communityLikes[i];
+          if (l.post_id === postId && (!byUser || l.user_id === userId)) {
+            communityLikes.splice(i, 1);
+          }
+        }
+        return { rows: [], rowCount: before - communityLikes.length };
+      }
+      // SELECT COUNT(*) AS n FROM community_likes WHERE post_id = $1
+      const n = communityLikes.filter((l) => l.post_id === params[0]).length;
+      return { rows: [{ n: String(n) }] };
+    }
+
+    // --- community_comments (addComment INSERT...WHERE EXISTS + reads) ------
+    if (/community_comments/i.test(sql)) {
+      if (/INSERT\s+INTO\s+community_comments/i.test(sql)) {
+        // addComment column order: id, post_id, author_id, body, created_at.
+        // The INSERT ... SELECT ... WHERE EXISTS only records the row when the
+        // post still exists.
+        const [id, post_id, author_id, body, created_at] = params;
+        if (!communityPosts.some((p) => p.id === post_id)) {
+          return { rows: [], rowCount: 0 };
+        }
+        communityComments.push({ id, post_id, author_id, body, created_at });
+        return { rows: [], rowCount: 1 };
+      }
+      if (/DELETE\s+FROM\s+community_comments/i.test(sql)) {
+        // cascade delete: WHERE post_id = $1
+        const postId = params[0];
+        const before = communityComments.length;
+        for (let i = communityComments.length - 1; i >= 0; i--) {
+          if (communityComments[i].post_id === postId) communityComments.splice(i, 1);
+        }
+        return { rows: [], rowCount: before - communityComments.length };
+      }
+      // SELECT reads JOIN users (author). getComment filters WHERE c.id = $1;
+      // listComments filters WHERE c.post_id = $1 (oldest first). Both drop a
+      // comment whose author account no longer exists (INNER JOIN users).
+      const byId = /WHERE\s+c\.id\s*=\s*\$1/i.test(sql);
+      const key = params[0];
+      const matching = communityComments.filter((c) =>
+        byId ? c.id === key : c.post_id === key
+      );
+      const joined = matching
+        .map((c) => ({ c, author: users.get(c.author_id) }))
+        .filter((x): x is { c: Row; author: Row } => !!x.author);
+      if (!byId) {
+        joined.sort((a, b) => {
+          if (a.c.created_at !== b.c.created_at) return a.c.created_at - b.c.created_at;
+          return a.c.id < b.c.id ? -1 : a.c.id > b.c.id ? 1 : 0; // id ASC
+        });
+      }
+      const rows = joined.map(({ c, author }) => ({
+        id: c.id,
+        post_id: c.post_id,
+        body: c.body ?? "",
+        created_at: c.created_at,
+        author_id: author.id,
+        author_name: author.name,
+        author_avatar: author.avatar_object_path == null ? (author.avatar ?? null) : null,
+        author_avatar_path: author.avatar_object_path ?? null,
+      }));
+      return { rows };
     }
 
     // --- community_posts (photo paths the cleanup sweep reconciles against) -
@@ -512,7 +596,6 @@ export function installFakeDb(): FakeDb {
   let commentSeq = 0;
   let notificationSeq = 0;
   let noticeSeq = 0;
-  let notificationSeq = 0;
   return {
     users,
     settings,
@@ -524,19 +607,6 @@ export function installFakeDb(): FakeDb {
     communityNotifications,
     notices,
     adminBlocks,
-    seedNotification(n) {
-      const row: Row = {
-        id: n.id ?? `notif-${++notificationSeq}`,
-        recipient_id: n.recipient_id,
-        actor_id: n.actor_id ?? "actor",
-        post_id: n.post_id ?? "post",
-        type: n.type ?? "like",
-        read: n.read ?? false,
-        created_at: n.created_at,
-      };
-      communityNotifications.push(row);
-      return row;
-    },
     seedUser(u) {
       const row: Row = {
         id: u.id,
