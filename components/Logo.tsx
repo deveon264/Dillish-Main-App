@@ -78,13 +78,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: 999,
-    backgroundColor: colors.accentTint,
+    backgroundColor: colors.accentFill,
     borderWidth: 1,
-    borderColor: colors.accentBorderMd,
+    borderColor: colors.accentBorderLg,
   },
   tagline: {
     fontFamily: fonts.sansSemibold,
-    color: colors.accent,
+    color: colors.accentDark,
     letterSpacing: 1.5,
   },
 });
