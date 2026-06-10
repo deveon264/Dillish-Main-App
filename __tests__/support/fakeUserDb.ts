@@ -327,7 +327,8 @@ export function installFakeDb(): FakeDb {
             l.post_id === post.id &&
             !communityBlocks.some(
               (b) => b.blocker_id === viewerId && b.blocked_id === l.user_id
-            )
+            ) &&
+            !adminBlocks.has(l.user_id)
         ).length;
         const commentCount = communityComments.filter(
           (c) =>
@@ -428,14 +429,16 @@ export function installFakeDb(): FakeDb {
       }
       // SELECT COUNT(*) AS n FROM community_likes l WHERE l.post_id = $1
       //   AND NOT EXISTS (community_blocks b WHERE b.blocker_id = $2
-      //   AND b.blocked_id = l.user_id) — excludes likers the viewer blocked.
+      //   AND b.blocked_id = l.user_id) — excludes likers the viewer blocked,
+      //   and also excludes globally admin-blocked likers (hidden from everyone).
       const [countPostId, countViewerId] = params;
       const n = communityLikes.filter(
         (l) =>
           l.post_id === countPostId &&
           !communityBlocks.some(
             (b) => b.blocker_id === countViewerId && b.blocked_id === l.user_id
-          )
+          ) &&
+          !adminBlocks.has(l.user_id)
       ).length;
       return { rows: [{ n: String(n) }] };
     }

@@ -6,14 +6,22 @@ description: The viewer-block filter must be applied identically across the feed
 # Community engagement counts must share one block filter
 
 The member feed/detail header shows `like_count` and `comment_count`. Three
-places compute viewer-facing engagement and **must all apply the same
-`community_blocks` (viewer-blocked author) filter**, or they disagree:
+places compute viewer-facing engagement and **must all apply two filters in
+lockstep**: the per-viewer `community_blocks` (viewer-blocked author) filter AND
+the global `community_admin_blocks` filter (members an admin blocked, hidden from
+everyone). Or they disagree:
 
 1. `POST_SELECT` in `lib/communityStore.ts` (the feed `listPosts` + `getPost`):
    both count subqueries exclude likes/comments whose author the viewer (`$1`)
-   has blocked.
-2. `listComments` (the comment list): already hid comments from blocked members.
-3. `toggleLike`'s returned `COUNT` (filtered by `$2 = userId`).
+   has blocked OR who is admin-blocked.
+2. `listComments` (the comment list): hides comments from both blocked and
+   admin-blocked members.
+3. `toggleLike`'s returned `COUNT` (filtered by `$2 = userId`): also excludes
+   admin-blocked likers.
+
+The admin-block (`NOT EXISTS community_admin_blocks ab WHERE ab.user_id = ...`)
+parallels the viewer-block clause but takes no viewer param: it is global. Posts,
+comments, and likes from an admin-blocked member are all hidden from everyone.
 
 **Why:** the comment list always hid blocked members, but the counts did not, so
 a viewer who had blocked someone saw a header count higher than the comments they

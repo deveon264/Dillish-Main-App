@@ -101,6 +101,37 @@ test("an admin-blocked member's comment is hidden from every viewer and the coun
   assert.equal(detail?.commentCount, 1);
 });
 
+test("an admin-blocked member's like is dropped from the count for every viewer", async () => {
+  const id = seedPostWithEngagement();
+  db.seedAdminBlock({ user_id: BLOCKED });
+
+  // VIEWER blocked no one personally, but the admin block still drops BLOCKED's
+  // like, so the header like count matches what everyone sees (FRIEND only).
+  const [viewerPost] = await listPosts({ viewerId: VIEWER, limit: 20 });
+  assert.equal(viewerPost.likeCount, 1);
+  const viewerDetail = await getPost(id, VIEWER);
+  assert.equal(viewerDetail?.likeCount, 1);
+
+  // FRIEND (another viewer) sees the same dropped count: the admin block is
+  // global, not per-viewer.
+  const [friendPost] = await listPosts({ viewerId: FRIEND, limit: 20 });
+  assert.equal(friendPost.likeCount, 1);
+  const friendDetail = await getPost(id, FRIEND);
+  assert.equal(friendDetail?.likeCount, 1);
+});
+
+test("toggleLike returns a count that also excludes an admin-blocked liker", async () => {
+  const id = seedPostWithEngagement();
+  db.seedAdminBlock({ user_id: BLOCKED });
+
+  // VIEWER likes the post: likers are now FRIEND, BLOCKED, VIEWER, but the
+  // returned total drops the admin-blocked BLOCKED, so the optimistic reconcile
+  // stays consistent with the feed's like_count (FRIEND + VIEWER = 2).
+  const res = await toggleLike({ postId: id, userId: VIEWER });
+  assert.equal(res?.liked, true);
+  assert.equal(res?.likeCount, 2);
+});
+
 test("toggleLike returns a count that also excludes a blocked liker", async () => {
   const id = seedPostWithEngagement();
   db.seedCommunityBlock({ blocker_id: VIEWER, blocked_id: BLOCKED });

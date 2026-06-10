@@ -108,9 +108,10 @@ function mapComment(r: any): CommunityComment {
 
 // $1 is always the viewer id (drives liked_by_me). Counts come from scalar
 // subqueries so the whole feed is one round-trip with no N+1. Both counts
-// exclude likes/comments from members the viewer has blocked, so the header
-// totals match what that viewer actually sees (the comment list and feed apply
-// the same block filter).
+// exclude likes/comments from members the viewer has blocked, plus members an
+// admin has globally blocked (hidden from everyone), so the header totals match
+// what that viewer actually sees (the comment list and feed apply the same
+// filters).
 const POST_SELECT = `
   SELECT p.id, p.type, p.body, p.photo_object_path, p.created_at,
     ${AUTHOR_SELECT},
@@ -119,6 +120,9 @@ const POST_SELECT = `
          AND NOT EXISTS (
            SELECT 1 FROM community_blocks b
            WHERE b.blocker_id = $1 AND b.blocked_id = l.user_id
+         )
+         AND NOT EXISTS (
+           SELECT 1 FROM community_admin_blocks ab WHERE ab.user_id = l.user_id
          )) AS like_count,
     (SELECT COUNT(*) FROM community_comments c
        WHERE c.post_id = p.id
@@ -345,6 +349,9 @@ export async function toggleLike(input: {
          AND NOT EXISTS (
            SELECT 1 FROM community_blocks b
            WHERE b.blocker_id = $2 AND b.blocked_id = l.user_id
+         )
+         AND NOT EXISTS (
+           SELECT 1 FROM community_admin_blocks ab WHERE ab.user_id = l.user_id
          )`,
     [input.postId, input.userId]
   );
