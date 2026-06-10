@@ -85,18 +85,31 @@ maestro test \
 
 ## Running automatically in CI
 
-`.github/workflows/mobile-e2e.yml` runs this flow on a real Android emulator so
-the native `expo-video` module is exercised before each release (the Replit
-container cannot, since it has no emulator). The job:
+`.github/workflows/mobile-e2e.yml` runs this flow on real devices so the native
+`expo-video` module is exercised before each release (the Replit container
+cannot, since it has no emulator or simulator). It runs the **same flow** on two
+platforms, because `expo-video` and the player UI can behave differently on each:
 
-1. Installs deps, prebuilds the native `android/` project, and builds a debug APK
-   (`expo-video` is native, so Expo Go cannot run the flow).
-2. Boots a hardware-accelerated Android emulator, installs the APK, and runs
-   `scripts/e2e-workout.sh` (the same wrapper `npm run e2e` uses).
+- **`e2e`** (Android emulator, `ubuntu-latest`): prebuilds the native `android/`
+  project, builds a debug APK, boots a hardware-accelerated emulator, installs
+  the APK, and runs `scripts/e2e-workout.sh` (the same wrapper `npm run e2e`
+  uses).
+- **`e2e-ios`** (iOS simulator, `macos-14`): prebuilds the native `ios/` project,
+  builds a debug `.app` for the simulator with `xcodebuild` (the workspace and
+  scheme are discovered at runtime, so the sanitized app name is never
+  hardcoded), boots an available iPhone simulator, installs the app, and runs the
+  same `scripts/e2e-workout.sh`.
 
-It triggers on `release: published` (so a red flow blocks the release when the
-publish job is gated on it), on pushes to `main` that touch the app or flow, and
-on demand via **workflow_dispatch**.
+> **Cost note:** the iOS job needs a macOS runner, and GitHub bills macOS minutes
+> at **10x** the Linux rate. It is therefore the most expensive job in the
+> pipeline; it stays gated on the same triggers as the Android job (release,
+> `main` pushes that touch the app/flow, and manual dispatch) rather than running
+> on every push.
+
+Both jobs use the same `MAESTRO_EMAIL` / `MAESTRO_PASSWORD` / `MAESTRO_WORKOUT_ID`
+secrets. They trigger on `release: published` (so a red flow blocks the release
+when the publish job is gated on it), on pushes to `main` that touch the app or
+flow, and on demand via **workflow_dispatch**.
 
 ### Required CI secrets
 
@@ -112,13 +125,14 @@ If a secret is unset the flow falls back to the defaults baked into
 
 ### Blocking a release
 
-Because the job runs on `release: published`, require it as a status check (branch
-protection) or make your publish/EAS-submit job depend on it (`needs: e2e`) so a
-failing flow stops the release.
+Because both jobs run on `release: published`, require them as status checks
+(branch protection) or make your publish/EAS-submit job depend on them
+(`needs: [e2e, e2e-ios]`) so a failing flow on either platform stops the release.
 
 ## Layout
 
 - `workout-video-advance.yaml` - the runnable flow.
 - `subflows/login.yaml` - reusable sign-in step (skipped when already signed in).
 - `config.yaml` - Maestro project config (treats top-level files as suites).
-- `../.github/workflows/mobile-e2e.yml` - the mobile CI job that runs this flow.
+- `../.github/workflows/mobile-e2e.yml` - the mobile CI jobs (Android + iOS) that
+  run this flow.

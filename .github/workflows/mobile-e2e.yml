@@ -103,7 +103,90 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: maestro-debug-output
+          name: maestro-debug-output-android
+          path: ~/.maestro/tests/**
+          if-no-files-found: ignore
+          retention-days: 14
+
+  e2e-ios:
+    name: Workout video flow (iOS simulator)
+    # macOS runners are the only GitHub-hosted runners with Xcode + the iOS
+    # simulator. NOTE: macOS minutes bill at 10x the Linux rate, so this job is
+    # the most expensive part of the pipeline -- keep it gated on the same
+    # triggers as the Android job rather than every push.
+    runs-on: macos-14
+    timeout-minutes: 60
+
+    env:
+      # Same secrets as the Android job; the flow falls back to the defaults
+      # baked into workout-video-advance.yaml if a secret is unset, but CI
+      # should always provide a dedicated QA account.
+      MAESTRO_EMAIL: ${{ secrets.MAESTRO_EMAIL }}
+      MAESTRO_PASSWORD: ${{ secrets.MAESTRO_PASSWORD }}
+      MAESTRO_WORKOUT_ID: ${{ secrets.MAESTRO_WORKOUT_ID }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Generate the native ios/ project from app.json. expo-video is a native
+      # module so Expo Go cannot run this flow; we build a real debug app instead.
+      - name: Prebuild native iOS project
+        run: npx expo prebuild --platform ios --no-install
+
+      # The .xcworkspace and scheme names come from the sanitized app name, so
+      # discover them at runtime rather than hardcoding "Florish Fitness".
+      - name: Build debug app for the simulator
+        run: |
+          set -euo pipefail
+          WORKSPACE="$(ls -d ios/*.xcworkspace | head -1)"
+          SCHEME="$(xcodebuild -list -workspace "$WORKSPACE" -json \
+            | python3 -c "import json,sys; print(json.load(sys.stdin)['workspace']['schemes'][0])")"
+          echo "Building workspace=$WORKSPACE scheme=$SCHEME"
+          xcodebuild \
+            -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath ios/build \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Install Maestro CLI
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      # Boot an available iPhone simulator, install the freshly built .app, then
+      # run the same flow the Android job runs. Maestro targets the booted
+      # simulator automatically.
+      - name: Boot simulator, install app, and run Maestro flow
+        run: |
+          set -euo pipefail
+          DEVICE_ID="$(python3 -c "import json,subprocess; d=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','-j'])); print(next(dev['udid'] for rt,ds in d['devices'].items() if 'iOS' in rt for dev in ds if dev.get('isAvailable') and 'iPhone' in dev['name']))")"
+          echo "Using simulator $DEVICE_ID"
+          xcrun simctl boot "$DEVICE_ID"
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+          APP_PATH="$(find ios/build/Build/Products/Debug-iphonesimulator -maxdepth 1 -name '*.app' | head -1)"
+          echo "Installing $APP_PATH"
+          xcrun simctl install "$DEVICE_ID" "$APP_PATH"
+          scripts/e2e-workout.sh
+
+      - name: Upload Maestro debug output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-debug-output-ios
           path: ~/.maestro/tests/**
           if-no-files-found: ignore
           retention-days: 14
