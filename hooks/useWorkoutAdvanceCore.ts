@@ -4,6 +4,7 @@ import {
   decideExerciseCompletion,
   decideJump,
   decideRestTick,
+  tickRestRemaining,
   type CompletionSource,
   type WorkoutPhase,
 } from "@/lib/workoutAdvance";
@@ -192,7 +193,7 @@ export function useWorkoutAdvanceCore(deps: WorkoutAdvanceDeps): WorkoutAdvanceC
     }
     const t = setTimeout(() => {
       onRestTick?.(restRemaining);
-      setRestRemaining((r) => Math.max(0, r - 1));
+      setRestRemaining((r) => tickRestRemaining(r));
     }, 1000);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps

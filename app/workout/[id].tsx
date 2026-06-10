@@ -21,6 +21,7 @@ import { todayKey, getJSON, setJSON } from "@/lib/storage";
 import { useInsets } from "@/hooks/useInsets";
 import { useFullscreenOrientation } from "@/hooks/useFullscreenOrientation";
 import { useWorkoutAdvanceCore } from "@/hooks/useWorkoutAdvanceCore";
+import { tickExerciseRemaining } from "@/lib/workoutAdvance";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
@@ -433,11 +434,10 @@ export default function WorkoutPlayer() {
     if (phase !== "active" || paused || !current || remaining <= 0) return;
     timer.current = setInterval(() => {
       setRemaining((r) => {
-        if (r <= 1) {
-          if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          return 0;
+        if (r <= 1 && Platform.OS !== "web") {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
-        return r - 1;
+        return tickExerciseRemaining(r);
       });
     }, 1000);
     return () => {

@@ -6,6 +6,8 @@ import {
   decideRestTick,
   decideAdvanceTarget,
   decideJump,
+  tickExerciseRemaining,
+  tickRestRemaining,
   type CompletionInput,
 } from "@/lib/workoutAdvance";
 
@@ -211,4 +213,58 @@ test("jump: tapping the current exercise is ignored (no needless restart)", () =
 test("jump: tapping a later exercise is ignored (can't skip ahead)", () => {
   assert.equal(decideJump({ target: 3, index: 1 }), "ignore");
   assert.equal(decideJump({ target: 4, index: 0 }), "ignore");
+});
+
+// --- (7) the exercise countdown ticks down one second at a time -----------
+
+test("exercise tick: a countdown with time left steps down exactly one second", () => {
+  assert.equal(tickExerciseRemaining(10), 9);
+  assert.equal(tickExerciseRemaining(2), 1);
+});
+
+test("exercise tick: the final tick (one second left) lands exactly on zero", () => {
+  assert.equal(tickExerciseRemaining(1), 0);
+});
+
+test("exercise tick: a countdown already at zero (or below) never goes negative", () => {
+  assert.equal(tickExerciseRemaining(0), 0);
+  assert.equal(tickExerciseRemaining(-1), 0);
+});
+
+test("exercise tick: ticking from a start value reaches zero in exactly that many ticks", () => {
+  let r = 5;
+  const seen: number[] = [];
+  for (let i = 0; i < 5; i++) {
+    r = tickExerciseRemaining(r);
+    seen.push(r);
+  }
+  // No skipped or repeated seconds: 5 -> 4 -> 3 -> 2 -> 1 -> 0.
+  assert.deepEqual(seen, [4, 3, 2, 1, 0]);
+  // One more tick at zero stays at zero (no underflow).
+  assert.equal(tickExerciseRemaining(r), 0);
+});
+
+// --- (8) the rest countdown ticks down one second at a time ---------------
+
+test("rest tick step: a countdown with time left steps down exactly one second", () => {
+  assert.equal(tickRestRemaining(15), 14);
+  assert.equal(tickRestRemaining(1), 0);
+});
+
+test("rest tick step: a countdown at zero (or an overshoot) clamps at zero", () => {
+  assert.equal(tickRestRemaining(0), 0);
+  assert.equal(tickRestRemaining(-3), 0);
+});
+
+test("rest tick step: ticking from a start value reaches zero in exactly that many ticks", () => {
+  let r = 4;
+  const seen: number[] = [];
+  for (let i = 0; i < 4; i++) {
+    r = tickRestRemaining(r);
+    seen.push(r);
+  }
+  // No skipped or repeated seconds: 4 -> 3 -> 2 -> 1 -> 0.
+  assert.deepEqual(seen, [3, 2, 1, 0]);
+  // One more tick at zero stays at zero (clamped, never negative).
+  assert.equal(tickRestRemaining(r), 0);
 });

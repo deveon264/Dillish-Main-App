@@ -128,6 +128,25 @@ export function decideRestTick(input: RestTickInput): RestTickAction {
   return "tick";
 }
 
+// --- Countdown decrement steps -------------------------------------------
+//
+// Both countdowns tick down one second at a time. The pure per-second
+// arithmetic is extracted here so it can be tested deterministically; the
+// haptic side-effect on the exercise countdown's final tick stays in the
+// effect, not in these helpers.
+
+// Exercise countdown step: one second left (or less) lands exactly on 0;
+// otherwise subtract a second. Never returns a negative value.
+export function tickExerciseRemaining(remaining: number): number {
+  return remaining <= 1 ? 0 : remaining - 1;
+}
+
+// Rest countdown step: subtract a second, clamped at 0 so an overshoot can
+// never drive the countdown negative.
+export function tickRestRemaining(restRemaining: number): number {
+  return Math.max(0, restRemaining - 1);
+}
+
 // --- Advance target (next exercise vs finish) ----------------------------
 //
 // Moving on from the current exercise (after the rest countdown, or straight
