@@ -14,7 +14,12 @@ import { pageHeaderStyles } from "@/components/PageHeader";
 import { Button } from "@/components/Button";
 import { getWorkout } from "@/constants/workouts";
 import { listWorkoutExercises, videoUrl, posterUrl } from "@/lib/exercises";
-import { computeWorkoutProgress, formatClock } from "@/lib/workoutProgress";
+import {
+  computeWorkoutProgress,
+  formatClock,
+  nextVideoTime,
+  acceptedVideoDuration,
+} from "@/lib/workoutProgress";
 import { useData } from "@/contexts/DataContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { todayKey, getJSON, setJSON } from "@/lib/storage";
@@ -94,13 +99,11 @@ export default function WorkoutPlayer() {
 
   // Keep the progress bar in sync with the real video clip.
   useEventListener(player, "timeUpdate", (e: { currentTime: number }) => {
-    setVideoTime(e?.currentTime ?? 0);
+    setVideoTime(nextVideoTime(e));
   });
   useEventListener(player, "statusChange", ({ status }: { status: string }) => {
-    if (status === "readyToPlay") {
-      const d = player.duration;
-      if (typeof d === "number" && isFinite(d) && d > 0) setVideoDuration(d);
-    }
+    const d = acceptedVideoDuration(status, player.duration);
+    if (d !== null) setVideoDuration(d);
   });
   // When the real clip reaches its end, the exercise is done — drive the rest
   // gap / auto-advance instead of leaving the player idle on the last frame.

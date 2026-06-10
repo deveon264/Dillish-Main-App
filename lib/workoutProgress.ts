@@ -67,6 +67,29 @@ export function formatClock(seconds: number): string {
   return `${mins}:${String(secs).padStart(2, "0")}`;
 }
 
+// The video player feeds two raw expo-video events into the progress bar's
+// videoTime / videoDuration state. The translation from a raw event into the
+// committed state lives here, free of any React Native imports, so the guard
+// logic can be unit-tested without a renderer.
+
+// "timeUpdate" reports the clip's current playback position. A missing
+// currentTime (null/undefined event payload) falls back to 0 so the bar never
+// tracks an undefined position.
+export function nextVideoTime(e: { currentTime?: number } | null | undefined): number {
+  return e?.currentTime ?? 0;
+}
+
+// "statusChange" should only commit a new duration once the player is actually
+// ready AND reports a sane length. Non-ready statuses, or a NaN/0/negative
+// duration (clip still loading), are rejected so a stuck or wrong bar can't
+// latch onto a garbage total. Returns the duration to commit, or null to skip.
+export function acceptedVideoDuration(status: string, duration: unknown): number | null {
+  if (status !== "readyToPlay") return null;
+  return typeof duration === "number" && Number.isFinite(duration) && duration > 0
+    ? duration
+    : null;
+}
+
 export function computeWorkoutProgress(input: WorkoutProgressInput): WorkoutProgress {
   const { exerciseSeconds, index, remaining, workoutKcal, hasVideo, videoTime, videoDuration } =
     input;
