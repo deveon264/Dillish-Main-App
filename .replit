@@ -76,13 +76,13 @@ localPort = 5001
 externalPort = 3001
 
 [objectStorage]
-defaultBucketID = "replit-objstore-7d8ff7e0-842c-417b-be6d-c9129a0cd7a1"
+defaultBucketID = "replit-objstore-1e2dd941-3474-49eb-840c-03c179aa7f47"
 
 [userenv]
 
 [userenv.shared]
-PRIVATE_OBJECT_DIR = "/replit-objstore-7d8ff7e0-842c-417b-be6d-c9129a0cd7a1/.private"
-PUBLIC_OBJECT_SEARCH_PATHS = "/replit-objstore-7d8ff7e0-842c-417b-be6d-c9129a0cd7a1/public"
+PRIVATE_OBJECT_DIR = "/replit-objstore-1e2dd941-3474-49eb-840c-03c179aa7f47/.private"
+PUBLIC_OBJECT_SEARCH_PATHS = "/replit-objstore-1e2dd941-3474-49eb-840c-03c179aa7f47/public"
 
 [postMerge]
 path = "scripts/post-merge.sh"
