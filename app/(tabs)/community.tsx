@@ -217,7 +217,7 @@ export default function Community() {
 
   const header = (
     <View>
-      <PageHeader eyebrow="COMMUNITY" title="The" accent="Circle" action={<HelpButton {...HELP} />} />
+      <PageHeader eyebrow="COMMUNITY" title="Your" accent="Circle" action={<HelpButton {...HELP} />} />
 
       <ScrollView
         horizontal
