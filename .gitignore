@@ -4,3 +4,10 @@ npm-debug.log*
 
 .expo/settings.json
 .expo/web/
+.expo/*.log
+
+.env
+.env.*.local
+
+.local-object-storage/
+.local-backups/

@@ -6,6 +6,13 @@ let schemaReady: Promise<void> | null = null;
 export function getPool(): Pool {
   if (!pool) {
     pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    // Surface connection-level failures (Postgres down/restarted, wrong port,
+    // auth rejected) in the terminal instead of crashing the process on an
+    // unhandled 'error' event. Log only the driver's code/message so the
+    // connection string and password are never printed.
+    pool.on("error", (e: any) => {
+      console.error(`[db] pool error code=${e?.code ?? "?"} ${e?.message ?? e}`);
+    });
   }
   return pool;
 }
@@ -295,7 +302,12 @@ export function ensureSchema(): Promise<void> {
         )
       )
       .then(() => undefined)
-      .catch((e) => {
+      .catch((e: any) => {
+        // Schema bootstrap failed — almost always the DB being unreachable,
+        // pointed at the wrong port, or missing the expected schema. Make it
+        // loud locally (code/message only, no secrets); callers still return
+        // their generic user-facing error.
+        console.error(`[db] schema init failed code=${e?.code ?? "?"} ${e?.message ?? e}`);
         schemaReady = null;
         throw e;
       });

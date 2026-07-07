@@ -65,10 +65,13 @@
     "typescript": "~5.9.2"
   },
   "scripts": {
-    "start": "expo start",
+    "start": "node scripts/safe-expo-start.mjs -- --lan --port 8081",
+    "start:unsafe": "expo start --lan --port 8081",
+    "preflight": "node scripts/safe-expo-start.mjs --check-only --skip-backups",
+    "backup:local": "node scripts/safe-expo-start.mjs --backup-only",
     "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "node scripts/safe-expo-start.mjs -- --android --lan --port 8081",
+    "ios": "node scripts/safe-expo-start.mjs -- --ios --lan --port 8081",
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "tsx --test __tests__/*.test.ts",
