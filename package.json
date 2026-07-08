@@ -69,6 +69,7 @@
     "start:unsafe": "expo start --lan --port 8081",
     "preflight": "node scripts/safe-expo-start.mjs --check-only --skip-backups",
     "backup:local": "node scripts/safe-expo-start.mjs --backup-only",
+    "exercise-db:import": "tsx scripts/import-exercise-db.mts",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "node scripts/safe-expo-start.mjs -- --android --lan --port 8081",
     "ios": "node scripts/safe-expo-start.mjs -- --ios --lan --port 8081",

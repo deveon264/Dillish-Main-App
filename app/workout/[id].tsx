@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, Animated, Share } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, Animated, Share, Modal } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -11,11 +11,14 @@ import { Asset } from "expo-asset";
 import { useEventListener } from "expo";
 import { GradientBackground } from "@/components/GradientBackground";
 import { pageHeaderStyles } from "@/components/PageHeader";
+import { InfoTip } from "@/components/InfoTip";
 import { Button } from "@/components/Button";
-import { getWorkout } from "@/constants/workouts";
+import { getWorkout, type Exercise } from "@/constants/workouts";
+import { findDbExerciseByName } from "@/constants/exerciseDb";
 import { listWorkoutExercises, videoUrl, posterUrl } from "@/lib/exercises";
 import {
   computeWorkoutProgress,
+  estimateKcalBurned,
   formatClock,
   nextVideoTime,
   acceptedVideoDuration,
@@ -29,29 +32,73 @@ import { useWorkoutAdvanceCore } from "@/hooks/useWorkoutAdvanceCore";
 import { tickExerciseRemaining } from "@/lib/workoutAdvance";
 import { loadExerciseClip } from "@/lib/workoutClipLoader";
 import { decidePlayPauseMirror, decideSeek } from "@/lib/workoutControls";
+import {
+  DEFAULT_REST_GAP,
+  REST_GAP_KEY,
+  REST_OPTIONS,
+  exerciseTimedSeconds,
+  workoutDurationMinutes,
+} from "@/lib/workoutDuration";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 
 const WEEK_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-// Rest gap (seconds) shown as a countdown between exercises before auto-advancing.
-// 0 = "Off" (advance immediately). Persisted as a device preference.
-const REST_OPTIONS = [0, 10, 15, 30, 60] as const;
-const REST_GAP_KEY = "florish.restGapSeconds";
-const DEFAULT_REST_GAP = 15;
+const TARGET_LABELS: Record<string, string> = {
+  full_body: "Full body",
+  core_abs: "Core & abs",
+  glutes: "Glutes",
+  legs: "Legs",
+  arms: "Arms",
+  upper_body: "Upper body",
+  back_posture: "Back & posture",
+  mobility: "Mobility",
+};
+
+const TARGET_EQUIP_LABELS: Record<string, string> = {
+  dumbbells: "dumbbells",
+  resistance_bands: "resistance bands",
+  yoga_mat: "yoga mat",
+  pilates_equipment: "pilates equipment",
+  gym_equipment: "gym equipment",
+};
+
+// One-line muscle/equipment summary for the guidance tab. Uses the exercise's
+// own metadata when present, otherwise a name lookup in the internal exercise
+// database; returns null (renders nothing) when neither knows the move.
+function exerciseTargets(e: Exercise): string | null {
+  const db = e.muscleGroups ? undefined : findDbExerciseByName(e.name);
+  const muscles = e.muscleGroups ?? db?.muscleGroups ?? [];
+  if (muscles.length === 0) return null;
+  const equipment = e.equipmentNeeded ?? db?.equipment;
+  const targets = `Targets: ${muscles.map((m) => TARGET_LABELS[m] ?? m).join(", ")}`;
+  if (!equipment) return targets;
+  const equipText =
+    equipment.length === 0
+      ? "No equipment"
+      : equipment.map((q) => TARGET_EQUIP_LABELS[q] ?? q).join(", ");
+  return `${targets} · ${equipText}`;
+}
 
 export default function WorkoutPlayer() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useInsets();
-  const { completeWorkout, toggleFavorite, isFavorite, streak, streakDays, newBestToday } = useData();
+  const { completeWorkout, toggleFavorite, isFavorite, streak, streakDays, newBestToday, profile } = useData();
   const { isAdmin } = useAuth();
   const workout = getWorkout(id);
   const fav = workout ? isFavorite(workout.id) : false;
 
   const [paused, setPaused] = useState(true);
+  // Real active seconds spent in this session, counted by a wall-clock timer that
+  // ticks while the workout is running and not paused (see the effect below). Used
+  // for the whole-workout elapsed/kcal stats so they stay honest even when a video
+  // clip runs longer or shorter than its configured exercise duration — unlike the
+  // per-exercise countdown, this never freezes on the video tail or jumps at a
+  // clip boundary.
+  const [sessionSeconds, setSessionSeconds] = useState(0);
   // Rest gap between exercises (device preference) and the live rest countdown.
-  const [restGap, setRestGap] = useState<number>(DEFAULT_REST_GAP);
+  const [restGap, setRestGap] = useState<(typeof REST_OPTIONS)[number]>(DEFAULT_REST_GAP);
   // Holds the latest completion handler so the video "playToEnd" listener (set up
   // once, before the early returns) always calls the current-closure version.
   const onVideoEndRef = useRef<() => void>(() => {});
@@ -82,6 +129,17 @@ export default function WorkoutPlayer() {
   // per-exercise countdown.
   const [videoTime, setVideoTime] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
+  const exerciseDurations = workout?.exercises.map(exerciseTimedSeconds) ?? [];
+  const sessionDurationMin = workoutDurationMinutes(workout?.exercises ?? [], restGap);
+  // The member's body weight in kg (converting from lbs when needed) used to
+  // personalize the kcal estimate. Undefined when no weight is set, so the
+  // estimate falls back to the authored per-workout figure.
+  const weightKg =
+    profile.weight != null
+      ? profile.weightUnit === "lbs"
+        ? profile.weight * 0.453592
+        : profile.weight
+      : undefined;
   const player = useVideoPlayer(null, (p) => {
     p.loop = false;
     p.timeUpdateEventInterval = 0.5;
@@ -93,9 +151,7 @@ export default function WorkoutPlayer() {
   // Monotonic token so a slow video load for a previous exercise can't apply
   // (or auto-play) after the user has already moved to another exercise.
   const loadSeq = useRef(0);
-  // Imperative handle so the fullscreen control can expand the inline clip
-  // without switching the player to native controls.
-  const videoViewRef = useRef<VideoView>(null);
+  const [isImmersiveVideo, setIsImmersiveVideo] = useState(false);
 
   // Keep the progress bar in sync with the real video clip.
   useEventListener(player, "timeUpdate", (e: { currentTime: number }) => {
@@ -159,8 +215,8 @@ export default function WorkoutPlayer() {
     total: workout?.exercises.length ?? 0,
     restGap,
     paused,
-    durationAt: (i) => workout?.exercises[i]?.seconds ?? 0,
-    initialRemaining: workout?.exercises[0]?.seconds ?? 0,
+    durationAt: (i) => exerciseDurations[i] ?? 0,
+    initialRemaining: exerciseDurations[0] ?? 0,
     videoIdAt: (i) => {
       const ex = workout?.exercises[i];
       const v = ex ? videoMap[ex.id] : undefined;
@@ -175,7 +231,13 @@ export default function WorkoutPlayer() {
       if (timer.current) clearInterval(timer.current);
       if (!savedRef.current && workout) {
         savedRef.current = true;
-        completeWorkout({ workoutId: workout.id, kcal: workout.kcal, durationMin: workout.durationMin });
+        // Log the same weight-personalized figure the member saw (full workout
+        // done → overall 1), rather than the raw authored total.
+        completeWorkout({
+          workoutId: workout.id,
+          kcal: estimateKcalBurned({ workoutKcal: workout.kcal, overall: 1, weightKg }),
+          durationMin: sessionDurationMin,
+        });
       }
       if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
@@ -189,7 +251,7 @@ export default function WorkoutPlayer() {
     },
   });
 
-  const changeRestGap = (v: number) => {
+  const changeRestGap = (v: (typeof REST_OPTIONS)[number]) => {
     setRestGap(v);
     setJSON(REST_GAP_KEY, v);
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -283,7 +345,7 @@ export default function WorkoutPlayer() {
     let on = true;
     getJSON<number>(REST_GAP_KEY, DEFAULT_REST_GAP).then((v) => {
       if (on && typeof v === "number" && REST_OPTIONS.includes(v as (typeof REST_OPTIONS)[number])) {
-        setRestGap(v);
+        setRestGap(v as (typeof REST_OPTIONS)[number]);
       }
     });
     return () => {
@@ -414,6 +476,34 @@ export default function WorkoutPlayer() {
     else revealOverlay();
   };
 
+  const openImmersiveVideo = () => {
+    if (!currentVideo) return;
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    setIsImmersiveVideo(true);
+    setControlsShown(true);
+    overlayOpacity.setValue(1);
+    onFullscreenEnter?.();
+    if (!paused) scheduleHide();
+  };
+
+  const closeImmersiveVideo = () => {
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    setIsImmersiveVideo(false);
+    setControlsShown(true);
+    overlayOpacity.setValue(1);
+    onFullscreenExit?.();
+    if (!paused) scheduleHide();
+  };
+
+  useEffect(() => {
+    if (phase === "active" || !isImmersiveVideo) return;
+    setIsImmersiveVideo(false);
+    onFullscreenExit?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, isImmersiveVideo]);
+
   useEffect(() => {
     if (paused) {
       if (hideTimer.current) clearTimeout(hideTimer.current);
@@ -442,6 +532,17 @@ export default function WorkoutPlayer() {
       if (timer.current) clearInterval(timer.current);
     };
   }, [phase, paused, index, current]);
+
+  // Wall-clock accumulator for real active time. It ticks 1/s while the session
+  // is running (active or rest) and not paused. Deliberately separate from the
+  // per-exercise countdown above — that effect bails on `remaining <= 0`, so it
+  // stops during a video's tail once the countdown has hit zero. This one keeps
+  // counting there, so the elapsed/kcal stats track the video instead of freezing.
+  useEffect(() => {
+    if ((phase !== "active" && phase !== "rest") || paused) return;
+    const id = setInterval(() => setSessionSeconds((s) => s + 1), 1000);
+    return () => clearInterval(id);
+  }, [phase, paused]);
 
   // Warm this workout's exercise photos into the image cache the moment the
   // player opens, so the header and the rest "up next" backgrounds appear
@@ -544,13 +645,16 @@ export default function WorkoutPlayer() {
     const hasMappedVideo = !!currentVideo;
     const { totalSeconds, elapsed, overall, overallPct, barElapsed, barTotal, barPct, kcalBurned, bpm, zone, bpmPct } =
       computeWorkoutProgress({
-        exerciseSeconds: workout.exercises.map((e) => e.seconds),
+        exerciseSeconds: exerciseDurations,
         index,
         remaining,
         workoutKcal: workout.kcal,
         hasVideo: hasMappedVideo,
         videoTime,
         videoDuration,
+        restGap,
+        activeElapsedSeconds: sessionSeconds,
+        weightKg,
       });
     // While a mapped clip loads, show its poster (the video's own frame) instead
     // of the generic stock thumbnail. No poster → neutral dark background.
@@ -572,10 +676,84 @@ export default function WorkoutPlayer() {
     const parts = workout.title.split(" ");
     const titleTail = parts.length > 1 ? parts.pop()! : "";
     const titleHead = parts.join(" ");
+    const renderPlaybackOverlay = (immersive = false) => (
+      <Animated.View
+        style={[
+          styles.playerOverlay,
+          immersive && styles.immersiveOverlay,
+          { opacity: overlayOpacity, pointerEvents: controlsShown ? "auto" : "none" },
+        ]}
+      >
+        <Pressable style={StyleSheet.absoluteFill} onPress={toggleOverlay} />
+
+        {immersive && (
+          <View style={[styles.immersiveTop, { paddingTop: insets.top + 10 }]}>
+            <Pressable style={styles.immersiveRoundBtn} onPress={closeImmersiveVideo} hitSlop={8}>
+              <Ionicons name="chevron-down" size={24} color="#FFFFFF" />
+            </Pressable>
+            <Text style={styles.immersiveTitle} numberOfLines={2}>
+              {titleHead}
+              {titleHead ? " " : ""}
+              <Text style={styles.immersiveTitleAccent}>{titleTail}</Text>
+            </Text>
+            <View style={styles.immersiveBtnSpacer} />
+          </View>
+        )}
+
+        <View style={[styles.playerControls, immersive && styles.immersiveControls, { pointerEvents: "box-none" }]}>
+          <Pressable testID="player-seek-back" style={styles.playerCtrl} onPress={() => seekRelative(-SEEK_STEP)} hitSlop={8}>
+            <Ionicons name="play-back" size={24} color={colors.onPrimary} />
+            <Text style={styles.seekLabel}>15</Text>
+          </Pressable>
+          <Pressable testID="player-play-toggle" style={[styles.playerPlay, immersive && styles.immersivePlay]} onPress={togglePause}>
+            <Ionicons name={paused ? "play" : "pause"} size={34} color={colors.onPrimary} />
+          </Pressable>
+          <Pressable testID="player-seek-forward" style={styles.playerCtrl} onPress={() => seekRelative(SEEK_STEP)} hitSlop={8}>
+            <Ionicons name="play-forward" size={24} color={colors.onPrimary} />
+            <Text style={styles.seekLabel}>15</Text>
+          </Pressable>
+        </View>
+
+        <View
+          style={[
+            styles.playerBar,
+            immersive && styles.immersiveBar,
+            immersive && { paddingBottom: insets.bottom + 26 },
+            { pointerEvents: "none" },
+          ]}
+        >
+          <Text testID="player-elapsed" style={styles.playerTime}>{fmt(barElapsed)}</Text>
+          <View style={styles.playerTrack}>
+            <View style={[styles.playerFill, { width: barPct }]} />
+            <View style={[styles.playerThumb, { left: barPct }]} />
+          </View>
+          <Text style={styles.playerTime}>{fmt(barTotal)}</Text>
+        </View>
+      </Animated.View>
+    );
 
     return (
       <GradientBackground>
         <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 24 }} showsVerticalScrollIndicator={false}>
+          <View style={[styles.workoutSafeHeader, { paddingTop: insets.top + 8 }]}>
+            <Pressable style={styles.headerRoundBtn} onPress={() => router.back()} hitSlop={8}>
+              <Ionicons name="chevron-back" size={22} color={colors.foreground} />
+            </Pressable>
+            <Text style={styles.safeHeaderTitle} numberOfLines={2}>
+              {titleHead}
+              {titleHead ? " " : ""}
+              <Text style={pageHeaderStyles.titleAccent}>{titleTail}</Text>
+            </Text>
+            <InfoTip
+              style={styles.headerRoundBtn}
+              iconName="information"
+              size={22}
+              color={colors.foreground}
+              title={workout.title}
+              body={workout.description}
+            />
+          </View>
+
           <View style={styles.player}>
             {playerImage && (
               <ExpoImage
@@ -586,16 +764,12 @@ export default function WorkoutPlayer() {
                 cachePolicy="memory-disk"
               />
             )}
-            {currentVideo && (
+            {currentVideo && !isImmersiveVideo && (
               <VideoView
-                ref={videoViewRef}
                 player={player}
                 style={StyleSheet.absoluteFill}
                 contentFit="cover"
                 nativeControls={false}
-                allowsFullscreen
-                onFullscreenEnter={onFullscreenEnter}
-                onFullscreenExit={onFullscreenExit}
                 pointerEvents="none"
               />
             )}
@@ -605,49 +779,13 @@ export default function WorkoutPlayer() {
             />
             <Pressable style={StyleSheet.absoluteFill} onPress={toggleOverlay} />
 
-            <Animated.View
-              style={[styles.playerOverlay, { opacity: overlayOpacity, pointerEvents: controlsShown ? "auto" : "none" }]}
-            >
-              <Pressable style={StyleSheet.absoluteFill} onPress={toggleOverlay} />
+            {renderPlaybackOverlay(false)}
 
-              <View style={[styles.playerTop, { marginTop: insets.top + 8, pointerEvents: "box-none" }]}>
-                <Pressable style={styles.roundBtn} onPress={() => router.back()} hitSlop={8}>
-                  <Ionicons name="chevron-back" size={22} color={colors.onPrimary} />
-                </Pressable>
-                {currentVideo && (
-                  <Pressable
-                    style={styles.roundBtn}
-                    onPress={() => videoViewRef.current?.enterFullscreen()}
-                    hitSlop={8}
-                  >
-                    <Ionicons name="expand" size={20} color={colors.onPrimary} />
-                  </Pressable>
-                )}
-              </View>
-
-              <View style={[styles.playerControls, { pointerEvents: "box-none" }]}>
-                <Pressable testID="player-seek-back" style={styles.playerCtrl} onPress={() => seekRelative(-SEEK_STEP)} hitSlop={8}>
-                  <Ionicons name="play-back" size={24} color={colors.onPrimary} />
-                  <Text style={styles.seekLabel}>15</Text>
-                </Pressable>
-                <Pressable testID="player-play-toggle" style={styles.playerPlay} onPress={togglePause}>
-                  <Ionicons name={paused ? "play" : "pause"} size={34} color={colors.onPrimary} />
-                </Pressable>
-                <Pressable testID="player-seek-forward" style={styles.playerCtrl} onPress={() => seekRelative(SEEK_STEP)} hitSlop={8}>
-                  <Ionicons name="play-forward" size={24} color={colors.onPrimary} />
-                  <Text style={styles.seekLabel}>15</Text>
-                </Pressable>
-              </View>
-
-              <View style={[styles.playerBar, { pointerEvents: "none" }]}>
-                <Text testID="player-elapsed" style={styles.playerTime}>{fmt(barElapsed)}</Text>
-                <View style={styles.playerTrack}>
-                  <View style={[styles.playerFill, { width: barPct }]} />
-                  <View style={[styles.playerThumb, { left: barPct }]} />
-                </View>
-                <Text style={styles.playerTime}>{fmt(barTotal)}</Text>
-              </View>
-            </Animated.View>
+            {currentVideo ? (
+              <Pressable style={styles.playerFullscreenBtn} onPress={openImmersiveVideo} hitSlop={8}>
+                <Ionicons name="expand" size={20} color="#FFFFFF" />
+              </Pressable>
+            ) : null}
           </View>
 
           <View style={styles.info}>
@@ -672,22 +810,10 @@ export default function WorkoutPlayer() {
               </View>
             </View>
 
-            <View style={styles.titleRow}>
-              <Text style={styles.playerTitle}>
-                {titleHead}
-                {titleHead ? " " : ""}
-                <Text style={pageHeaderStyles.titleAccent}>{titleTail}</Text>
-              </Text>
-              <View style={styles.rating}>
-                <Ionicons name="star" size={14} color={colors.accent} />
-                <Text style={styles.ratingText}>4.9</Text>
-              </View>
-            </View>
-
             <View style={styles.metaRow}>
               <View style={styles.metaItem}>
                 <Ionicons name="time-outline" size={15} color={colors.muted} />
-                <Text style={styles.metaText2}>{workout.durationMin} min</Text>
+                <Text style={styles.metaText2}>{sessionDurationMin} min</Text>
               </View>
               <View style={styles.metaItem}>
                 <Ionicons name="flame-outline" size={15} color={colors.muted} />
@@ -845,6 +971,9 @@ export default function WorkoutPlayer() {
                     <Text style={styles.guideTitleItalic}>{current.name.split(" ").slice(-1)[0]}</Text>
                   </Text>
                   <Text style={styles.guideDesc}>{current.description}</Text>
+                  {exerciseTargets(current) ? (
+                    <Text style={styles.guideTargets}>{exerciseTargets(current)}</Text>
+                  ) : null}
                 </View>
 
                 <View style={styles.guideCard}>
@@ -977,6 +1106,33 @@ export default function WorkoutPlayer() {
             )}
           </View>
         </ScrollView>
+        <Modal
+          visible={isImmersiveVideo}
+          animationType="fade"
+          presentationStyle="fullScreen"
+          supportedOrientations={["portrait", "landscape", "landscape-left", "landscape-right"]}
+          onRequestClose={closeImmersiveVideo}
+          statusBarTranslucent
+        >
+          <View style={styles.immersiveRoot}>
+            {currentVideo && (
+              <VideoView
+                player={player}
+                style={StyleSheet.absoluteFill}
+                contentFit="contain"
+                nativeControls={false}
+                pointerEvents="none"
+              />
+            )}
+            <Pressable style={StyleSheet.absoluteFill} onPress={toggleOverlay} />
+            <LinearGradient
+              colors={["rgba(0,0,0,0.65)", "rgba(0,0,0,0.04)", "rgba(0,0,0,0.75)"]}
+              style={StyleSheet.absoluteFill}
+              pointerEvents="none"
+            />
+            {renderPlaybackOverlay(true)}
+          </View>
+        </Modal>
         {toast && (
           <Animated.View
             style={[
@@ -1047,7 +1203,7 @@ export default function WorkoutPlayer() {
           </View>
           <View style={styles.doneStatDivider} />
           <View style={styles.doneStat}>
-            <Text style={styles.doneStatNum}>{workout.durationMin}</Text>
+            <Text style={styles.doneStatNum}>{sessionDurationMin}</Text>
             <Text style={styles.doneStatLbl}>minutes</Text>
           </View>
           <View style={styles.doneStatDivider} />
@@ -1067,9 +1223,79 @@ const styles = StyleSheet.create({
   notFound: { fontFamily: fonts.serif, fontSize: 22, color: colors.foreground },
   metaItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   rowCenter: { flexDirection: "row", alignItems: "center", gap: 10 },
+  workoutSafeHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+  },
+  safeHeaderTitle: {
+    flex: 1,
+    minWidth: 0,
+    fontFamily: fonts.serifSemibold,
+    fontSize: 22,
+    lineHeight: 27,
+    color: colors.foreground,
+  },
+  headerRoundBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  playerFullscreenBtn: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "rgba(16,17,17,0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   player: { height: 360, justifyContent: "space-between", backgroundColor: "#000" },
-  playerOverlay: { flex: 1, justifyContent: "space-between" },
-  playerTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20 },
+  playerOverlay: { flex: 1 },
+  immersiveRoot: { flex: 1, backgroundColor: "#000" },
+  immersiveOverlay: { ...StyleSheet.absoluteFillObject },
+  immersiveTop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 3,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 18,
+    paddingBottom: 12,
+  },
+  immersiveRoundBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: "rgba(16,17,17,0.62)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.22)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  immersiveBtnSpacer: { width: 46, height: 46 },
+  immersiveTitle: {
+    flex: 1,
+    minWidth: 0,
+    fontFamily: fonts.serifSemibold,
+    fontSize: 20,
+    lineHeight: 24,
+    color: "#FFFFFF",
+    textAlign: "center",
+  },
+  immersiveTitleAccent: { fontFamily: fonts.serifItalic, fontStyle: "italic", color: "#FFFFFF" },
   roundBtn: {
     width: 42,
     height: 42,
@@ -1080,7 +1306,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  playerControls: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 28 },
+  playerControls: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 28,
+  },
+  immersiveControls: { gap: 34 },
   playerCtrl: {
     width: 52,
     height: 52,
@@ -1105,7 +1342,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  playerBar: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingBottom: 18 },
+  immersivePlay: { width: 84, height: 84, borderRadius: 42 },
+  playerBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 18,
+  },
+  immersiveBar: { paddingHorizontal: 24 },
   playerTime: { fontFamily: fonts.sansMedium, fontSize: 12, color: "#FFFFFF" },
   playerTrack: { flex: 1, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.3)", justifyContent: "center" },
   playerFill: { height: 4, borderRadius: 2, backgroundColor: colors.accent },
@@ -1133,10 +1382,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   infoActions: { flexDirection: "row", alignItems: "center", gap: 10 },
-  titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 12 },
-  playerTitle: { flex: 1, fontFamily: fonts.serifSemibold, fontSize: 30, color: colors.foreground },
-  rating: { flexDirection: "row", alignItems: "center", gap: 4, marginLeft: 10 },
-  ratingText: { fontFamily: fonts.sansSemibold, fontSize: 14, color: colors.foreground },
   metaRow: { flexDirection: "row", gap: 18, marginTop: 12, flexWrap: "wrap" },
   metaText2: { fontFamily: fonts.sansMedium, fontSize: 13.5, color: colors.muted },
   statCards: { flexDirection: "row", gap: 10, marginTop: 22 },
@@ -1156,16 +1401,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 4,
     marginTop: 24,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
+    backgroundColor: "rgba(62, 39, 51, 0.05)",
     borderRadius: 999,
     padding: 4,
   },
   tab: { flex: 1, alignItems: "center", paddingVertical: 11, borderRadius: 999 },
-  tabOn: { backgroundColor: colors.accent },
-  tabText: { fontFamily: fonts.sansMedium, fontSize: 13.5, color: colors.muted },
-  tabTextOn: { color: colors.onPrimaryStrong },
+  tabOn: {
+    backgroundColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  tabText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.muted },
+  tabTextOn: { color: colors.onPrimary },
   guideCard: {
     backgroundColor: colors.card,
     borderWidth: 1,
@@ -1178,9 +1428,10 @@ const styles = StyleSheet.create({
   guideTitle: { fontFamily: fonts.serif, fontSize: 26, color: colors.foreground },
   guideTitleItalic: { fontFamily: fonts.serifItalic, fontSize: 26, color: colors.foreground },
   guideDesc: { fontFamily: fonts.sans, fontSize: 14.5, color: colors.muted, lineHeight: 22, marginTop: 8 },
+  guideTargets: { fontFamily: fonts.sansMedium, fontSize: 12.5, color: colors.mutedForeground, marginTop: 10 },
   cueRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
-  cueNum: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", marginTop: 1 },
-  cueNumText: { fontFamily: fonts.sansSemibold, fontSize: 12, color: colors.onPrimaryStrong },
+  cueNum: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.blush, alignItems: "center", justifyContent: "center", marginTop: 1 },
+  cueNumText: { fontFamily: fonts.sansBold, fontSize: 11.5, color: colors.accent },
   cueRowText: { flex: 1, fontFamily: fonts.sans, fontSize: 14, color: colors.foreground, lineHeight: 21 },
   progressBarBg: { height: 10, borderRadius: 5, backgroundColor: colors.track, overflow: "hidden" },
   progressBarFill: { height: 10, borderRadius: 5 },
@@ -1338,15 +1589,23 @@ const styles = StyleSheet.create({
   restChip: {
     flex: 1,
     alignItems: "center",
-    paddingVertical: 9,
+    paddingVertical: 10,
     borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderWidth: 1.5,
+    borderColor: "rgba(62, 39, 51, 0.12)",
     backgroundColor: colors.card,
   },
-  restChipOn: { backgroundColor: colors.accent, borderColor: "transparent" },
-  restChipText: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.muted },
-  restChipTextOn: { color: colors.onPrimaryStrong },
+  restChipOn: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 14,
+    elevation: 4,
+  },
+  restChipText: { fontFamily: fonts.sansSemibold, fontSize: 12.5, color: colors.muted },
+  restChipTextOn: { color: colors.onPrimary },
   restScreen: { flex: 1, justifyContent: "space-between", backgroundColor: "#101111" },
   restTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20 },
   restBody: { alignItems: "center", paddingHorizontal: 24 },
