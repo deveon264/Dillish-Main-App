@@ -10,26 +10,25 @@ import { useInsets } from "@/hooks/useInsets";
 import { useOnboardingMode } from "@/hooks/useOnboardingMode";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
-import { GOALS } from "@/constants/goals";
+import type { FitnessLevel } from "@/lib/profile";
 
-export default function GoalStep() {
+const LEVELS: { id: FitnessLevel; label: string; desc: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { id: "beginner", label: "Beginner", desc: "I'm starting or getting back into it", icon: "leaf-outline" },
+  { id: "intermediate", label: "Intermediate", desc: "I train sometimes", icon: "walk-outline" },
+  { id: "advanced", label: "Advanced", desc: "I want a challenge", icon: "flame-outline" },
+];
+
+export default function FitnessLevelStep() {
   const router = useRouter();
   const insets = useInsets();
-  const { personalize, total, withMode } = useOnboardingMode();
+  const { total, withMode } = useOnboardingMode();
   const { profile, updateProfile, ready } = useData();
-  const [selected, setSelected] = useState<string[]>(profile.goals);
-
-  const toggle = (id: string) => {
-    setSelected((prev) => (prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]));
-  };
+  const [selected, setSelected] = useState<FitnessLevel | null>(profile.fitnessLevel);
 
   const next = async () => {
-    // Dropping a goal also drops it as the main focus, so the next screen
-    // never preselects something that is no longer chosen.
-    const patch: Parameters<typeof updateProfile>[0] = { goals: selected };
-    if (profile.primaryGoal && !selected.includes(profile.primaryGoal)) patch.primaryGoal = null;
-    await updateProfile(patch);
-    router.push(withMode("/onboarding/main-focus") as any);
+    if (!selected) return;
+    await updateProfile({ fitnessLevel: selected });
+    router.push(withMode("/onboarding/equipment") as any);
   };
 
   return (
@@ -38,21 +37,21 @@ export default function GoalStep() {
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
       >
-        <StepHeader step={1} total={total} canBack={personalize} />
-        <Text style={styles.title}>What brings you here?</Text>
-        <Text style={styles.subtitle}>Choose all that resonate. We'll shape your experience around them.</Text>
+        <StepHeader step={3} total={total} />
+        <Text style={styles.title}>What's your fitness level?</Text>
+        <Text style={styles.subtitle}>Be honest, we'll meet you exactly where you are.</Text>
 
         <View style={styles.list}>
-          {GOALS.map((g) => {
-            const on = selected.includes(g.id);
+          {LEVELS.map((l) => {
+            const on = selected === l.id;
             return (
-              <Pressable key={g.id} style={[styles.item, on && styles.itemOn]} onPress={() => toggle(g.id)}>
+              <Pressable key={l.id} style={[styles.item, on && styles.itemOn]} onPress={() => setSelected(l.id)}>
                 <View style={[styles.itemIcon, on && styles.itemIconOn]}>
-                  <Ionicons name={g.icon} size={22} color={on ? colors.onPrimary : colors.accent} />
+                  <Ionicons name={l.icon} size={22} color={on ? colors.onPrimary : colors.accent} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.itemLabel}>{g.label}</Text>
-                  <Text style={styles.itemDesc}>{g.desc}</Text>
+                  <Text style={styles.itemLabel}>{l.label}</Text>
+                  <Text style={styles.itemDesc}>{l.desc}</Text>
                 </View>
                 <View style={[styles.check, on && styles.checkOn]}>
                   {on ? <Ionicons name="checkmark" size={15} color={colors.onPrimary} /> : null}
@@ -63,7 +62,7 @@ export default function GoalStep() {
         </View>
       </ScrollView>
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
-        <Button label="Continue" iconRight="arrow-forward" onPress={next} disabled={selected.length === 0 || !ready} />
+        <Button label="Continue" iconRight="arrow-forward" onPress={next} disabled={!selected || !ready} />
       </View>
     </GradientBackground>
   );

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -12,24 +12,28 @@ import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 import { GOALS } from "@/constants/goals";
 
-export default function GoalStep() {
+// Single-select among the goals chosen on the previous screen. The pick
+// becomes primaryGoal (drives the recommended program); the rest act as
+// secondary goals in ranking.
+export default function MainFocusStep() {
   const router = useRouter();
   const insets = useInsets();
-  const { personalize, total, withMode } = useOnboardingMode();
+  const { total, withMode } = useOnboardingMode();
   const { profile, updateProfile, ready } = useData();
-  const [selected, setSelected] = useState<string[]>(profile.goals);
 
-  const toggle = (id: string) => {
-    setSelected((prev) => (prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]));
-  };
+  const options = useMemo(() => GOALS.filter((g) => profile.goals.includes(g.id)), [profile.goals]);
+  const [selected, setSelected] = useState<string | null>(
+    profile.primaryGoal && profile.goals.includes(profile.primaryGoal)
+      ? profile.primaryGoal
+      : options.length === 1
+        ? options[0].id
+        : null
+  );
 
   const next = async () => {
-    // Dropping a goal also drops it as the main focus, so the next screen
-    // never preselects something that is no longer chosen.
-    const patch: Parameters<typeof updateProfile>[0] = { goals: selected };
-    if (profile.primaryGoal && !selected.includes(profile.primaryGoal)) patch.primaryGoal = null;
-    await updateProfile(patch);
-    router.push(withMode("/onboarding/main-focus") as any);
+    if (!selected) return;
+    await updateProfile({ primaryGoal: selected });
+    router.push(withMode("/onboarding/fitness-level") as any);
   };
 
   return (
@@ -38,15 +42,15 @@ export default function GoalStep() {
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
       >
-        <StepHeader step={1} total={total} canBack={personalize} />
-        <Text style={styles.title}>What brings you here?</Text>
-        <Text style={styles.subtitle}>Choose all that resonate. We'll shape your experience around them.</Text>
+        <StepHeader step={2} total={total} />
+        <Text style={styles.title}>What's your main focus?</Text>
+        <Text style={styles.subtitle}>We'll use this to shape your first plan.</Text>
 
         <View style={styles.list}>
-          {GOALS.map((g) => {
-            const on = selected.includes(g.id);
+          {options.map((g) => {
+            const on = selected === g.id;
             return (
-              <Pressable key={g.id} style={[styles.item, on && styles.itemOn]} onPress={() => toggle(g.id)}>
+              <Pressable key={g.id} style={[styles.item, on && styles.itemOn]} onPress={() => setSelected(g.id)}>
                 <View style={[styles.itemIcon, on && styles.itemIconOn]}>
                   <Ionicons name={g.icon} size={22} color={on ? colors.onPrimary : colors.accent} />
                 </View>
@@ -63,7 +67,7 @@ export default function GoalStep() {
         </View>
       </ScrollView>
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
-        <Button label="Continue" iconRight="arrow-forward" onPress={next} disabled={selected.length === 0 || !ready} />
+        <Button label="Continue" iconRight="arrow-forward" onPress={next} disabled={!selected || !ready} />
       </View>
     </GradientBackground>
   );

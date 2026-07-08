@@ -10,26 +10,37 @@ import { useInsets } from "@/hooks/useInsets";
 import { useOnboardingMode } from "@/hooks/useOnboardingMode";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
-import { GOALS } from "@/constants/goals";
+import type { EquipmentId } from "@/lib/profile";
 
-export default function GoalStep() {
+const OPTIONS: { id: EquipmentId; label: string; desc: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { id: "none", label: "No equipment", desc: "Just me and my bodyweight", icon: "body-outline" },
+  { id: "dumbbells", label: "Dumbbells", desc: "A pair or two at home", icon: "barbell-outline" },
+  { id: "resistance_bands", label: "Resistance bands", desc: "Loops or long bands", icon: "infinite-outline" },
+  { id: "yoga_mat", label: "Yoga mat", desc: "For floor and mat work", icon: "layers-outline" },
+  { id: "pilates_equipment", label: "Pilates equipment", desc: "Reformer, ring, or ball", icon: "ellipse-outline" },
+  { id: "gym_equipment", label: "Gym equipment", desc: "I have gym access", icon: "fitness-outline" },
+];
+
+// Multi-select. "No equipment" is a real answer (stored as ["none"]) and is
+// mutually exclusive with the gear options.
+export default function EquipmentStep() {
   const router = useRouter();
   const insets = useInsets();
-  const { personalize, total, withMode } = useOnboardingMode();
+  const { total, withMode } = useOnboardingMode();
   const { profile, updateProfile, ready } = useData();
-  const [selected, setSelected] = useState<string[]>(profile.goals);
+  const [selected, setSelected] = useState<EquipmentId[]>(profile.equipment);
 
-  const toggle = (id: string) => {
-    setSelected((prev) => (prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]));
+  const toggle = (id: EquipmentId) => {
+    setSelected((prev) => {
+      if (prev.includes(id)) return prev.filter((e) => e !== id);
+      if (id === "none") return ["none"];
+      return [...prev.filter((e) => e !== "none"), id];
+    });
   };
 
   const next = async () => {
-    // Dropping a goal also drops it as the main focus, so the next screen
-    // never preselects something that is no longer chosen.
-    const patch: Parameters<typeof updateProfile>[0] = { goals: selected };
-    if (profile.primaryGoal && !selected.includes(profile.primaryGoal)) patch.primaryGoal = null;
-    await updateProfile(patch);
-    router.push(withMode("/onboarding/main-focus") as any);
+    await updateProfile({ equipment: selected });
+    router.push(withMode("/onboarding/schedule") as any);
   };
 
   return (
@@ -38,21 +49,21 @@ export default function GoalStep() {
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
       >
-        <StepHeader step={1} total={total} canBack={personalize} />
-        <Text style={styles.title}>What brings you here?</Text>
-        <Text style={styles.subtitle}>Choose all that resonate. We'll shape your experience around them.</Text>
+        <StepHeader step={4} total={total} />
+        <Text style={styles.title}>What equipment do you have?</Text>
+        <Text style={styles.subtitle}>Select everything available to you. We'll only suggest workouts you can actually do.</Text>
 
         <View style={styles.list}>
-          {GOALS.map((g) => {
-            const on = selected.includes(g.id);
+          {OPTIONS.map((o) => {
+            const on = selected.includes(o.id);
             return (
-              <Pressable key={g.id} style={[styles.item, on && styles.itemOn]} onPress={() => toggle(g.id)}>
+              <Pressable key={o.id} style={[styles.item, on && styles.itemOn]} onPress={() => toggle(o.id)}>
                 <View style={[styles.itemIcon, on && styles.itemIconOn]}>
-                  <Ionicons name={g.icon} size={22} color={on ? colors.onPrimary : colors.accent} />
+                  <Ionicons name={o.icon} size={22} color={on ? colors.onPrimary : colors.accent} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.itemLabel}>{g.label}</Text>
-                  <Text style={styles.itemDesc}>{g.desc}</Text>
+                  <Text style={styles.itemLabel}>{o.label}</Text>
+                  <Text style={styles.itemDesc}>{o.desc}</Text>
                 </View>
                 <View style={[styles.check, on && styles.checkOn]}>
                   {on ? <Ionicons name="checkmark" size={15} color={colors.onPrimary} /> : null}

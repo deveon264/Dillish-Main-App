@@ -17,6 +17,12 @@ const ACTIVITY = [
   { id: "active", label: "Very Active" },
 ];
 
+const GENDER = [
+  { id: "male", label: "Male" },
+  { id: "female", label: "Female" },
+  { id: "other", label: "Other" },
+] as const;
+
 function Toggle({ options, value, onChange }: { options: string[]; value: string; onChange: (v: string) => void }) {
   return (
     <View style={styles.toggle}>
@@ -41,6 +47,7 @@ export default function ProfileStep() {
   const [height, setHeight] = useState(profile.height ? String(profile.height) : "");
   const [heightUnit, setHeightUnit] = useState<"cm" | "ft">(profile.heightUnit);
   const [activity, setActivity] = useState(profile.activityLevel);
+  const [gender, setGender] = useState<"male" | "female" | "other">(profile.gender);
 
   const valid = age.trim() !== "" && weight.trim() !== "" && height.trim() !== "";
 
@@ -55,8 +62,9 @@ export default function ProfileStep() {
       height: parseFloat(height) || null,
       heightUnit,
       activityLevel: activity,
+      gender,
     });
-    router.push("/onboarding/water");
+    router.push("/onboarding/calorie");
   };
 
   return (
@@ -67,11 +75,23 @@ export default function ProfileStep() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <StepHeader step={2} total={3} />
+          <StepHeader step={8} total={10} />
           <Text style={styles.title}>About you</Text>
           <Text style={styles.subtitle}>This helps us personalize your goals and tracking.</Text>
 
           <View style={{ marginTop: 24 }}>
+            <Text style={styles.fieldLabel}>Gender</Text>
+            <View style={styles.chips}>
+              {GENDER.map((g) => {
+                const on = gender === g.id;
+                return (
+                  <Pressable key={g.id} style={[styles.chip, on && styles.chipOn]} onPress={() => setGender(g.id)}>
+                    <Text style={[styles.chipText, on && styles.chipTextOn]}>{g.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
             <Input label="Age" icon="calendar-outline" placeholder="28" keyboardType="number-pad" value={age} onChangeText={setAge} />
 
             <Text style={styles.fieldLabel}>Current Weight</Text>

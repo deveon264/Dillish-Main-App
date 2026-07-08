@@ -4,8 +4,70 @@
 // Metro-Node API routes. The server is the source of truth for these values;
 // the device only keeps an offline cache.
 
+export type NotificationPrefs = {
+  workout: boolean;
+  hydration: boolean;
+  streak: boolean;
+  content: boolean;
+  weekly: boolean;
+};
+
+// Fitness-personalization vocabulary. Goal ids intentionally match the values
+// the goal screen has always stored ("lose-weight", "tone", ...) so existing
+// saved profiles keep working.
+export const GOAL_IDS = [
+  "lose-weight",
+  "tone",
+  "strength",
+  "flexibility",
+  "wellness",
+  "energy",
+] as const;
+export type GoalId = (typeof GOAL_IDS)[number];
+
+export const FITNESS_LEVELS = ["beginner", "intermediate", "advanced"] as const;
+export type FitnessLevel = (typeof FITNESS_LEVELS)[number];
+
+export const EQUIPMENT_IDS = [
+  "none",
+  "dumbbells",
+  "resistance_bands",
+  "yoga_mat",
+  "pilates_equipment",
+  "gym_equipment",
+] as const;
+export type EquipmentId = (typeof EQUIPMENT_IDS)[number];
+
+export const DURATION_PREFERENCES = ["10_15", "20_30", "30_45", "45_plus"] as const;
+export type DurationPreference = (typeof DURATION_PREFERENCES)[number];
+
+export const BODY_FOCUS_IDS = [
+  "full_body",
+  "core_abs",
+  "glutes",
+  "legs",
+  "arms",
+  "upper_body",
+  "back_posture",
+  "mobility",
+] as const;
+export type BodyFocusId = (typeof BODY_FOCUS_IDS)[number];
+
+// "No limitations" is represented by an empty array, never stored as a value,
+// so the list below is only real filters. Used for workout filtering only, not
+// medical advice.
+export const LIMITATION_IDS = [
+  "knee_friendly",
+  "back_friendly",
+  "low_impact",
+  "no_jumping",
+  "postpartum_friendly",
+] as const;
+export type LimitationId = (typeof LIMITATION_IDS)[number];
+
 export type Profile = {
   goals: string[];
+  gender: "male" | "female" | "other";
   age: number | null;
   weight: number | null;
   weightUnit: "kg" | "lbs";
@@ -17,10 +79,35 @@ export type Profile = {
   calorieGoal: number;
   startWeight: number | null;
   goalWeight: number | null;
+  notifications: NotificationPrefs;
+  restDays: string[];
+  workoutReminderTime: string;
+  // Fitness personalization. `fitnessLevel === null` means the fitness
+  // questions were never answered (pre-personalization account); see
+  // hasFitnessProfile(). `secondaryGoals` is never stored: it is always
+  // derived as goals minus primaryGoal.
+  primaryGoal: string | null;
+  fitnessLevel: FitnessLevel | null;
+  equipment: EquipmentId[];
+  daysPerWeek: number | null;
+  durationPreference: DurationPreference | null;
+  bodyFocus: BodyFocusId[];
+  limitations: LimitationId[];
+  programId: string | null;
+  programStartedAt: number | null;
 };
+
+export const NOTIFICATION_KEYS: (keyof NotificationPrefs)[] = [
+  "workout",
+  "hydration",
+  "streak",
+  "content",
+  "weekly",
+];
 
 export const DEFAULT_PROFILE: Profile = {
   goals: [],
+  gender: "other",
   age: null,
   weight: null,
   weightUnit: "kg",
@@ -32,6 +119,24 @@ export const DEFAULT_PROFILE: Profile = {
   calorieGoal: 1800,
   startWeight: null,
   goalWeight: null,
+  notifications: {
+    workout: true,
+    hydration: true,
+    streak: true,
+    content: false,
+    weekly: true,
+  },
+  restDays: [],
+  workoutReminderTime: "07:00",
+  primaryGoal: null,
+  fitnessLevel: null,
+  equipment: [],
+  daysPerWeek: null,
+  durationPreference: null,
+  bodyFocus: [],
+  limitations: [],
+  programId: null,
+  programStartedAt: null,
 };
 
 function has(obj: Record<string, unknown>, key: string): boolean {
@@ -63,6 +168,9 @@ export function sanitizeProfilePatch(input: unknown): Partial<Profile> {
       .filter((g): g is string => typeof g === "string" && g.trim() !== "")
       .map((g) => g.trim())
       .slice(0, 12);
+  }
+  if (has(src, "gender") && (src.gender === "male" || src.gender === "female" || src.gender === "other")) {
+    out.gender = src.gender;
   }
   // Nullable measurements: keep an explicit null, keep a valid number, drop
   // anything else.
@@ -101,6 +209,77 @@ export function sanitizeProfilePatch(input: unknown): Partial<Profile> {
     const n = Number(src.calorieGoal);
     if (Number.isFinite(n)) out.calorieGoal = Math.min(10000, Math.max(500, Math.round(n)));
   }
+  if (has(src, "notifications") && src.notifications && typeof src.notifications === "object") {
+    const raw = src.notifications as Record<string, unknown>;
+    const prefs = { ...DEFAULT_PROFILE.notifications };
+    for (const key of NOTIFICATION_KEYS) {
+      if (has(raw, key)) prefs[key] = Boolean(raw[key]);
+    }
+    out.notifications = prefs;
+  }
+  if (has(src, "restDays") && Array.isArray(src.restDays)) {
+    out.restDays = src.restDays
+      .filter((d): d is string => typeof d === "string")
+      .slice(0, 7);
+  }
+  if (has(src, "workoutReminderTime") && typeof src.workoutReminderTime === "string") {
+    if (/^([01]\d|2[0-3]):[0-5]\d$/.test(src.workoutReminderTime)) {
+      out.workoutReminderTime = src.workoutReminderTime;
+    }
+  }
+
+  // Fitness personalization fields. Enum members are kept, explicit nulls are
+  // kept (they mean "answered: none / cleared"), anything else is dropped.
+  const enumArray = <T extends string>(key: keyof Profile, allowed: readonly T[]) => {
+    if (!has(src, key) || !Array.isArray(src[key])) return;
+    const seen = new Set<T>();
+    for (const v of src[key] as unknown[]) {
+      if (typeof v === "string" && (allowed as readonly string[]).includes(v)) seen.add(v as T);
+      if (seen.size >= 12) break;
+    }
+    (out as any)[key] = [...seen];
+  };
+  const nullableEnum = <T extends string>(key: keyof Profile, allowed: readonly T[]) => {
+    if (!has(src, key)) return;
+    if (src[key] === null) {
+      (out as any)[key] = null;
+      return;
+    }
+    if (typeof src[key] === "string" && (allowed as readonly string[]).includes(src[key] as string)) {
+      (out as any)[key] = src[key];
+    }
+  };
+
+  nullableEnum("primaryGoal", GOAL_IDS);
+  nullableEnum("fitnessLevel", FITNESS_LEVELS);
+  nullableEnum("durationPreference", DURATION_PREFERENCES);
+  enumArray("equipment", EQUIPMENT_IDS);
+  enumArray("bodyFocus", BODY_FOCUS_IDS);
+  enumArray("limitations", LIMITATION_IDS);
+
+  if (has(src, "daysPerWeek")) {
+    if (src.daysPerWeek === null) {
+      out.daysPerWeek = null;
+    } else {
+      const n = Number(src.daysPerWeek);
+      if (Number.isFinite(n)) out.daysPerWeek = Math.min(6, Math.max(2, Math.round(n)));
+    }
+  }
+  if (has(src, "programId")) {
+    if (src.programId === null) {
+      out.programId = null;
+    } else if (typeof src.programId === "string" && src.programId.trim()) {
+      out.programId = src.programId.trim();
+    }
+  }
+  if (has(src, "programStartedAt")) {
+    if (src.programStartedAt === null) {
+      out.programStartedAt = null;
+    } else {
+      const n = Number(src.programStartedAt);
+      if (Number.isFinite(n) && n > 0) out.programStartedAt = Math.round(n);
+    }
+  }
 
   return out;
 }
@@ -120,6 +299,7 @@ export function isDefaultProfile(p: Profile): boolean {
   const d = DEFAULT_PROFILE;
   return (
     p.goals.length === 0 &&
+    p.gender === d.gender &&
     p.age === d.age &&
     p.weight === d.weight &&
     p.weightUnit === d.weightUnit &&
@@ -130,6 +310,32 @@ export function isDefaultProfile(p: Profile): boolean {
     p.waterGoalMl === d.waterGoalMl &&
     p.calorieGoal === d.calorieGoal &&
     p.startWeight === d.startWeight &&
-    p.goalWeight === d.goalWeight
+    p.goalWeight === d.goalWeight &&
+    NOTIFICATION_KEYS.every((k) => p.notifications[k] === d.notifications[k]) &&
+    p.restDays.length === 0 &&
+    p.workoutReminderTime === d.workoutReminderTime &&
+    p.primaryGoal === null &&
+    p.fitnessLevel === null &&
+    p.equipment.length === 0 &&
+    p.daysPerWeek === null &&
+    p.durationPreference === null &&
+    p.bodyFocus.length === 0 &&
+    p.limitations.length === 0 &&
+    p.programId === null &&
+    p.programStartedAt === null
   );
+}
+
+// True once the user has answered the fitness-personalization questions.
+// Gates the personalized Home hero and library ranking; older accounts that
+// finished the original 4-step onboarding return false and get the classic
+// featured workout plus a personalize prompt.
+export function hasFitnessProfile(p: Profile): boolean {
+  return p.fitnessLevel !== null;
+}
+
+// Secondary goals are always derived, never stored, so they can't drift from
+// the goals list when either field is edited alone.
+export function secondaryGoalsOf(p: Profile): string[] {
+  return p.goals.filter((g) => g !== p.primaryGoal);
 }
