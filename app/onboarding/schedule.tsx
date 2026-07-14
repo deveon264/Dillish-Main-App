@@ -4,12 +4,15 @@ import { useRouter } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Button } from "@/components/Button";
 import { StepHeader } from "@/components/StepHeader";
-import { useData } from "@/contexts/DataContext";
+import { Reveal, Bouncy, OnboardDecor } from "@/components/onboarding/OnboardKit";
+import { useOnboardingAnswers } from "@/hooks/useOnboardingAnswers";
 import { useInsets } from "@/hooks/useInsets";
 import { useOnboardingMode } from "@/hooks/useOnboardingMode";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
 import type { DurationPreference } from "@/lib/profile";
+import { haptics } from "@/lib/haptics";
 
 const DAYS = [2, 3, 4, 5, 6];
 
@@ -21,53 +24,75 @@ const DURATIONS: { id: DurationPreference; label: string; desc: string }[] = [
 ];
 
 export default function ScheduleStep() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const insets = useInsets();
   const { total, withMode } = useOnboardingMode();
-  const { profile, updateProfile, ready } = useData();
+  const { answers: profile, save: updateProfile, ready } = useOnboardingAnswers();
   const [days, setDays] = useState<number | null>(profile.daysPerWeek);
   const [duration, setDuration] = useState<DurationPreference | null>(profile.durationPreference);
 
   const next = async () => {
     if (!days || !duration) return;
+    haptics.selection();
     await updateProfile({ daysPerWeek: days, durationPreference: duration });
     router.push(withMode("/onboarding/body-focus") as any);
   };
 
   return (
     <GradientBackground>
+      <OnboardDecor />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
       >
         <StepHeader step={5} total={total} />
+        <Reveal index={0}>
         <Text style={styles.title}>How often do you want to train?</Text>
         <Text style={styles.subtitle}>A rhythm you can keep beats a perfect week you can't.</Text>
+        </Reveal>
 
         <View style={styles.dayRow}>
-          {DAYS.map((d) => {
+          {DAYS.map((d, i) => {
             const on = days === d;
             return (
-              <Pressable key={d} style={[styles.dayChip, on && styles.dayChipOn]} onPress={() => setDays(d)}>
+              <Bouncy
+                key={d}
+                style={[styles.dayChip, on && styles.dayChipOn]}
+                onPress={() => {
+                  if (on) return;
+                  haptics.selection();
+                  setDays(d);
+                }}
+              >
                 <Text style={[styles.dayNum, on && styles.dayNumOn]}>{d}</Text>
                 <Text style={[styles.dayUnit, on && styles.dayUnitOn]}>days</Text>
-              </Pressable>
+              </Bouncy>
             );
           })}
         </View>
 
         <Text style={styles.sectionLabel}>PREFERRED WORKOUT LENGTH</Text>
         <View style={styles.list}>
-          {DURATIONS.map((o) => {
+          {DURATIONS.map((o, i) => {
             const on = duration === o.id;
             return (
-              <Pressable key={o.id} style={[styles.item, on && styles.itemOn]} onPress={() => setDuration(o.id)}>
+              <Bouncy
+                key={o.id}
+                style={[styles.item, on && styles.itemOn]}
+                onPress={() => {
+                  if (on) return;
+                  haptics.selection();
+                  setDuration(o.id);
+                }}
+              >
                 <View style={{ flex: 1 }}>
                   <Text style={styles.itemLabel}>{o.label}</Text>
                   <Text style={styles.itemDesc}>{o.desc}</Text>
                 </View>
                 <View style={[styles.radio, on && styles.radioOn]}>{on ? <View style={styles.radioDot} /> : null}</View>
-              </Pressable>
+              </Bouncy>
             );
           })}
         </View>
@@ -79,7 +104,7 @@ export default function ScheduleStep() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   scroll: { paddingHorizontal: 24 },
   title: { fontFamily: fonts.serif, fontSize: 36, color: colors.foreground, lineHeight: 40 },
   subtitle: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted, marginTop: 10, marginBottom: 24, lineHeight: 22 },

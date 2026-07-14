@@ -20,6 +20,7 @@ export type UploadedExercise = {
   hasPoster: boolean;
   workoutId?: string | null;
   workoutExerciseId?: string | null;
+  moveId?: string | null;
   createdAt: number;
 };
 
@@ -50,11 +51,17 @@ export async function listExercises(): Promise<UploadedExercise[]> {
 }
 
 // Returns the uploaded videos tied to a specific workout, newest first, so the
-// workout player can map each exercise to its own video.
-export async function listWorkoutExercises(workoutId: string): Promise<UploadedExercise[]> {
-  const resp = await fetch(
-    `${getApiUrl()}/api/exercises?workoutId=${encodeURIComponent(workoutId)}`
-  );
+// workout player can map each exercise to its own video. Passing the workout's
+// canonical moveIds also returns clips uploaded for the same moves in other
+// workouts (lib/workoutClips.ts picks the right one per exercise).
+export async function listWorkoutExercises(
+  workoutId: string,
+  moveIds: (string | null | undefined)[] = []
+): Promise<UploadedExercise[]> {
+  const moves = [...new Set(moveIds.filter((m): m is string => !!m))];
+  const params = new URLSearchParams({ workoutId });
+  if (moves.length > 0) params.set("moveIds", moves.join(","));
+  const resp = await fetch(`${getApiUrl()}/api/exercises?${params}`);
   if (!resp.ok) throw new Error("Could not load workout videos");
   const data = (await resp.json()) as { items: UploadedExercise[] };
   return data.items ?? [];
@@ -151,6 +158,7 @@ export async function uploadExercise(params: {
   poster?: PosterAsset | null;
   workoutId?: string | null;
   workoutExerciseId?: string | null;
+  moveId?: string | null;
   token: string;
   onProgress?: UploadProgress;
 }): Promise<UploadedExercise> {
@@ -165,6 +173,7 @@ export async function uploadExercise(params: {
     poster,
     workoutId,
     workoutExerciseId,
+    moveId,
     token,
     onProgress,
   } = params;
@@ -190,6 +199,7 @@ export async function uploadExercise(params: {
     filename: asset.fileName ?? "",
     workoutId: workoutId ?? "",
     exerciseId: workoutExerciseId ?? "",
+    moveId: moveId ?? "",
   }).toString();
 
   const { status, body } = await postBinary(

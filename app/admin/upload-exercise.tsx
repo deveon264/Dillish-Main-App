@@ -4,11 +4,11 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Pressable,
   ActivityIndicator,
   Alert,
   Platform,
 } from "react-native";
+import { Bouncy as Pressable } from "@/components/Bouncy";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -19,8 +19,10 @@ import { useInsets } from "@/hooks/useInsets";
 import { useAuth } from "@/contexts/AuthContext";
 import { uploadExercise, UploadError, UploadStage, VideoAsset, PosterAsset } from "@/lib/exercises";
 import { generatePosterFromVideo } from "@/lib/posterFromVideo";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
+import { haptics } from "@/lib/haptics";
 
 const MAX_MB = 80;
 
@@ -45,6 +47,8 @@ function failureTitle(stage: UploadStage | undefined): string {
 }
 
 export default function UploadExercise() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const insets = useInsets();
   const { isAdmin, adminToken } = useAuth();
@@ -54,6 +58,7 @@ export default function UploadExercise() {
   const params = useLocalSearchParams<{
     workoutId?: string;
     exerciseId?: string;
+    moveId?: string;
     title?: string;
     category?: string;
     level?: string;
@@ -83,6 +88,7 @@ export default function UploadExercise() {
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
+        haptics.warning();
         notify("Permission needed", "Please allow library access to choose a video.");
         return;
       }
@@ -94,6 +100,7 @@ export default function UploadExercise() {
       if (result.canceled || !result.assets?.length) return;
       const a = result.assets[0];
       if (a.fileSize && a.fileSize > MAX_MB * 1024 * 1024) {
+        haptics.warning();
         notify("Video too large", `Please choose a video under ${MAX_MB}MB.`);
         return;
       }
@@ -108,12 +115,14 @@ export default function UploadExercise() {
         setPoster(null);
       }
     } catch {
+      haptics.warning();
       notify("Could not open library", "Something went wrong picking a video.");
     }
   };
 
   const submit = async () => {
     if (!asset) {
+      haptics.warning();
       notify("Video required", "Choose a video to upload.");
       return;
     }
@@ -131,6 +140,7 @@ export default function UploadExercise() {
         poster,
         workoutId: params.workoutId ?? null,
         workoutExerciseId: params.exerciseId ?? null,
+        moveId: params.moveId ?? null,
         token: adminToken ?? "",
         onProgress: (sent, total) => setProgress({ sent, total }),
       });
@@ -147,6 +157,7 @@ export default function UploadExercise() {
       if (forWorkout) router.back();
       else router.replace("/exercises");
     } catch (e: any) {
+      haptics.warning();
       const stage: UploadStage | undefined = e instanceof UploadError ? e.stage : undefined;
       const title = failureTitle(stage);
       const message = e?.message ?? "Please try again.";
@@ -199,7 +210,8 @@ export default function UploadExercise() {
           <View style={styles.forCard}>
             <Ionicons name="link-outline" size={18} color={colors.accent} />
             <Text style={styles.forText} numberOfLines={2}>
-              This video will play for <Text style={styles.forName}>{exerciseName || "this exercise"}</Text> in the workout.
+              This video will play for <Text style={styles.forName}>{exerciseName || "this exercise"}</Text>
+              {params.moveId ? " in every workout that uses this move." : " in the workout."}
             </Text>
           </View>
         )}
@@ -255,7 +267,7 @@ export default function UploadExercise() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   scroll: { paddingHorizontal: 20 },
   header: { marginBottom: 8 },
   roundBtn: {

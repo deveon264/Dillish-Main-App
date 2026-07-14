@@ -1,7 +1,8 @@
 import React from "react";
 import { View } from "react-native";
 import Svg, { Path, Defs, LinearGradient, Stop, ClipPath, Rect, G } from "react-native-svg";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 
 export function WaterDroplet({
   size = 180,
@@ -10,6 +11,7 @@ export function WaterDroplet({
   size: number;
   progress: number;
 }) {
+  const colors = useColors();
   const clamped = Math.max(0, Math.min(1, progress));
   const vb = 100;
   const fillY = vb * (1 - clamped);

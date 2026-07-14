@@ -1,4 +1,5 @@
 import { Alert, Platform } from "react-native";
+import { haptics } from "@/lib/haptics";
 
 // A promise-based confirmation that works the same on web and native: web uses
 // the built-in confirm dialog, native uses a two-button Alert. Resolves true
@@ -12,7 +13,9 @@ export function confirmAction(opts: {
   const confirmLabel = opts.confirmLabel ?? "Confirm";
   if (Platform.OS === "web") {
     const text = opts.message ? `${opts.title}\n\n${opts.message}` : opts.title;
-    return Promise.resolve(typeof window !== "undefined" ? window.confirm(text) : false);
+    const confirmed = typeof window !== "undefined" ? window.confirm(text) : false;
+    if (confirmed && opts.destructive) haptics.warning();
+    return Promise.resolve(confirmed);
   }
   return new Promise((resolve) => {
     Alert.alert(opts.title, opts.message, [
@@ -20,7 +23,10 @@ export function confirmAction(opts: {
       {
         text: confirmLabel,
         style: opts.destructive ? "destructive" : "default",
-        onPress: () => resolve(true),
+        onPress: () => {
+          if (opts.destructive) haptics.warning();
+          resolve(true);
+        },
       },
     ]);
   });

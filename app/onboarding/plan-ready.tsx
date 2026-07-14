@@ -4,14 +4,18 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Button } from "@/components/Button";
-import { useData } from "@/contexts/DataContext";
+import { Logo } from "@/components/Logo";
+import { Reveal, OnboardDecor } from "@/components/onboarding/OnboardKit";
+import { useOnboardingAnswers } from "@/hooks/useOnboardingAnswers";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInsets } from "@/hooks/useInsets";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
 import { goalLabel } from "@/constants/goals";
 import { getRecommendedProgram } from "@/lib/recommendation";
 import { PROGRAMS } from "@/constants/programs";
+import { haptics } from "@/lib/haptics";
 
 const DURATION_LABELS: Record<string, string> = {
   "10_15": "10-15 min",
@@ -29,10 +33,12 @@ const LEVEL_LABELS: Record<string, string> = {
 // Final onboarding screen: shows the plan summary, locks in the recommended
 // program, and marks onboarding complete before handing over to the paywall.
 export default function PlanReadyStep() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const insets = useInsets();
-  const { profile, updateProfile, ready } = useData();
-  const { completeOnboarding } = useAuth();
+  const { answers: profile, save: updateProfile, ready } = useOnboardingAnswers();
+  const { user, completeOnboarding } = useAuth();
   const [saving, setSaving] = useState(false);
 
   const program = useMemo(() => getRecommendedProgram(profile, PROGRAMS), [profile]);
@@ -50,12 +56,23 @@ export default function PlanReadyStep() {
   const start = async () => {
     setSaving(true);
     try {
-      await updateProfile({
-        programId: program?.id ?? null,
-        programStartedAt: program ? Date.now() : null,
-      });
-      await completeOnboarding();
-      router.push("/onboarding/paywall");
+      if (user) {
+        // Signed-in member (legacy account mid-onboarding): same as always.
+        await updateProfile({
+          programId: program?.id ?? null,
+          programStartedAt: program ? Date.now() : null,
+        });
+        await completeOnboarding();
+        haptics.success();
+        router.push("/onboarding/paywall");
+      } else {
+        // New flow: the questionnaire ran before signup. Stamp the program
+        // into the draft (started-at is set at flush time, when the account
+        // exists) and continue to account creation.
+        await updateProfile({ programId: program?.id ?? null, programStartedAt: null });
+        haptics.success();
+        router.push("/(auth)/signup");
+      }
     } finally {
       setSaving(false);
     }
@@ -63,31 +80,43 @@ export default function PlanReadyStep() {
 
   return (
     <GradientBackground>
+      <OnboardDecor />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 36, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.heroIcon}>
-          <Ionicons name="sparkles" size={26} color={colors.accent} />
+          <Logo showText={false} size="md" />
         </View>
-        <Text style={styles.title}>Your plan is ready</Text>
-        <Text style={styles.subtitle}>Here's the journey we shaped around your answers. You can adjust any of it later.</Text>
+        <Reveal index={1}>
+          <Text style={styles.title}>Your plan is ready</Text>
+          <Text style={styles.subtitle}>Here's the journey we shaped around your answers. You can adjust any of it later.</Text>
+        </Reveal>
 
-        <View style={styles.card}>
-          {rows.map((r, i) => (
-            <View key={r.label} style={[styles.row, i > 0 && styles.rowBorder]}>
-              <View style={styles.rowIcon}>
-                <Ionicons name={r.icon} size={17} color={colors.accent} />
+        <Reveal index={2}>
+          <View style={styles.card}>
+            {rows.map((r, i) => (
+              <View
+                key={r.label}
+                style={[styles.row, i > 0 && styles.rowBorder]}
+              >
+                <View style={styles.rowIcon}>
+                  <Ionicons name={r.icon} size={17} color={colors.accent} />
+                </View>
+                <Text style={styles.rowLabel}>{r.label}</Text>
+                <Text style={styles.rowValue} numberOfLines={1}>
+                  {r.value}
+                </Text>
               </View>
-              <Text style={styles.rowLabel}>{r.label}</Text>
-              <Text style={styles.rowValue} numberOfLines={1}>
-                {r.value}
-              </Text>
-            </View>
-          ))}
-        </View>
+            ))}
+          </View>
+        </Reveal>
 
-        {program ? <Text style={styles.programDesc}>{program.description}</Text> : null}
+        {program ? (
+          <View>
+            <Text style={styles.programDesc}>{program.description}</Text>
+          </View>
+        ) : null}
       </ScrollView>
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <Button label="Start My Journey" icon="sparkles-outline" onPress={start} loading={saving} disabled={!ready} />
@@ -96,15 +125,10 @@ export default function PlanReadyStep() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   scroll: { paddingHorizontal: 24 },
   heroIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    backgroundColor: colors.accentTint,
-    alignItems: "center",
-    justifyContent: "center",
+    alignSelf: "flex-start",
     marginBottom: 18,
   },
   title: { fontFamily: fonts.serif, fontSize: 36, color: colors.foreground, lineHeight: 40 },

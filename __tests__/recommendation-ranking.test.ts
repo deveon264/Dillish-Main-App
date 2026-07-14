@@ -110,3 +110,26 @@ test("every goal id has a program", () => {
     assert.ok(getRecommendedProgram(p, PROGRAMS), `no program for goal ${goal}`);
   }
 });
+
+test("getRecommendedProgram picks the phase from fitness level", () => {
+  const at = (fitnessLevel: Profile["fitnessLevel"]) =>
+    getRecommendedProgram(prof({ goals: ["tone"], primaryGoal: "tone", fitnessLevel }), PROGRAMS);
+  assert.equal(at("beginner")?.id, "tone-sculpt-4w"); // phase 1
+  assert.equal(at("intermediate")?.id, "sculpt-define-4w"); // phase 2
+  assert.equal(at("advanced")?.id, "sculpt-define-4w"); // phase 2
+  assert.equal(at(null)?.phase, 1); // unknown level starts the journey
+});
+
+test("intermediate users of every goal land on a phase-2 program", () => {
+  for (const goal of ["lose-weight", "tone", "strength", "flexibility", "wellness", "energy"]) {
+    const p = prof({ goals: [goal], primaryGoal: goal, fitnessLevel: "intermediate" });
+    const program = getRecommendedProgram(p, PROGRAMS);
+    assert.equal(program?.phase, 2, `goal ${goal} gave ${program?.id ?? "nothing"}`);
+  }
+});
+
+test("a goal with only phase-1 programs still resolves for intermediate users", () => {
+  const only1 = PROGRAMS.filter((p) => p.goal === "tone" && p.phase === 1);
+  const p = prof({ goals: ["tone"], primaryGoal: "tone", fitnessLevel: "intermediate" });
+  assert.equal(getRecommendedProgram(p, only1)?.id, "tone-sculpt-4w");
+});

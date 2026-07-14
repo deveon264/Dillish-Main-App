@@ -211,6 +211,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { ok: true };
       }
       if (res.status === 0) return { ok: false, error: "Network error. Please try again." };
+      if (!res.data) {
+        return {
+          ok: false,
+          error: "Unexpected server response. Reload Expo Go and try again.",
+        };
+      }
       // Unknown account? Try migrating a matching on-device account.
       const migrated = await migrateLegacy(email, password);
       if (migrated) return migrated;

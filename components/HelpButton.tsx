@@ -1,9 +1,12 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable, Modal, StyleProp, ViewStyle } from "react-native";
+import { View, Text, StyleSheet, Pressable as StructuralPressable, Modal, StyleProp, ViewStyle } from "react-native";
+import { Bouncy as Pressable } from "@/components/Bouncy";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
 import { Button } from "@/components/Button";
+import { Logo } from "@/components/Logo";
 
 type Props = {
   title: string;
@@ -13,7 +16,9 @@ type Props = {
   style?: StyleProp<ViewStyle>;
 };
 
-export function HelpButton({ title, points, intro, iconColor = colors.muted, style }: Props) {
+export function HelpButton({ title, points, intro, iconColor, style }: Props) {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const [open, setOpen] = useState(false);
 
   return (
@@ -25,16 +30,14 @@ export function HelpButton({ title, points, intro, iconColor = colors.muted, sty
         accessibilityRole="button"
         accessibilityLabel="Help"
       >
-        <Ionicons name="help" size={18} color={iconColor} />
+        <Ionicons name="information" size={18} color={iconColor ?? colors.muted} />
       </Pressable>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
-          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+        <StructuralPressable style={styles.backdrop} onPress={() => setOpen(false)}>
+          <StructuralPressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
             <View style={styles.headRow}>
-              <View style={styles.iconBadge}>
-                <Ionicons name="sparkles-outline" size={18} color={colors.accent} />
-              </View>
+              <Logo showText={false} size="sm" />
               <Text style={styles.title}>{title}</Text>
             </View>
 
@@ -50,14 +53,14 @@ export function HelpButton({ title, points, intro, iconColor = colors.muted, sty
             </View>
 
             <Button label="Got it" onPress={() => setOpen(false)} style={styles.cta} />
-          </Pressable>
-        </Pressable>
+          </StructuralPressable>
+        </StructuralPressable>
       </Modal>
     </>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   btn: {
     width: 44,
     height: 44,
@@ -85,16 +88,6 @@ const styles = StyleSheet.create({
     padding: 22,
   },
   headRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  iconBadge: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   title: { flex: 1, fontFamily: fonts.serif, fontSize: 26, color: colors.foreground },
   intro: { fontFamily: fonts.sans, fontSize: 14, lineHeight: 21, color: colors.muted, marginTop: 14 },
   points: { marginTop: 16, gap: 12 },

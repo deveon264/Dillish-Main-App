@@ -1,19 +1,21 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
-  Pressable,
   TextInput,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { Bouncy as Pressable } from "@/components/Bouncy";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
+import { MotionListItem } from "@/components/Motion";
+import { PostDetailSkeleton } from "@/components/LoadingSkeletons";
+import { EmptyState } from "@/components/EmptyState";
 import { Avatar } from "@/components/community/Avatar";
 import { PostMenu } from "@/components/community/PostMenu";
 import { POST_TYPE_META } from "@/components/community/postTypes";
@@ -28,15 +30,20 @@ import {
   fetchComments,
   fetchPost,
   reportPost,
+  setPostPinned,
   timeAgo,
   toggleLike,
   type CommunityComment,
   type CommunityPost,
 } from "@/lib/community";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
+import { haptics } from "@/lib/haptics";
 
 export default function PostDetail() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useInsets();
   const router = useRouter();
@@ -50,6 +57,7 @@ export default function PostDetail() {
   const [posting, setPosting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuBusy, setMenuBusy] = useState(false);
+  const commentInputRef = useRef<TextInput>(null);
 
   const load = useCallback(async () => {
     if (!token || !id) return;
@@ -76,6 +84,7 @@ export default function PostDetail() {
 
   const onLike = useCallback(async () => {
     if (!token || !post) return;
+    haptics.selection();
     const snapshot = post;
     setPost((p) =>
       p ? { ...p, likedByMe: !p.likedByMe, likeCount: p.likeCount + (p.likedByMe ? -1 : 1) } : p
@@ -87,6 +96,7 @@ export default function PostDetail() {
       setPost((p) =>
         p ? { ...p, likedByMe: snapshot.likedByMe, likeCount: snapshot.likeCount } : p
       );
+      haptics.warning();
     }
   }, [token, post]);
 
@@ -101,6 +111,7 @@ export default function PostDetail() {
       setPost((p) => (p ? { ...p, commentCount: p.commentCount + 1 } : p));
       setText("");
     } catch (e: any) {
+      haptics.warning();
       notify("Couldn't comment", e?.message);
     } finally {
       setPosting(false);
@@ -121,6 +132,7 @@ export default function PostDetail() {
       notify("Thanks for reporting", "Our team will take a look at this post.");
     } catch (e: any) {
       closeMenu();
+      haptics.warning();
       notify("Couldn't report", e?.message);
     }
   };
@@ -139,6 +151,7 @@ export default function PostDetail() {
       await blockMember({ token, blockedId: post.author.id });
       router.back();
     } catch (e: any) {
+      haptics.warning();
       notify("Couldn't block", e?.message);
     }
   };
@@ -163,7 +176,20 @@ export default function PostDetail() {
       await deletePost({ token, id: post.id });
       router.back();
     } catch (e: any) {
+      haptics.warning();
       notify("Couldn't delete", e?.message);
+    }
+  };
+  const onTogglePin = async () => {
+    if (!token || !post) return;
+    const nextPinned = !post.pinned;
+    closeMenu();
+    try {
+      await setPostPinned({ token, postId: post.id, pinned: nextPinned });
+      setPost((p) => (p ? { ...p, pinned: nextPinned } : p));
+    } catch (e: any) {
+      haptics.warning();
+      notify(nextPinned ? "Couldn't pin" : "Couldn't unpin", e?.message);
     }
   };
 
@@ -235,9 +261,7 @@ export default function PostDetail() {
       </View>
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.accent} />
-        </View>
+        <PostDetailSkeleton />
       ) : error || !post ? (
         <View style={styles.center}>
           <Ionicons name="alert-circle-outline" size={30} color={colors.muted} />
@@ -249,7 +273,7 @@ export default function PostDetail() {
       ) : (
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior="padding"
           keyboardVerticalOffset={insets.top + 50}
         >
           <FlatList
@@ -257,7 +281,7 @@ export default function PostDetail() {
             keyExtractor={(c) => c.id}
             ListHeaderComponent={head}
             renderItem={({ item }) => (
-              <View style={styles.commentRow}>
+              <MotionListItem style={styles.commentRow}>
                 <Avatar author={item.author} size={34} />
                 <View style={styles.commentBubble}>
                   <View style={styles.commentTop}>
@@ -266,19 +290,28 @@ export default function PostDetail() {
                   </View>
                   <Text style={styles.commentBody}>{item.body}</Text>
                 </View>
-              </View>
+              </MotionListItem>
             )}
             ListEmptyComponent={
-              <Text style={styles.noComments}>No comments yet. Start the conversation.</Text>
+              <EmptyState
+                compact
+                icon="chatbubble-outline"
+                title="No comments yet"
+                description="Start the conversation and support this member."
+                actionLabel="Write a comment"
+                onAction={() => commentInputRef.current?.focus()}
+              />
             }
             ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
             contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
           />
 
           <View style={[styles.inputBar, { paddingBottom: insets.bottom + 10 }]}>
             <TextInput
+              ref={commentInputRef}
               style={styles.input}
               placeholder="Add a comment..."
               placeholderTextColor={colors.muted}
@@ -306,18 +339,20 @@ export default function PostDetail() {
         onClose={closeMenu}
         isOwn={!!post && !!user && post.author.id === user.id}
         isAdmin={!!user?.isAdmin}
+        isPinned={!!post?.pinned}
         authorName={post?.author.name ?? ""}
         busy={menuBusy}
         onReport={onReport}
         onBlock={onBlock}
         onEdit={onEdit}
         onDelete={onDelete}
+        onTogglePin={onTogglePin}
       />
     </GradientBackground>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   topBar: {
     flexDirection: "row",
     alignItems: "center",

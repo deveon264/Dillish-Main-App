@@ -1,19 +1,26 @@
-import React, { useMemo, useState } from "react";
-import { View, Text, StyleSheet, Pressable, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import React, { useMemo, useRef, useState } from "react";
+import { View, Text, StyleSheet, Keyboard, TextInput as NativeTextInput } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
+import { Bouncy as Pressable } from "@/components/Bouncy";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Input } from "@/components/Input";
+import { KeyboardFormToolbar } from "@/components/KeyboardFormToolbar";
 import { Button } from "@/components/Button";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInsets } from "@/hooks/useInsets";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
+import { haptics } from "@/lib/haptics";
 
 type Phase = "request" | "reset";
 
 export default function ForgotPassword() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const insets = useInsets();
   const { requestPasswordReset, resetPassword } = useAuth();
@@ -26,6 +33,7 @@ export default function ForgotPassword() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const confirmRef = useRef<NativeTextInput>(null);
 
   const canReset = useMemo(
     () => password.length >= 6 && confirm.length >= 6,
@@ -39,6 +47,7 @@ export default function ForgotPassword() {
     const res = await requestPasswordReset(email);
     setLoading(false);
     if (!res.ok) {
+      haptics.warning();
       setError(res.error ?? "Could not start password reset");
       return;
     }
@@ -55,10 +64,12 @@ export default function ForgotPassword() {
   const onReset = async () => {
     setError(null);
     if (password.length < 6) {
+      haptics.warning();
       setError("Password must be at least 6 characters");
       return;
     }
     if (password !== confirm) {
+      haptics.warning();
       setError("Passwords don't match");
       return;
     }
@@ -68,18 +79,20 @@ export default function ForgotPassword() {
     if (res.ok) {
       router.replace("/");
     } else {
+      haptics.warning();
       setError(res.error ?? "Could not reset password");
     }
   };
 
   return (
     <GradientBackground>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24 }]}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
+      <KeyboardAwareScrollView
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24 }]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        bottomOffset={96}
+        showsVerticalScrollIndicator={false}
+      >
           <Pressable style={styles.back} onPress={() => router.back()} hitSlop={10}>
             <Ionicons name="chevron-back" size={24} color={colors.foreground} />
           </Pressable>
@@ -103,6 +116,8 @@ export default function ForgotPassword() {
                 autoComplete="email"
                 value={email}
                 onChangeText={setEmail}
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
               />
             ) : (
               <>
@@ -112,13 +127,18 @@ export default function ForgotPassword() {
                   password
                   value={password}
                   onChangeText={setPassword}
+                  returnKeyType="next"
+                  onSubmitEditing={() => confirmRef.current?.focus()}
                 />
                 <Input
+                  ref={confirmRef}
                   icon="lock-closed-outline"
                   placeholder="Confirm new password"
                   password
                   value={confirm}
                   onChangeText={setConfirm}
+                  returnKeyType="done"
+                  onSubmitEditing={Keyboard.dismiss}
                 />
               </>
             )}
@@ -155,13 +175,13 @@ export default function ForgotPassword() {
               Remembered it? <Text style={styles.footerLink}>Back to sign in</Text>
             </Text>
           </Pressable>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+      {phase === "reset" ? <KeyboardFormToolbar /> : null}
     </GradientBackground>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   scroll: { flexGrow: 1, paddingHorizontal: 24 },
   back: { width: 40, height: 40, alignItems: "flex-start", justifyContent: "center" },
   header: { marginTop: 20, marginBottom: 36 },

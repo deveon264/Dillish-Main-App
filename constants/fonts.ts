@@ -1,12 +1,13 @@
 export const fonts = {
-  serifLight: "CormorantGaramond_300Light",
-  serif: "CormorantGaramond_400Regular",
-  serifMedium: "CormorantGaramond_500Medium",
-  serifSemibold: "CormorantGaramond_600SemiBold",
-  serifItalic: "CormorantGaramond_500Medium_Italic",
-  serifItalicLight: "CormorantGaramond_400Regular_Italic",
-  sans: "DMSans_400Regular",
-  sansMedium: "DMSans_500Medium",
-  sansSemibold: "DMSans_600SemiBold",
-  sansBold: "DMSans_700Bold",
+  // Playfair Display has no 300 weight; Light callers get Regular.
+  serifLight: "PlayfairDisplay_400Regular",
+  serif: "PlayfairDisplay_400Regular",
+  serifMedium: "PlayfairDisplay_500Medium",
+  serifSemibold: "PlayfairDisplay_600SemiBold",
+  serifItalic: "PlayfairDisplay_500Medium_Italic",
+  serifItalicLight: "PlayfairDisplay_400Regular_Italic",
+  sans: "Figtree_400Regular",
+  sansMedium: "Figtree_500Medium",
+  sansSemibold: "Figtree_600SemiBold",
+  sansBold: "Figtree_700Bold",
 };

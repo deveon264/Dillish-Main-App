@@ -4,11 +4,11 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Pressable,
   ActivityIndicator,
   Alert,
   Platform,
 } from "react-native";
+import { Bouncy as Pressable } from "@/components/Bouncy";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -20,8 +20,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/Button";
 import { updateExercisePoster, posterUrl, videoUrl, PosterAsset } from "@/lib/exercises";
 import { generatePosterFromVideo } from "@/lib/posterFromVideo";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
+import { haptics } from "@/lib/haptics";
 
 function notify(title: string, message: string) {
   if (Platform.OS === "web") window.alert(`${title}\n\n${message}`);
@@ -29,6 +31,8 @@ function notify(title: string, message: string) {
 }
 
 export default function EditPoster() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const insets = useInsets();
   const { isAdmin, adminToken } = useAuth();
@@ -60,6 +64,7 @@ export default function EditPoster() {
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
+        haptics.warning();
         notify("Permission needed", "Please allow library access to choose an image.");
         return;
       }
@@ -72,6 +77,7 @@ export default function EditPoster() {
       const a = result.assets[0];
       setPoster({ uri: a.uri, mimeType: a.mimeType || "image/jpeg" });
     } catch {
+      haptics.warning();
       notify("Could not open library", "Something went wrong picking an image.");
     }
   };
@@ -84,6 +90,7 @@ export default function EditPoster() {
       if (generated) {
         setPoster(generated);
       } else {
+        haptics.warning();
         notify("Couldn't capture a frame", "Choose a custom image instead.");
       }
     } finally {
@@ -94,6 +101,7 @@ export default function EditPoster() {
   const save = async () => {
     if (!id) return;
     if (!poster?.uri) {
+      haptics.warning();
       notify("Pick a poster", "Choose a new image or capture one from the video first.");
       return;
     }
@@ -103,6 +111,7 @@ export default function EditPoster() {
       if (Platform.OS !== "web") Alert.alert("Poster updated", "Members will see the new poster.");
       router.back();
     } catch (e: any) {
+      haptics.warning();
       notify("Update failed", e?.message ?? "Please try again.");
     } finally {
       setBusy(false);
@@ -177,6 +186,8 @@ export default function EditPoster() {
 }
 
 function Header({ onBack }: { onBack: () => void }) {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   return (
     <PageHeader
       variant="compact"
@@ -193,7 +204,7 @@ function Header({ onBack }: { onBack: () => void }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   scroll: { paddingHorizontal: 20 },
   header: { marginBottom: 8 },
   roundBtn: {

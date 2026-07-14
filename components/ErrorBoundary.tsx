@@ -1,5 +1,6 @@
 import React from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
+import { Bouncy as Pressable } from "@/components/Bouncy";
 import { reloadAppAsync } from "expo";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/constants/colors";

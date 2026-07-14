@@ -18,6 +18,10 @@
 
 export type WorkoutPhase = "active" | "rest" | "done";
 
+// What the rest phase leads into: the next set of the SAME exercise, or the
+// next exercise.
+export type RestKind = "set" | "exercise";
+
 // Which signal fired the completion.
 export type CompletionSource = "video" | "timer";
 
@@ -43,6 +47,15 @@ export type CompletionInput = {
   // Rest gap (seconds) configured between exercises. <= 0 means advance
   // immediately with no rest screen.
   restGap: number;
+  // 0-based set currently playing within the exercise. Defaults to 0 for
+  // callers that predate per-set playback.
+  setIndex?: number;
+  // Total sets configured for the current exercise (>= 1). Defaults to 1, which
+  // reproduces the pre-set behavior (every completion ends the exercise).
+  sets?: number;
+  // The set already marked complete for `completedIndex` (the double-fire
+  // guard's second half). -1 means none. Defaults to -1.
+  completedSetIndex?: number;
 };
 
 export type CompletionAction =
@@ -53,16 +66,25 @@ export type CompletionAction =
   // Advance straight to the next exercise (rest is off).
   | "advance"
   // Open the rest countdown before the next exercise.
-  | "rest";
+  | "rest"
+  // More sets remain and rest is off: start the next set immediately.
+  | "nextSet"
+  // More sets remain: open the rest countdown before the next set.
+  | "setRest";
 
 export type CompletionDecision = {
   action: CompletionAction;
-  // The value to store back into the double-fire guard, or null when the signal
-  // is ignored (the guard must not move).
+  // The values to store back into the double-fire guard, or null when the
+  // signal is ignored (the guard must not move).
   completedIndex: number | null;
+  completedSetIndex: number | null;
 };
 
-const ignore = (): CompletionDecision => ({ action: "ignore", completedIndex: null });
+const ignore = (): CompletionDecision => ({
+  action: "ignore",
+  completedIndex: null,
+  completedSetIndex: null,
+});
 
 export function decideExerciseCompletion(input: CompletionInput): CompletionDecision {
   const {
@@ -75,6 +97,9 @@ export function decideExerciseCompletion(input: CompletionInput): CompletionDeci
     index,
     total,
     restGap,
+    setIndex = 0,
+    sets = 1,
+    completedSetIndex = -1,
   } = input;
 
   // Only an exercise that is actively playing can complete.
@@ -87,13 +112,21 @@ export function decideExerciseCompletion(input: CompletionInput): CompletionDeci
     return ignore();
   }
 
-  // Already completed this exercise (e.g. the countdown and the clip ended
+  // Already completed this set (e.g. the countdown and the clip ended
   // together): ignore the second signal so it can't double-count or skip ahead.
-  if (completedIndex === index) return ignore();
+  if (completedIndex === index && completedSetIndex === setIndex) return ignore();
 
-  if (index + 1 >= total) return { action: "finish", completedIndex: index };
-  if (restGap <= 0) return { action: "advance", completedIndex: index };
-  return { action: "rest", completedIndex: index };
+  const done = { completedIndex: index, completedSetIndex: setIndex };
+
+  // More sets of THIS exercise remain: rest into the next set (or start it
+  // straight away when rest is off).
+  if (setIndex + 1 < Math.max(1, sets)) {
+    return restGap <= 0 ? { action: "nextSet", ...done } : { action: "setRest", ...done };
+  }
+
+  if (index + 1 >= total) return { action: "finish", ...done };
+  if (restGap <= 0) return { action: "advance", ...done };
+  return { action: "rest", ...done };
 }
 
 // --- Rest countdown -> auto-advance ---------------------------------------

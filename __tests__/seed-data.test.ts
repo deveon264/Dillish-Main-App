@@ -41,6 +41,7 @@ test("every workout has real exercises with cues and timing", () => {
     assert.equal(exIds.size, w.exercises.length, `${w.id}: duplicate exercise ids`);
     for (const e of w.exercises) {
       assert.ok(e.name.trim(), `${w.id}/${e.id}: empty name`);
+      assert.ok(e.moveId.trim(), `${w.id}/${e.id}: empty moveId`);
       assert.ok(e.cues.length > 0 && e.cues.every((c) => c.trim()), `${w.id}/${e.id}: empty cues`);
       assert.ok(e.modifications.trim(), `${w.id}/${e.id}: empty modifications`);
       assert.ok(e.sets > 0, `${w.id}/${e.id}: sets ${e.sets}`);
@@ -108,5 +109,39 @@ test("every goal has a program", () => {
   const covered = new Set(PROGRAMS.map((p) => p.goal));
   for (const goal of GOAL_IDS) {
     assert.ok(covered.has(goal), `no program for ${goal}`);
+  }
+});
+
+test("workout titles are unique", () => {
+  const seen = new Map<string, string>();
+  for (const w of WORKOUTS) {
+    const key = w.title.trim().toLowerCase();
+    assert.ok(!seen.has(key), `duplicate workout title "${w.title}" (${seen.get(key)} and ${w.id})`);
+    seen.set(key, w.id);
+  }
+});
+
+test("every goal has a phase-1 and a phase-2 program", () => {
+  for (const goal of GOAL_IDS) {
+    const phases = new Set(PROGRAMS.filter((p) => p.goal === goal).map((p) => p.phase));
+    assert.ok(phases.has(1), `no phase-1 program for ${goal}`);
+    assert.ok(phases.has(2), `no phase-2 program for ${goal}`);
+  }
+});
+
+test("program chains resolve, stay on-goal, and never cycle", () => {
+  const byId = new Map(PROGRAMS.map((p) => [p.id, p]));
+  for (const p of PROGRAMS) {
+    if (!p.nextProgramId) continue;
+    const next = byId.get(p.nextProgramId);
+    assert.ok(next, `${p.id}: nextProgramId ${p.nextProgramId} does not exist`);
+    assert.equal(next.goal, p.goal, `${p.id}: chains into a different goal`);
+    const seen = new Set([p.id]);
+    let cur: (typeof PROGRAMS)[number] | undefined = next;
+    while (cur) {
+      assert.ok(!seen.has(cur.id), `program chain cycle at ${cur.id}`);
+      seen.add(cur.id);
+      cur = cur.nextProgramId ? byId.get(cur.nextProgramId) : undefined;
+    }
   }
 });

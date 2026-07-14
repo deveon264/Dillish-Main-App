@@ -4,21 +4,24 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Pressable,
   ActivityIndicator,
   Alert,
   Platform,
   RefreshControl,
   Modal,
   TextInput,
-  KeyboardAvoidingView,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { Bouncy as Pressable } from "@/components/Bouncy";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
+import { MotionListItem } from "@/components/Motion";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/Button";
+import { ListRowsSkeleton } from "@/components/LoadingSkeletons";
+import { EmptyState } from "@/components/EmptyState";
 import { Avatar } from "@/components/community/Avatar";
 import { POST_TYPE_META } from "@/components/community/postTypes";
 import { useInsets } from "@/hooks/useInsets";
@@ -35,8 +38,10 @@ import {
   warnAuthor,
   type ReportGroup,
 } from "@/lib/community";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
+import { haptics } from "@/lib/haptics";
 
 // Prefilled into the warn composer so an admin can send a clear note in one tap
 // or tweak it first. No em dashes per the project's copy rules.
@@ -51,17 +56,23 @@ function notify(title: string, message: string) {
 }
 
 function confirmAction(title: string, message: string, confirmLabel: string, run: () => void) {
+  const confirmedRun = () => {
+    haptics.warning();
+    run();
+  };
   if (Platform.OS === "web") {
-    if (window.confirm(`${title}\n\n${message}`)) run();
+    if (window.confirm(`${title}\n\n${message}`)) confirmedRun();
   } else {
     Alert.alert(title, message, [
       { text: "Cancel", style: "cancel" },
-      { text: confirmLabel, style: "destructive", onPress: run },
+      { text: confirmLabel, style: "destructive", onPress: confirmedRun },
     ]);
   }
 }
 
 export default function Reports() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const insets = useInsets();
   const { isAdmin, token } = useAuth();
@@ -125,6 +136,7 @@ export default function Reports() {
           await deletePost({ token, id: group.post.id });
           setReports((prev) => (prev ? prev.filter((g) => g.post.id !== group.post.id) : prev));
         } catch (e: any) {
+          haptics.warning();
           notify("Could not delete post", e?.message ?? "Please try again.");
         } finally {
           setBusyId(null);
@@ -152,6 +164,7 @@ export default function Reports() {
             : prev
         );
       } catch (e: any) {
+        haptics.warning();
         notify(
           blocking ? "Could not block member" : "Could not unblock member",
           e?.message ?? "Please try again."
@@ -187,6 +200,7 @@ export default function Reports() {
     if (!token || !warnTarget) return;
     const message = warnText.trim();
     if (!message) {
+      haptics.warning();
       notify("Add a message", "Please write a short warning before sending.");
       return;
     }
@@ -205,6 +219,7 @@ export default function Reports() {
       setWarnText("");
       notify("Warning sent", "The member will see your note the next time they open the feed.");
     } catch (e: any) {
+      haptics.warning();
       notify("Could not warn member", e?.message ?? "Please try again.");
     } finally {
       setWarnSending(false);
@@ -230,6 +245,7 @@ export default function Reports() {
               : prev
           );
         } catch (e: any) {
+          haptics.warning();
           notify("Could not withdraw warning", e?.message ?? "Please try again.");
         } finally {
           setBusyId(null);
@@ -251,6 +267,7 @@ export default function Reports() {
           await dismissReportsForPost({ token, postId: group.post.id });
           setReports((prev) => (prev ? prev.filter((g) => g.post.id !== group.post.id) : prev));
         } catch (e: any) {
+          haptics.warning();
           notify("Could not dismiss reports", e?.message ?? "Please try again.");
         } finally {
           setBusyId(null);
@@ -290,9 +307,7 @@ export default function Reports() {
         </View>
 
         {reports === null ? (
-          <View style={styles.center}>
-            <ActivityIndicator color={colors.accent} />
-          </View>
+          <ListRowsSkeleton rows={3} label="Loading reported posts" />
         ) : error && reports.length === 0 ? (
           <View style={styles.center}>
             <Ionicons name="cloud-offline-outline" size={36} color={colors.mutedForeground} />
@@ -300,17 +315,19 @@ export default function Reports() {
             <Button label="Try Again" variant="outline" onPress={() => void load()} style={{ marginTop: 16, width: 200 }} />
           </View>
         ) : reports.length === 0 ? (
-          <View style={styles.center}>
-            <Ionicons name="checkmark-done-circle-outline" size={40} color={colors.accent} />
-            <Text style={styles.emptyTitle}>All clear</Text>
-            <Text style={styles.emptyText}>There are no reported posts to review right now.</Text>
-          </View>
+          <EmptyState
+            icon="checkmark-done-circle-outline"
+            title="All clear"
+            description="There are no reported posts to review right now."
+            actionLabel="Return to community"
+            onAction={() => router.push("/(tabs)/community")}
+          />
         ) : (
           reports.map((group) => {
             const meta = POST_TYPE_META[group.post.type];
             const busy = busyId === group.post.id;
             return (
-              <View key={group.post.id} style={styles.card}>
+              <MotionListItem key={group.post.id} style={styles.card}>
                 <Pressable
                   style={styles.reporterRow}
                   onPress={() => router.push(`/community/${group.post.id}`)}
@@ -480,7 +497,7 @@ export default function Reports() {
                     </Text>
                   </Pressable>
                 </View>
-              </View>
+              </MotionListItem>
             );
           })
         )}
@@ -494,7 +511,7 @@ export default function Reports() {
       >
         <KeyboardAvoidingView
           style={styles.modalOverlay}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior="padding"
         >
           <View style={styles.modalCard}>
             <View style={styles.modalHead}>
@@ -546,7 +563,7 @@ export default function Reports() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   scroll: { paddingHorizontal: 20 },
   header: { marginBottom: 8 },
   roundBtn: {

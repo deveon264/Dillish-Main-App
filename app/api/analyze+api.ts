@@ -8,10 +8,31 @@ type Nutrition = {
   fats: number;
 };
 
-export async function POST(request: Request): Promise<Response> {
-  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
-  const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-  if (!apiKey || !baseURL) {
+type Env = Record<string, string | undefined>;
+
+export type AnalyzeDeps = {
+  env?: Env;
+  createCompletion?: (input: any) => Promise<any>;
+};
+
+const NUTRITION_SCHEMA = {
+  type: "object",
+  properties: {
+    name: { type: "string", description: "The identified food or meal name." },
+    kcal: { type: "number", description: "Estimated calories for the shown or described portion." },
+    protein: { type: "number", description: "Estimated protein grams for the portion." },
+    carbs: { type: "number", description: "Estimated carbohydrate grams for the portion." },
+    fats: { type: "number", description: "Estimated fat grams for the portion." },
+  },
+  required: ["name", "kcal", "protein", "carbs", "fats"],
+  additionalProperties: false,
+} as const;
+
+export async function analyzeMealPost(request: Request, deps: AnalyzeDeps = {}): Promise<Response> {
+  const env = deps.env ?? process.env;
+  const apiKey = env.OPENAI_API_KEY ?? env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  const baseURL = env.OPENAI_BASE_URL ?? env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+  if (!apiKey) {
     return Response.json(
       { error: "AI service is not configured yet." },
       { status: 503 },
@@ -31,7 +52,12 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  const openai = new OpenAI({ apiKey, baseURL });
+  const openai = deps.createCompletion
+    ? null
+    : new OpenAI({ apiKey, ...(baseURL ? { baseURL } : {}) });
+  const createCompletion =
+    deps.createCompletion ??
+    ((input: any) => openai!.chat.completions.create(input));
 
   const systemPrompt =
     'You are a precise nutrition estimator. Identify the food and estimate its nutritional content for the portion described or shown. Respond ONLY with JSON in this exact shape: {"name": string, "kcal": number, "protein": number, "carbs": number, "fats": number}. Macros are in grams, rounded to whole numbers. If the input is not food, return name \'Not a meal\' with zeros.';
@@ -45,16 +71,22 @@ export async function POST(request: Request): Promise<Response> {
 
   let completion;
   try {
-    completion = await openai.chat.completions.create({
-      // Use the model the Replit OpenAI integration actually serves. It is
-      // vision-capable, so the same call handles photo, scan, and text input.
-      model: "gpt-5.4",
+    completion = await createCompletion({
+      // Lower-cost, vision-capable default for photo and text meal analysis.
+      model: env.OPENAI_MODEL ?? "gpt-5.4-mini",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userContent },
       ],
-      response_format: { type: "json_object" },
-      max_completion_tokens: 8192,
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "nutrition_estimate",
+          strict: true,
+          schema: NUTRITION_SCHEMA,
+        },
+      },
+      max_completion_tokens: 2048,
     });
   } catch (e: any) {
     console.error("analyze error: model request failed:", e?.status ?? "", e?.message ?? e);
@@ -105,4 +137,8 @@ export async function POST(request: Request): Promise<Response> {
   };
 
   return Response.json(result);
+}
+
+export async function POST(request: Request): Promise<Response> {
+  return analyzeMealPost(request);
 }

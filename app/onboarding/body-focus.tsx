@@ -5,12 +5,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Button } from "@/components/Button";
 import { StepHeader } from "@/components/StepHeader";
-import { useData } from "@/contexts/DataContext";
+import { Reveal, Bouncy, OnboardDecor } from "@/components/onboarding/OnboardKit";
+import { useOnboardingAnswers } from "@/hooks/useOnboardingAnswers";
 import { useInsets } from "@/hooks/useInsets";
 import { useOnboardingMode } from "@/hooks/useOnboardingMode";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
 import type { BodyFocusId } from "@/lib/profile";
+import { haptics } from "@/lib/haptics";
 
 const OPTIONS: { id: BodyFocusId; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { id: "full_body", label: "Full Body", icon: "body-outline" },
@@ -24,43 +27,50 @@ const OPTIONS: { id: BodyFocusId; label: string; icon: keyof typeof Ionicons.gly
 ];
 
 export default function BodyFocusStep() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const insets = useInsets();
   const { total, withMode } = useOnboardingMode();
-  const { profile, updateProfile, ready } = useData();
+  const { answers: profile, save: updateProfile, ready } = useOnboardingAnswers();
   const [selected, setSelected] = useState<BodyFocusId[]>(profile.bodyFocus);
 
   const toggle = (id: BodyFocusId) => {
+    haptics.selection();
     setSelected((prev) => (prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]));
   };
 
   const next = async () => {
+    haptics.selection();
     await updateProfile({ bodyFocus: selected });
     router.push(withMode("/onboarding/limitations") as any);
   };
 
   return (
     <GradientBackground>
+      <OnboardDecor />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
       >
         <StepHeader step={6} total={total} />
+        <Reveal index={0}>
         <Text style={styles.title}>What areas do you want to focus on?</Text>
         <Text style={styles.subtitle}>Choose as many as you like. We'll weave them into your plan.</Text>
+        </Reveal>
 
         <View style={styles.grid}>
-          {OPTIONS.map((o) => {
+          {OPTIONS.map((o, i) => {
             const on = selected.includes(o.id);
             return (
-              <Pressable key={o.id} style={[styles.cell, on && styles.cellOn]} onPress={() => toggle(o.id)}>
+              <Bouncy key={o.id} style={[styles.cell, on && styles.cellOn]} onPress={() => toggle(o.id)}>
                 <View style={[styles.cellIcon, on && styles.cellIconOn]}>
                   <Ionicons name={o.icon} size={20} color={on ? colors.onPrimary : colors.accent} />
                 </View>
                 <Text style={[styles.cellLabel, on && styles.cellLabelOn]} numberOfLines={1}>
                   {o.label}
                 </Text>
-              </Pressable>
+              </Bouncy>
             );
           })}
         </View>
@@ -72,7 +82,7 @@ export default function BodyFocusStep() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   scroll: { paddingHorizontal: 24 },
   title: { fontFamily: fonts.serif, fontSize: 36, color: colors.foreground, lineHeight: 40 },
   subtitle: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted, marginTop: 10, marginBottom: 24, lineHeight: 22 },

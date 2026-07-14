@@ -57,6 +57,23 @@ export function buildNotifications(args: {
   const now = Date.now();
   const out: Omit<AppNotification, "read">[] = [];
 
+  // A brand-new member has no activity of any kind yet. Greet them warmly the
+  // moment they reach home; the card clears itself as soon as they log water, a
+  // meal, or a workout, so it shows exactly while they are getting started. Its
+  // id is not date-keyed, so once read it stays read (no daily resurfacing).
+  const isNewMember =
+    completions.length === 0 && waterLogs.length === 0 && calorieLogs.length === 0;
+  if (isNewMember) {
+    out.push({
+      id: "welcome",
+      icon: "sparkles-outline",
+      tone: "accent",
+      title: "Welcome to Florish! 🌸",
+      body: "We're so glad you're here. This is the start of your fitness journey, one beautiful session at a time.",
+      ts: now + 2,
+    });
+  }
+
   // A genuinely new all-time record beats a plain milestone, so when both would
   // fire on the same day we show only the personal-best celebration.
   const celebratingBest = newBest != null && newBest > 0;

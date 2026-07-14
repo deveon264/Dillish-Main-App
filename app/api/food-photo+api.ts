@@ -1,20 +1,41 @@
-export async function POST(request: Request): Promise<Response> {
+type FoodPhotoDeps = {
+  env?: Record<string, string | undefined>;
+  fetchPhotos?: (url: string, init?: RequestInit) => Promise<Response>;
+};
+
+function buildFoodPhotoQuery(name: string, text?: string): string {
+  const original = text?.trim();
+  if (!original || original.toLowerCase() === name.toLowerCase()) {
+    return `${name} food`;
+  }
+  if (name.toLowerCase().includes(original.toLowerCase())) {
+    return `${name} food`;
+  }
+  return `${name} ${original} food`;
+}
+
+export async function foodPhotoPost(
+  request: Request,
+  deps: FoodPhotoDeps = {},
+): Promise<Response> {
   try {
-    const apiKey = process.env.PEXELS_API_KEY;
+    const env = deps.env ?? process.env;
+    const apiKey = env.PEXELS_API_KEY;
     if (!apiKey) {
       return Response.json({ photoUrl: null });
     }
 
-    const body = (await request.json()) as { name?: string };
+    const body = (await request.json()) as { name?: string; text?: string };
     const name = body.name?.trim();
     if (!name || name.toLowerCase() === "not a meal") {
       return Response.json({ photoUrl: null });
     }
 
-    const query = encodeURIComponent(`${name} food`);
+    const query = encodeURIComponent(buildFoodPhotoQuery(name, body.text));
     const url = `https://api.pexels.com/v1/search?query=${query}&per_page=1&orientation=landscape`;
 
-    const resp = await fetch(url, {
+    const fetchPhotos = deps.fetchPhotos ?? fetch;
+    const resp = await fetchPhotos(url, {
       headers: { Authorization: apiKey },
     });
     if (!resp.ok) {
@@ -32,4 +53,8 @@ export async function POST(request: Request): Promise<Response> {
     console.error("food-photo error:", e?.message ?? e);
     return Response.json({ photoUrl: null });
   }
+}
+
+export async function POST(request: Request): Promise<Response> {
+  return foodPhotoPost(request);
 }

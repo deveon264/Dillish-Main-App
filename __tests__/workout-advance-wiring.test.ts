@@ -392,3 +392,91 @@ test("a playToEnd from an outgoing clip during a load does not advance", () => {
   assert.equal(h.calls.complete, 0);
   assert.equal(h.calls.finish, 0);
 });
+
+// =========================================================================
+// Per-set playback: a mid-exercise set completion opens a SET rest, the rest
+// countdown then starts the NEXT SET of the same exercise (onSetStart fires,
+// index stays, remaining reseeds), and the exercise's LAST set hands over to
+// the normal exercise rest/advance flow.
+// =========================================================================
+
+test("completing a mid-exercise set opens a set rest, then the next set of the SAME exercise starts", () => {
+  const setStarts: Array<[number, number]> = [];
+  const h = renderHook(
+    { total: 3, restGap: 15, paused: true },
+    { setsAt: () => 3, onSetStart: (i, s) => setStarts.push([i, s]) },
+  );
+
+  act(() => h.result.current.completeExercise("timer"));
+  assert.equal(h.result.current.phase, "rest");
+  assert.equal(h.result.current.restKind, "set");
+  assert.equal(h.result.current.restRemaining, 15);
+  assert.equal(h.result.current.index, 0);
+  assert.equal(h.calls.complete, 1);
+
+  // "Start now" during a set rest starts the next set, not the next exercise.
+  act(() => h.result.current.skipRest());
+  assert.equal(h.result.current.phase, "active");
+  assert.equal(h.result.current.index, 0);
+  assert.equal(h.result.current.currentSet, 1);
+  assert.equal(h.result.current.remaining, DURATIONS[0]);
+  assert.deepEqual(setStarts, [[0, 1]]);
+});
+
+test("the LAST set of an exercise opens an exercise rest and the advance resets currentSet", () => {
+  const h = renderHook({ total: 3, restGap: 15, paused: true }, { setsAt: () => 2 });
+
+  // Set 1 of 2 -> set rest -> set 2.
+  act(() => h.result.current.completeExercise("timer"));
+  act(() => h.result.current.skipRest());
+  assert.equal(h.result.current.currentSet, 1);
+
+  // Set 2 of 2 -> exercise rest -> next exercise with currentSet back at 0.
+  act(() => h.result.current.completeExercise("timer"));
+  assert.equal(h.result.current.phase, "rest");
+  assert.equal(h.result.current.restKind, "exercise");
+  act(() => h.result.current.skipRest());
+  assert.equal(h.result.current.index, 1);
+  assert.equal(h.result.current.currentSet, 0);
+  assert.equal(h.result.current.remaining, DURATIONS[1]);
+});
+
+test("rest off chains straight from set to set, and each set can complete once", () => {
+  const setStarts: Array<[number, number]> = [];
+  const h = renderHook(
+    { total: 3, restGap: 0, paused: true },
+    { setsAt: () => 3, onSetStart: (i, s) => setStarts.push([i, s]) },
+  );
+
+  act(() => h.result.current.completeExercise("timer"));
+  assert.equal(h.result.current.phase, "active");
+  assert.equal(h.result.current.currentSet, 1);
+
+  // A duplicate signal for the set that just completed is NOT ignored for the
+  // new set: this is set 2 completing (new pair), so it advances to set 3.
+  act(() => h.result.current.completeExercise("timer"));
+  assert.equal(h.result.current.currentSet, 2);
+
+  // Final set with rest off advances to the next exercise.
+  act(() => h.result.current.completeExercise("timer"));
+  assert.equal(h.result.current.index, 1);
+  assert.equal(h.result.current.currentSet, 0);
+  assert.deepEqual(setStarts, [[0, 1], [0, 2]]);
+});
+
+test("jumpTo an earlier exercise resets currentSet to 0", () => {
+  const h = renderHook({ total: 3, restGap: 0, paused: true }, { setsAt: () => 2 });
+
+  // Finish both sets of exercise 0 to land on exercise 1.
+  act(() => h.result.current.completeExercise("timer"));
+  act(() => h.result.current.completeExercise("timer"));
+  assert.equal(h.result.current.index, 1);
+
+  // Move to set 2 of exercise 1, then jump back.
+  act(() => h.result.current.completeExercise("timer"));
+  assert.equal(h.result.current.currentSet, 1);
+  act(() => h.result.current.jumpTo(0));
+  assert.equal(h.result.current.index, 0);
+  assert.equal(h.result.current.currentSet, 0);
+  assert.equal(h.result.current.remaining, DURATIONS[0]);
+});

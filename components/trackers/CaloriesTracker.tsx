@@ -1,23 +1,34 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, Image, Platform, ActivityIndicator, Animated, Easing, TextInput, Modal, ActionSheetIOS, Alert } from "react-native";
+import { View, Text, StyleSheet, Pressable as StructuralPressable, Image, Platform, ActivityIndicator, Animated, Easing, TextInput, Modal, ActionSheetIOS, Alert } from "react-native";
+import { KeyboardAwareScrollView, KeyboardGestureArea } from "react-native-keyboard-controller";
 import * as ImagePicker from "expo-image-picker";
-import * as Haptics from "expo-haptics";
+import { useRouter } from "expo-router";
+import { useAudioRecorder, AudioModule, RecordingPresets, setAudioModeAsync } from "expo-audio";
+import { readAsStringAsync } from "expo-file-system/legacy";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { AnimatedNumber } from "@/components/AnimatedNumber";
+import { Bouncy as Pressable } from "@/components/Bouncy";
 import { GradientBackground } from "@/components/GradientBackground";
+import { MotionListItem } from "@/components/Motion";
+import { useDataRefresh } from "@/hooks/useDataRefresh";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
+import { EmptyState } from "@/components/EmptyState";
 import { SectionLabel } from "@/components/PageHeader";
 import { ProgressRing } from "@/components/ProgressRing";
-import { ProgressBar } from "@/components/ProgressBar";
-import { useData } from "@/contexts/DataContext";
+import { useData, type CalorieLog } from "@/contexts/DataContext";
 import { useInsets } from "@/hooks/useInsets";
 import { getApiUrl } from "@/lib/api";
+import { rehostStockPhoto } from "@/lib/mealPhotos";
+import { addMealWithBackgroundPhoto } from "@/lib/optimisticMeal";
 import { todayKey } from "@/lib/storage";
-import { getCalorieInsight } from "@/lib/calorieInsights";
+import { getCalorieInsight, type InsightChip } from "@/lib/calorieInsights";
 import { CalorieInsightBody, insightMacroColor, type InsightBodyComponents } from "@/components/trackers/CalorieInsightCard";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
+import { haptics } from "@/lib/haptics";
 
 type AnalysisResult = {
   name: string;
@@ -25,9 +36,26 @@ type AnalysisResult = {
   protein: number;
   carbs: number;
   fats: number;
+  photoUrl?: string;
 };
 
-type LogTab = "photo" | "text" | "scan";
+type LogTab = "photo" | "text" | "voice";
+const MAX_VISIBLE_LOGS = 5;
+const MEAL_TEXT_INPUT_ID = "meal-text-input";
+
+function MealTextGestureArea({ children }: { children: React.ReactNode }) {
+  if (Platform.OS === "web") return <>{children}</>;
+  return (
+    <KeyboardGestureArea
+      enableSwipeToDismiss
+      showOnSwipeUp={false}
+      interpolator="ios"
+      textInputNativeID={MEAL_TEXT_INPUT_ID}
+    >
+      {children}
+    </KeyboardGestureArea>
+  );
+}
 
 // Pull the specific message the analyze endpoint returned (it answers with
 // {"error": "..."}) so the user sees what actually went wrong instead of a
@@ -60,6 +88,8 @@ function toAnalyzeMessage(e: any, fallback: string): string {
 // wait feel intentional rather than broken. On failure the hero falls back to
 // the fork-and-knife icon (handled by the caller).
 function PhotoShimmer() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const pulse = useRef(new Animated.Value(0.35)).current;
   useEffect(() => {
     const loop = Animated.loop(
@@ -91,8 +121,12 @@ function PhotoShimmer() {
 }
 
 export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const insets = useInsets();
-  const { profile, calorieLogs, addCalorie, deleteCalorie } = useData();
+  const router = useRouter();
+  const { profile, calorieLogs, addCalorie, updateCaloriePhoto, deleteCalorie } = useData();
+  const { refreshControl, scrollRef } = useDataRefresh();
   const [image, setImage] = useState<string | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoLoading, setPhotoLoading] = useState(false);
@@ -107,10 +141,27 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
   const [mealType, setMealType] = useState("Lunch");
   const [mealMenu, setMealMenu] = useState(false);
   const [mealText, setMealText] = useState("");
+  const mealTextInputRef = useRef<TextInput>(null);
+  // Voice logging: idle -> recording -> transcribing, then the transcript is
+  // handed to analyzeText and the shared analyzing/result states take over.
+  const [voiceState, setVoiceState] = useState<"idle" | "recording" | "transcribing">("idle");
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [saving, setSaving] = useState(false);
+  const [selectedMeal, setSelectedMeal] = useState<CalorieLog | null>(null);
+  const [showAllTodayLogs, setShowAllTodayLogs] = useState(false);
+  // Tapped AI-insight food chip, plus its looked-up stock photo.
+  const [foodDetail, setFoodDetail] = useState<InsightChip | null>(null);
+  const [foodPhotoUrl, setFoodPhotoUrl] = useState<string | null>(null);
+  const [foodPhotoLoading, setFoodPhotoLoading] = useState(false);
+  const foodPhotoCache = useRef<Record<string, string>>({});
+  // Name of the food whose detail modal is currently open, so a slow photo
+  // fetch for a previously-tapped chip can't overwrite the current one.
+  const openFoodNameRef = useRef<string | null>(null);
 
   const tk = todayKey();
   const todayLogs = useMemo(() => calorieLogs.filter((l) => todayKey(new Date(l.ts)) === tk), [calorieLogs, tk]);
+  const canExpandTodayLogs = todayLogs.length > MAX_VISIBLE_LOGS;
+  const visibleTodayLogs = showAllTodayLogs ? todayLogs : todayLogs.slice(0, MAX_VISIBLE_LOGS);
   const totals = useMemo(() => {
     return todayLogs.reduce(
       (acc, l) => ({
@@ -140,7 +191,8 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
       }),
     [totals, profile.calorieGoal, goalProtein, goalCarbs, goalFats]
   );
-  const insightColor = insightMacroColor(insight.featuredMacro);
+  const insightColor = insightMacroColor(insight.featuredMacro, colors);
+  const INSIGHT_COMPONENTS = useMemo(() => insightComponents(styles), [styles]);
 
   const week = useMemo(() => {
     const base = new Date();
@@ -196,6 +248,7 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
         : await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
         setError("Permission is required to access your photos.");
+        haptics.warning();
         return;
       }
       const opts: ImagePicker.ImagePickerOptions = {
@@ -215,9 +268,11 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
         analyze(asset.base64);
       } else {
         setError("Could not read the image. Please try another.");
+        haptics.warning();
       }
     } catch {
       setError("Unable to open the camera or library on this device.");
+      haptics.warning();
     }
   };
 
@@ -261,21 +316,21 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
       }
       const data = (await resp.json()) as AnalysisResult;
       setResult(data);
-      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e: any) {
       setError(toAnalyzeMessage(e, "Could not analyze the image. Please try again."));
+      haptics.warning();
     } finally {
       setAnalyzing(false);
     }
   };
 
-  const fetchFoodPhoto = async (name: string) => {
+  const fetchFoodPhoto = async (name: string, text?: string) => {
     setPhotoLoading(true);
     try {
       const resp = await fetch(`${getApiUrl()}/api/food-photo`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, text }),
       });
       if (!resp.ok) return;
       const { photoUrl: url } = (await resp.json()) as { photoUrl: string | null };
@@ -287,6 +342,46 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
     }
   };
 
+  // Open the food-idea detail popup and look up a stock photo for it by name
+  // (reusing the /api/food-photo endpoint). Cached per name; falls back to the
+  // chip's icon when offline or no photo is found.
+  const openFoodDetail = async (chip: InsightChip) => {
+    setFoodDetail(chip);
+    openFoodNameRef.current = chip.name;
+    const cached = foodPhotoCache.current[chip.name];
+    if (cached) {
+      setFoodPhotoUrl(cached);
+      setFoodPhotoLoading(false);
+      return;
+    }
+    setFoodPhotoUrl(null);
+    setFoodPhotoLoading(true);
+    try {
+      const resp = await fetch(`${getApiUrl()}/api/food-photo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: chip.name }),
+      });
+      if (!resp.ok) return;
+      const { photoUrl: url } = (await resp.json()) as { photoUrl: string | null };
+      if (url) {
+        foodPhotoCache.current[chip.name] = url;
+        if (openFoodNameRef.current === chip.name) setFoodPhotoUrl(url);
+      }
+    } catch {
+      // Offline / no key: the hero keeps its icon fallback.
+    } finally {
+      if (openFoodNameRef.current === chip.name) setFoodPhotoLoading(false);
+    }
+  };
+
+  const closeFoodDetail = () => {
+    openFoodNameRef.current = null;
+    setFoodDetail(null);
+    setFoodPhotoUrl(null);
+    setFoodPhotoLoading(false);
+  };
+
   const reset = () => {
     setImage(null);
     setPhotoUrl(null);
@@ -296,54 +391,48 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
     setError(null);
     setQty(1);
     setMealMenu(false);
+    // Abandon any in-flight recording (e.g. the member switched tabs mid-take).
+    if (voiceState === "recording") {
+      recorder.stop().catch(() => {});
+      setAudioModeAsync({ allowsRecording: false }).catch(() => {});
+    }
+    setVoiceState("idle");
   };
 
-  // Re-hosts a chosen stock photo into Object Storage so the saved log keeps its
-  // image even if the original Pexels URL stops working. Returns the durable
-  // app-served URL, or falls back to the original URL if re-hosting fails so the
-  // meal still logs with a picture.
-  const rehostStockPhoto = async (url: string): Promise<string> => {
-    try {
-      const resp = await fetch(`${getApiUrl()}/api/meal-photo`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
-      });
-      if (resp.ok) {
-        const { key } = (await resp.json()) as { key: string | null };
-        if (key) return `${getApiUrl()}/api/meal-photo?key=${encodeURIComponent(key)}`;
-      }
-    } catch {
-      // Network/transient: fall back to the original URL below.
-    }
-    return url;
+  const startTextLogging = () => {
+    setTab("text");
+    requestAnimationFrame(() => mealTextInputRef.current?.focus());
   };
 
   const save = async () => {
     if (!result || saving) return;
     setSaving(true);
     try {
-      // Photo/scan logs already hold a durable device image; only a text-meal's
-      // stock photo (no device image) needs re-hosting so it survives Pexels.
-      let photoUri = image ?? undefined;
-      if (!photoUri && photoUrl) {
-        photoUri = await rehostStockPhoto(photoUrl);
-      }
-      await addCalorie({
-        name: result.name,
-        kcal: result.kcal * qty,
-        protein: result.protein * qty,
-        carbs: result.carbs * qty,
-        fats: result.fats * qty,
-        photoUri,
-        mealType,
+      // Device photos are already durable. Stock photos are inserted as their
+      // current URL immediately, then re-hosted after the local diary write so
+      // network latency never holds the logged meal or its counters hostage.
+      await addMealWithBackgroundPhoto({
+        entry: {
+          name: result.name,
+          kcal: result.kcal * qty,
+          protein: result.protein * qty,
+          carbs: result.carbs * qty,
+          fats: result.fats * qty,
+          photoUri: image ?? undefined,
+          mealType,
+        },
+        stockPhotoUrl: image ? null : photoUrl,
+        addCalorie,
+        updateCaloriePhoto,
+        rehostPhoto: rehostStockPhoto,
       });
-      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
       reset();
     } catch (e: any) {
       // The save only resolves once the log is durably written to storage; if
       // that fails, keep the result on screen so the user can retry instead of
       // silently losing the meal.
+      haptics.warning();
       Alert.alert("Couldn't save meal", e?.message ?? "Please try again.");
     } finally {
       setSaving(false);
@@ -378,12 +467,62 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
       // Fetch a matching stock photo in the background so it never blocks the
       // nutrition result. On no result or any error the hero falls back to the
       // fork-and-knife icon.
-      fetchFoodPhoto(data.name);
-      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      fetchFoodPhoto(data.name, trimmed);
     } catch (e: any) {
       setError(toAnalyzeMessage(e, "Could not analyze that meal. Please try again."));
+      haptics.warning();
     } finally {
       setAnalyzing(false);
+    }
+  };
+
+  const startVoice = async () => {
+    setError(null);
+    const perm = await AudioModule.requestRecordingPermissionsAsync();
+    if (!perm.granted) {
+      setError("Microphone permission is required to log meals by voice.");
+      haptics.warning();
+      return;
+    }
+    try {
+      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+      await recorder.prepareToRecordAsync();
+      recorder.record();
+      setVoiceState("recording");
+      haptics.selection();
+    } catch {
+      setError("Could not start recording. Please try again.");
+      haptics.warning();
+    }
+  };
+
+  const stopVoice = async () => {
+    setVoiceState("transcribing");
+    try {
+      await recorder.stop();
+      await setAudioModeAsync({ allowsRecording: false });
+      const uri = recorder.uri;
+      if (!uri) throw new Error("No recording captured. Please try again.");
+      const b64 = await readAsStringAsync(uri, { encoding: "base64" });
+      const resp = await fetch(`${getApiUrl()}/api/transcribe`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // Web records webm/opus; native records m4a. The server names the file
+        // accordingly so the transcription provider sniffs the right codec.
+        body: JSON.stringify({ audio: b64, format: Platform.OS === "web" ? "webm" : "m4a" }),
+      });
+      if (!resp.ok) {
+        throw new Error(await extractAnalyzeError(resp, "Could not transcribe the recording. Please try again."));
+      }
+      const data = (await resp.json()) as { text?: string };
+      const transcript = data.text?.trim();
+      if (!transcript) throw new Error("We couldn't hear a meal in that recording. Please try again.");
+      setVoiceState("idle");
+      await analyzeText(transcript);
+    } catch (e: any) {
+      setVoiceState("idle");
+      setError(toAnalyzeMessage(e, "Could not transcribe the recording. Please try again."));
+      haptics.warning();
     }
   };
 
@@ -392,15 +531,20 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
 
   const TABS: { key: LogTab; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
     { key: "photo", label: "Photo", icon: "camera-outline" },
+    { key: "voice", label: "Voice", icon: "mic-outline" },
     { key: "text", label: "Text", icon: "create-outline" },
-    { key: "scan", label: "Scan", icon: "scan-outline" },
   ];
 
   return (
     <GradientBackground>
-      <ScrollView
+      <KeyboardAwareScrollView
+        ref={scrollRef}
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 110 }]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        bottomOffset={110}
+        refreshControl={refreshControl}
       >
         {header}
 
@@ -416,17 +560,14 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
             </View>
           </View>
 
-          <View style={styles.goalMain}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.bigNum}>
-                {totals.kcal.toLocaleString()}
-                <Text style={styles.bigNumGoal}> / {profile.calorieGoal.toLocaleString()} kcal</Text>
-              </Text>
-              <Text style={styles.remaining}>{remaining.toLocaleString()} kcal remaining</Text>
-            </View>
-            <ProgressRing size={72} strokeWidth={7} progress={kcalPct}>
-              <Text style={styles.ringPct}>{Math.round(kcalPct * 100)}%</Text>
+          <View style={styles.goalRingWrap}>
+            <ProgressRing size={170} strokeWidth={12} progress={kcalPct} gradientId="calorieGoalRing">
+              <AnimatedNumber value={remaining} style={styles.remainingNum} />
+              <Text style={styles.remainingLabel}>KCAL REMAINING</Text>
             </ProgressRing>
+            <Text style={styles.eatenLine}>
+              <AnimatedNumber value={totals.kcal} style={styles.eatenStrong} /> eaten · goal {profile.calorieGoal.toLocaleString()}
+            </Text>
           </View>
 
           <View style={styles.macros}>
@@ -445,6 +586,8 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
                 key={t.key}
                 style={[styles.tab, active && styles.tabActive]}
                 onPress={() => {
+                  if (t.key === tab) return;
+                  haptics.selection();
                   setTab(t.key);
                   reset();
                 }}
@@ -553,40 +696,89 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
               <Text style={styles.analyzingText}>Analyzing your meal...</Text>
             </View>
           </Card>
-        ) : tab === "text" ? (
+        ) : tab === "voice" ? (
           <Card style={styles.textCard}>
-            <View style={styles.searchRow}>
-              <Ionicons name="search" size={18} color={colors.muted} />
-              <TextInput
-                value={mealText}
-                onChangeText={setMealText}
-                placeholder="e.g. 2 eggs, oatmeal with berries..."
-                placeholderTextColor={colors.mutedForeground}
-                style={styles.searchInput}
-                returnKeyType="search"
-                onSubmitEditing={() => analyzeText(mealText)}
-              />
-              <Pressable style={styles.analyzeBtn} onPress={() => analyzeText(mealText)}>
-                <LinearGradient
-                  colors={colors.gradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.analyzeBtnGrad}
-                >
-                  <Ionicons name="sparkles" size={14} color={colors.onPrimaryStrong} />
-                  <Text style={styles.analyzeBtnText}>Analyze</Text>
-                </LinearGradient>
-              </Pressable>
+            <View style={styles.textIntro}>
+              <View style={styles.dropIcon}>
+                <Ionicons name="mic" size={26} color={colors.accent} />
+              </View>
+              <Text style={styles.dropTitle}>
+                {voiceState === "recording" ? "Listening..." : "Say what you ate"}
+              </Text>
+              <Text style={styles.dropDesc}>
+                {voiceState === "recording"
+                  ? "Describe your meal, then tap to stop"
+                  : 'Try "two scrambled eggs with toast and orange juice"'}
+              </Text>
             </View>
-            <View style={styles.chipsWrap}>
-              {SUGGESTIONS.map((s) => (
-                <Pressable key={s} style={styles.suggestChip} onPress={() => setMealText(s)}>
-                  <Text style={styles.suggestChipText}>{s}</Text>
+            {voiceState === "transcribing" ? (
+              <View style={styles.analyzing}>
+                <ActivityIndicator color={colors.accent} />
+                <Text style={styles.analyzingText}>Transcribing your meal...</Text>
+              </View>
+            ) : (
+              <View style={styles.micWrap}>
+                <Pressable onPress={voiceState === "recording" ? stopVoice : startVoice} hitSlop={8}>
+                  {voiceState === "recording" ? (
+                    <View style={[styles.micBtn, styles.micBtnRecording]}>
+                      <Ionicons name="stop" size={26} color={colors.onPrimaryStrong} />
+                    </View>
+                  ) : (
+                    <LinearGradient
+                      colors={colors.gradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.micBtn}
+                    >
+                      <Ionicons name="mic" size={26} color={colors.onPrimaryStrong} />
+                    </LinearGradient>
+                  )}
                 </Pressable>
-              ))}
-            </View>
+              </View>
+            )}
+            {mealText && voiceState === "idle" ? (
+              <Text style={styles.voiceTranscript}>You said: {mealText}</Text>
+            ) : null}
             {error ? <Text style={styles.formError}>{error}</Text> : null}
           </Card>
+        ) : tab === "text" ? (
+          <MealTextGestureArea>
+            <Card style={styles.textCard}>
+              <View style={styles.textIntro}>
+                <View style={styles.dropIcon}>
+                  <Ionicons name="create" size={26} color={colors.accent} />
+                </View>
+                <Text style={styles.dropTitle}>Type what you ate</Text>
+                <Text style={styles.dropDesc}>AI will estimate the calories and macros instantly</Text>
+              </View>
+              <View style={styles.searchRow}>
+                <Ionicons name="search" size={18} color={colors.muted} />
+                <TextInput
+                  ref={mealTextInputRef}
+                  nativeID={MEAL_TEXT_INPUT_ID}
+                  value={mealText}
+                  onChangeText={setMealText}
+                  placeholder="e.g. 2 eggs, oatmeal with berries..."
+                  placeholderTextColor={colors.mutedForeground}
+                  style={styles.searchInput}
+                  returnKeyType="search"
+                  onSubmitEditing={() => analyzeText(mealText)}
+                />
+                <Pressable style={styles.analyzeBtn} onPress={() => analyzeText(mealText)}>
+                  <LinearGradient
+                    colors={colors.gradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.analyzeBtnGrad}
+                  >
+                    <Ionicons name="sparkles" size={14} color={colors.onPrimaryStrong} />
+                    <Text style={styles.analyzeBtnText}>Analyze</Text>
+                  </LinearGradient>
+                </Pressable>
+              </View>
+              {error ? <Text style={styles.formError}>{error}</Text> : null}
+            </Card>
+          </MealTextGestureArea>
         ) : image ? (
           <Card style={{ marginTop: 14 }}>
             <Image source={{ uri: image }} style={styles.preview} />
@@ -597,17 +789,17 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
             </View>
           </Card>
         ) : (
-          <Pressable onPress={() => (tab === "photo" ? choosePhotoSource() : pickImage(false))}>
+          <Pressable pressedScale={0.985} onPress={choosePhotoSource}>
             <Card style={styles.dropCard}>
               <View style={styles.dropInner}>
                 <View style={styles.dropIcon}>
-                  <Ionicons name={tab === "photo" ? "camera" : "barcode"} size={26} color={colors.accent} />
+                  <Ionicons name="camera" size={26} color={colors.accent} />
                 </View>
                 <Text style={styles.dropTitle}>
-                  {tab === "photo" ? "Tap to take a photo or upload" : "Point camera at barcode"}
+                  Tap to take a photo or upload
                 </Text>
                 <Text style={styles.dropDesc}>
-                  {tab === "photo" ? "AI will recognize your food instantly" : "Supports all food product barcodes"}
+                  AI will recognize your food instantly
                 </Text>
               </View>
             </Card>
@@ -621,6 +813,22 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
           </View>
         ) : null}
 
+        <SectionLabel style={styles.section}>RECIPE IDEAS</SectionLabel>
+        <Pressable pressedScale={0.985} onPress={() => router.push("/recipes")}>
+          {({ pressed }) => (
+            <Card style={[styles.recipesCard, pressed && { opacity: 0.9 }]}>
+              <View style={styles.recipesIcon}>
+                <Ionicons name="restaurant" size={20} color={colors.accent} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.recipesTitle}>Browse Recipes</Text>
+                <Text style={styles.recipesSub}>Mediterranean, high protein, pre and post workout and more</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
+            </Card>
+          )}
+        </Pressable>
+
         <View style={styles.diaryHead}>
           <Text style={styles.diaryEyebrow}>TODAY'S MEALS</Text>
           {todayLogs.length > 0 ? (
@@ -628,14 +836,28 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
           ) : null}
         </View>
         {todayLogs.length === 0 ? (
-          <Card style={{ alignItems: "center", paddingVertical: 28 }}>
-            <Ionicons name="restaurant-outline" size={32} color={colors.blush} />
-            <Text style={styles.emptyText}>No meals logged yet today</Text>
+          <Card>
+            <EmptyState
+              compact
+              icon="restaurant-outline"
+              title="No meals logged yet"
+              description="Describe what you ate and Florish will estimate the nutrition."
+              actionLabel="Log with text"
+              onAction={startTextLogging}
+            />
           </Card>
         ) : (
           <View style={{ gap: 12 }}>
-            {todayLogs.map((l) => (
-              <Card key={l.id} style={styles.logCard}>
+            {visibleTodayLogs.map((l) => (
+              <MotionListItem key={l.id}>
+              <Pressable
+                pressedScale={0.985}
+                accessibilityRole="button"
+                accessibilityLabel={`View meal details for ${l.name}`}
+                onPress={() => setSelectedMeal(l)}
+                style={({ pressed }) => [pressed && styles.logCardPressed]}
+              >
+              <Card style={styles.logCard}>
                 {l.photoUri ? (
                   <Image source={{ uri: l.photoUri }} style={styles.logThumb} />
                 ) : (
@@ -658,12 +880,33 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
                 <View style={styles.logRight}>
                   <Text style={styles.logKcal}>{l.kcal}</Text>
                   <Text style={styles.logKcalUnit}>kcal</Text>
-                  <Pressable style={styles.logTrash} onPress={() => deleteCalorie(l.id)} hitSlop={8}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete ${l.name}`}
+                    style={styles.logTrash}
+                    onPress={(event) => {
+                      event.stopPropagation();
+                      setSelectedMeal((current) => (current?.id === l.id ? null : current));
+                      haptics.warning();
+                      deleteCalorie(l.id);
+                    }}
+                    hitSlop={8}
+                  >
                     <Ionicons name="trash-outline" size={15} color={colors.muted} />
                   </Pressable>
                 </View>
               </Card>
+              </Pressable>
+              </MotionListItem>
             ))}
+            {canExpandTodayLogs ? (
+              <Pressable
+                style={styles.seeMoreButton}
+                onPress={() => setShowAllTodayLogs((current) => !current)}
+              >
+                <Text style={styles.seeMoreText}>{showAllTodayLogs ? "See less" : "See more"}</Text>
+              </Pressable>
+            ) : null}
           </View>
         )}
 
@@ -674,7 +917,12 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
             </View>
             <Text style={styles.insightEyebrow}>AI INSIGHT</Text>
           </View>
-          <CalorieInsightBody insight={insight} components={INSIGHT_COMPONENTS} color={insightColor} />
+          <CalorieInsightBody
+            insight={insight}
+            components={INSIGHT_COMPONENTS}
+            color={insightColor}
+            onChipPress={openFoodDetail}
+          />
         </Card>
 
         <Card style={styles.weekCard}>
@@ -712,10 +960,10 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
             </View>
           </View>
         </Card>
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <Modal visible={mealMenu} transparent animationType="fade" onRequestClose={() => setMealMenu(false)}>
-        <Pressable style={styles.modalBackdrop} onPress={() => setMealMenu(false)}>
+        <StructuralPressable style={styles.modalBackdrop} onPress={() => setMealMenu(false)}>
           <View style={styles.modalSheet}>
             <Text style={styles.modalTitle}>Meal type</Text>
             {MEALS.map((m) => {
@@ -725,6 +973,7 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
                   key={m}
                   style={styles.modalItem}
                   onPress={() => {
+                    if (mealType !== m) haptics.selection();
                     setMealType(m);
                     setMealMenu(false);
                   }}
@@ -735,7 +984,102 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
               );
             })}
           </View>
-        </Pressable>
+        </StructuralPressable>
+      </Modal>
+
+      <Modal visible={!!selectedMeal} transparent animationType="fade" onRequestClose={() => setSelectedMeal(null)}>
+        <StructuralPressable style={styles.mealDetailBackdrop} onPress={() => setSelectedMeal(null)}>
+          {selectedMeal ? (
+            <StructuralPressable style={styles.mealDetailSheet} onPress={(event) => event.stopPropagation()}>
+              <View style={styles.mealDetailHero}>
+                {selectedMeal.photoUri ? (
+                  <Image source={{ uri: selectedMeal.photoUri }} style={styles.mealDetailImage} />
+                ) : (
+                  <View style={styles.mealDetailFallback}>
+                    <Ionicons name="restaurant-outline" size={42} color={colors.accent} />
+                  </View>
+                )}
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Close meal details"
+                  style={styles.mealDetailClose}
+                  onPress={() => setSelectedMeal(null)}
+                >
+                  <Ionicons name="close" size={18} color={colors.foreground} />
+                </Pressable>
+              </View>
+              <View style={styles.mealDetailBody}>
+                <View style={styles.mealDetailMetaRow}>
+                  {selectedMeal.mealType ? (
+                    <View style={styles.mealTag}>
+                      <Text style={styles.mealTagText}>{selectedMeal.mealType}</Text>
+                    </View>
+                  ) : null}
+                  <Text style={styles.mealDetailTime}>{formatTime(selectedMeal.ts)}</Text>
+                </View>
+                <Text style={styles.mealDetailTitle}>{selectedMeal.name}</Text>
+                <View style={styles.mealDetailKcalRow}>
+                  <Ionicons name="flame" size={18} color={colors.accent} />
+                  <Text style={styles.mealDetailKcal}>{selectedMeal.kcal.toLocaleString()} kcal</Text>
+                </View>
+                <View style={styles.mealDetailMacros}>
+                  <DetailMacro label="Protein" value={selectedMeal.protein} />
+                  <DetailMacro label="Carbs" value={selectedMeal.carbs} />
+                  <DetailMacro label="Fats" value={selectedMeal.fats} />
+                </View>
+              </View>
+            </StructuralPressable>
+          ) : null}
+        </StructuralPressable>
+      </Modal>
+
+      <Modal visible={!!foodDetail} transparent animationType="fade" onRequestClose={closeFoodDetail}>
+        <StructuralPressable style={styles.mealDetailBackdrop} onPress={closeFoodDetail}>
+          {foodDetail ? (
+            <StructuralPressable style={styles.mealDetailSheet} onPress={(event) => event.stopPropagation()}>
+              <View style={styles.mealDetailHero}>
+                {foodPhotoUrl ? (
+                  <Image source={{ uri: foodPhotoUrl }} style={styles.mealDetailImage} />
+                ) : (
+                  <View style={styles.mealDetailFallback}>
+                    {foodPhotoLoading ? (
+                      <ActivityIndicator color={colors.accent} />
+                    ) : (
+                      <Ionicons
+                        name={foodDetail.icon as keyof typeof Ionicons.glyphMap}
+                        size={42}
+                        color={colors.accent}
+                      />
+                    )}
+                  </View>
+                )}
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Close food details"
+                  style={styles.mealDetailClose}
+                  onPress={closeFoodDetail}
+                >
+                  <Ionicons name="close" size={18} color={colors.foreground} />
+                </Pressable>
+              </View>
+              <View style={styles.mealDetailBody}>
+                <Text style={styles.mealDetailTitle}>{foodDetail.name}</Text>
+                <View style={styles.mealDetailKcalRow}>
+                  <Ionicons name="flame" size={18} color={colors.accent} />
+                  <Text style={styles.mealDetailKcal}>
+                    {Math.round(foodDetail.protein * 4 + foodDetail.carbs * 4 + foodDetail.fats * 9).toLocaleString()} kcal
+                  </Text>
+                </View>
+                <View style={styles.mealDetailMacros}>
+                  <DetailMacro label="Protein" value={foodDetail.protein} />
+                  <DetailMacro label="Carbs" value={foodDetail.carbs} />
+                  <DetailMacro label="Fats" value={foodDetail.fats} />
+                </View>
+                <Text style={styles.foodDetailNote}>Approx. per serving</Text>
+              </View>
+            </StructuralPressable>
+          ) : null}
+        </StructuralPressable>
       </Modal>
     </GradientBackground>
   );
@@ -743,28 +1087,27 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
 
 const MEALS = ["Breakfast", "Lunch", "Dinner", "Snack"];
 
-const SUGGESTIONS = ["Greek yogurt", "Avocado toast", "Protein shake", "Brown rice", "Salmon fillet"];
-
 function formatTime(ts: number) {
   return new Date(ts).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
 function Macro({ label, value, goal, color }: { label: string; value: number; goal: number; color: string }) {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   return (
-    <View style={styles.macroRow}>
-      <View style={styles.macroHead}>
-        <View style={styles.macroLabelWrap}>
-          <View style={[styles.macroDot, { backgroundColor: color }]} />
-          <Text style={styles.macroLabel}>{label}</Text>
-        </View>
-        <Text style={styles.macroValue}>{value}g / {goal}g</Text>
-      </View>
-      <ProgressBar progress={goal ? value / goal : 0} color={color} height={6} style={{ marginTop: 6 }} />
+    <View style={styles.macroTile}>
+      <ProgressRing size={54} strokeWidth={5} progress={goal ? value / goal : 0} color={color} gradientId={`macro-${label}`}>
+        <AnimatedNumber value={value} formatter={(n) => `${Math.round(n)}g`} style={styles.macroRingValue} />
+      </ProgressRing>
+      <Text style={styles.macroLabel}>{label}</Text>
+      <Text style={styles.macroValue}>{goal}g</Text>
     </View>
   );
 }
 
 function ResultMacro({ label, value }: { label: string; value: number }) {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.rMacro}>
       <Text style={styles.rMacroVal}>{value}g</Text>
@@ -773,7 +1116,18 @@ function ResultMacro({ label, value }: { label: string; value: number }) {
   );
 }
 
-const styles = StyleSheet.create({
+function DetailMacro({ label, value }: { label: string; value: number }) {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
+  return (
+    <View style={styles.detailMacro}>
+      <Text style={styles.detailMacroValue}>{value}g</Text>
+      <Text style={styles.detailMacroLabel}>{label}</Text>
+    </View>
+  );
+}
+
+const createStyles = (colors: AppColors) => StyleSheet.create({
   scroll: { paddingHorizontal: 20 },
   goalCard: { marginTop: 20, padding: 20 },
   goalHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
@@ -782,17 +1136,21 @@ const styles = StyleSheet.create({
   dateChip: { flexDirection: "row", alignItems: "center", gap: 6 },
   dateText: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.muted },
   goalMain: { flexDirection: "row", alignItems: "center", marginTop: 16 },
+  goalRingWrap: { alignItems: "center", marginTop: 18 },
+  bigNumRow: { flexDirection: "row", alignItems: "baseline", flexWrap: "wrap" },
   bigNum: { fontFamily: fonts.serifSemibold, fontSize: 40, color: colors.foreground },
   bigNumGoal: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted },
   remaining: { fontFamily: fonts.sans, fontSize: 13, color: colors.muted, marginTop: 4 },
+  remainingNum: { fontFamily: fonts.serifSemibold, fontSize: 42, lineHeight: 46, color: colors.foreground },
+  remainingLabel: { fontFamily: fonts.sansBold, fontSize: 10, letterSpacing: 1.7, color: colors.mutedForeground, marginTop: 2 },
+  eatenLine: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.muted, marginTop: 12 },
+  eatenStrong: { fontFamily: fonts.sansBold, color: colors.foreground },
   ringPct: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.foreground },
-  macros: { gap: 14, marginTop: 22 },
-  macroRow: {},
-  macroHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  macroLabelWrap: { flexDirection: "row", alignItems: "center", gap: 8 },
-  macroDot: { width: 8, height: 8, borderRadius: 4 },
-  macroLabel: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.foreground },
-  macroValue: { fontFamily: fonts.sans, fontSize: 13, color: colors.muted },
+  macros: { flexDirection: "row", justifyContent: "space-between", gap: 12, marginTop: 24 },
+  macroTile: { flex: 1, alignItems: "center" },
+  macroRingValue: { fontFamily: fonts.sansBold, fontSize: 11, color: colors.foreground },
+  macroLabel: { fontFamily: fonts.sansSemibold, fontSize: 12, color: colors.foreground, marginTop: 8 },
+  macroValue: { fontFamily: fonts.sans, fontSize: 11, color: colors.mutedForeground, marginTop: 1 },
   section: { marginTop: 28, marginBottom: 14 },
   tabRow: {
     flexDirection: "row",
@@ -828,7 +1186,28 @@ const styles = StyleSheet.create({
   dropTitle: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
   dropDesc: { fontFamily: fonts.sans, fontSize: 13, color: colors.muted, marginTop: 6 },
   textCard: { marginTop: 14, padding: 18 },
+  textIntro: { alignItems: "center", marginBottom: 16 },
   formError: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.primary, marginTop: 12 },
+  micWrap: { alignItems: "center", paddingVertical: 8 },
+  micBtn: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  micBtnRecording: {
+    backgroundColor: colors.primary,
+    borderWidth: 6,
+    borderColor: colors.accentTintLg,
+  },
+  voiceTranscript: {
+    fontFamily: fonts.sans,
+    fontSize: 13,
+    color: colors.muted,
+    textAlign: "center",
+    marginTop: 10,
+  },
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -857,16 +1236,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   analyzeBtnText: { fontFamily: fonts.sansSemibold, fontSize: 14, color: colors.onPrimaryStrong },
-  chipsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 14 },
-  suggestChip: {
-    backgroundColor: colors.cardElevated,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  suggestChipText: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.muted },
   preview: { width: "100%", height: 200, borderRadius: colors.radius, marginBottom: 8 },
   analyzing: { alignItems: "center", paddingVertical: 20, gap: 12 },
   analyzingText: { fontFamily: fonts.sansMedium, fontSize: 15, color: colors.muted },
@@ -976,11 +1345,31 @@ const styles = StyleSheet.create({
   errorText: { fontFamily: fonts.sans, fontSize: 14, color: colors.muted, textAlign: "center", marginTop: 8 },
   inlineError: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12 },
   inlineErrorText: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.foreground, flex: 1 },
+  recipesCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  recipesIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    backgroundColor: colors.accentTint,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  recipesTitle: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
+  recipesSub: { fontFamily: fonts.sans, fontSize: 12, color: colors.mutedForeground, marginTop: 2 },
   diaryHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 28, marginBottom: 14 },
   diaryEyebrow: { fontFamily: fonts.sansMedium, fontSize: 12, letterSpacing: 2, color: colors.muted },
   diaryCount: { fontFamily: fonts.sansMedium, fontSize: 12.5, color: colors.primary },
   emptyText: { fontFamily: fonts.sans, fontSize: 14, color: colors.muted, marginTop: 10 },
+  seeMoreButton: { alignSelf: "center", paddingHorizontal: 8, paddingVertical: 4, marginTop: -2 },
+  seeMoreText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.accent },
   logCard: { flexDirection: "row", gap: 12, paddingVertical: 14, paddingHorizontal: 14 },
+  logCardPressed: { opacity: 0.86 },
   logThumb: { width: 56, height: 56, borderRadius: 14 },
   logThumbFallback: { backgroundColor: colors.accentTint, alignItems: "center", justifyContent: "center" },
   logMid: { flex: 1, justifyContent: "center" },
@@ -994,6 +1383,53 @@ const styles = StyleSheet.create({
   logKcal: { fontFamily: fonts.sansBold, fontSize: 20, color: colors.foreground },
   logKcalUnit: { fontFamily: fonts.sans, fontSize: 11, color: colors.mutedForeground, marginTop: 1 },
   logTrash: { width: 30, height: 30, borderRadius: 15, backgroundColor: colors.cardElevated, alignItems: "center", justifyContent: "center", marginTop: 6 },
+  mealDetailBackdrop: { flex: 1, backgroundColor: "rgba(16,17,17,0.5)", justifyContent: "center", paddingHorizontal: 24 },
+  mealDetailSheet: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: colors.radiusLg,
+    overflow: "hidden",
+  },
+  mealDetailHero: { height: 210, backgroundColor: colors.cardElevated },
+  mealDetailImage: { width: "100%", height: "100%" },
+  mealDetailFallback: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.accentTint },
+  mealDetailClose: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "rgba(255,255,255,0.88)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  mealDetailBody: { padding: 18 },
+  mealDetailMetaRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  mealDetailTime: { fontFamily: fonts.sansMedium, fontSize: 12.5, color: colors.muted },
+  mealDetailTitle: { fontFamily: fonts.serifSemibold, fontSize: 26, lineHeight: 31, color: colors.foreground, marginTop: 12 },
+  mealDetailKcalRow: { flexDirection: "row", alignItems: "center", gap: 7, marginTop: 12 },
+  mealDetailKcal: { fontFamily: fonts.sansBold, fontSize: 18, color: colors.accent },
+  mealDetailMacros: { flexDirection: "row", gap: 10, marginTop: 16 },
+  detailMacro: {
+    flex: 1,
+    alignItems: "center",
+    backgroundColor: colors.cardElevated,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: 14,
+    paddingVertical: 13,
+  },
+  detailMacroValue: { fontFamily: fonts.sansSemibold, fontSize: 18, color: colors.foreground },
+  detailMacroLabel: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, marginTop: 3 },
+  foodDetailNote: {
+    fontFamily: fonts.sans,
+    fontSize: 12,
+    color: colors.muted,
+    marginTop: 12,
+    textAlign: "center",
+  },
 
   insightCard: { marginTop: 14, padding: 18 },
   insightHead: { flexDirection: "row", alignItems: "center", gap: 9, marginBottom: 12 },
@@ -1001,7 +1437,14 @@ const styles = StyleSheet.create({
   insightEyebrow: { fontFamily: fonts.sansSemibold, fontSize: 12, letterSpacing: 1.2, color: colors.muted },
   insightText: { fontFamily: fonts.sans, fontSize: 14, lineHeight: 22, color: colors.muted },
   insightStrong: { fontFamily: fonts.sansSemibold, color: colors.foreground },
-  insightChips: { flexDirection: "row", gap: 10, marginTop: 14 },
+  insightChipsCaption: {
+    fontFamily: fonts.sansSemibold,
+    fontSize: 11.5,
+    letterSpacing: 0.4,
+    color: colors.muted,
+    marginTop: 14,
+  },
+  insightChips: { flexDirection: "row", gap: 10, marginTop: 8 },
   insightChip: {
     flex: 1,
     flexDirection: "row",
@@ -1014,6 +1457,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 11,
   },
+  insightChipPressed: { opacity: 0.6 },
   insightChipName: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.foreground, flex: 1 },
   insightChipVal: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.primary },
 
@@ -1036,12 +1480,22 @@ const styles = StyleSheet.create({
 
 // React-native host elements the insight card renders through. Kept here so the
 // styling stays with the screen, while the wiring (segments + chips) lives in
-// the testable, RN-free CalorieInsightBody.
-const INSIGHT_COMPONENTS: InsightBodyComponents = {
+// the testable, RN-free CalorieInsightBody. A factory over the themed styles so
+// the chips restyle with the palette.
+const insightComponents = (styles: ReturnType<typeof createStyles>): InsightBodyComponents => ({
   Text: ({ children }) => <Text style={styles.insightText}>{children}</Text>,
   Strong: ({ children }) => <Text style={styles.insightStrong}>{children}</Text>,
+  ChipsCaption: ({ children }) => <Text style={styles.insightChipsCaption}>{children}</Text>,
   ChipsRow: ({ children }) => <View style={styles.insightChips}>{children}</View>,
-  Chip: ({ children }) => <View style={styles.insightChip}>{children}</View>,
+  Chip: ({ onPress, children }) => (
+    <Pressable
+      style={({ pressed }) => [styles.insightChip, pressed && styles.insightChipPressed]}
+      onPress={onPress}
+      accessibilityRole="button"
+    >
+      {children}
+    </Pressable>
+  ),
   ChipIcon: ({ name, color }) => (
     <Ionicons name={name as keyof typeof Ionicons.glyphMap} size={14} color={color} />
   ),
@@ -1053,4 +1507,4 @@ const INSIGHT_COMPONENTS: InsightBodyComponents = {
   ChipValue: ({ color, children }) => (
     <Text style={[styles.insightChipVal, { color }]}>{children}</Text>
   ),
-};
+});

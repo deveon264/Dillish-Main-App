@@ -183,6 +183,45 @@ test("chip values quantify the featured macro and are never 0g", () => {
   }
 });
 
+test("chips expose full per-serving macros, and value equals the featured macro", () => {
+  for (const { name, input } of STATES) {
+    for (const seed of SEEDS) {
+      const insight = getCalorieInsight({ ...input, seed });
+      for (const chip of insight.chips) {
+        for (const m of ["protein", "carbs", "fats"] as const) {
+          assert.equal(typeof chip[m], "number", `${name} chip ${chip.name} ${m} not numeric`);
+          assert.ok(chip[m] >= 0, `${name} chip ${chip.name} ${m} negative`);
+        }
+        // The chip's headline value is exactly the featured macro's grams.
+        assert.equal(chip.value, chip[insight.featuredMacro]);
+      }
+    }
+  }
+});
+
+test("every state has a non-empty chips caption that frames the food ideas", () => {
+  // The caption is what makes the chips read as macro-appropriate alternatives
+  // (rather than an additive plan), so pin the framing per state.
+  const expectedSubstring: Record<string, string> = {
+    start: "begin",
+    over: "Lighter",
+    balanced: "snack",
+    "macro-protein": "Protein-rich",
+    "macro-carbs": "Carb-rich",
+    "macro-fats": "Healthy fats",
+  };
+  for (const { name, input } of STATES) {
+    for (const seed of SEEDS) {
+      const insight = getCalorieInsight({ ...input, seed });
+      assert.ok(insight.chipsCaption.length > 0, `empty caption for ${name} seed=${seed}`);
+      assert.ok(
+        insight.chipsCaption.includes(expectedSubstring[name]),
+        `caption "${insight.chipsCaption}" missing "${expectedSubstring[name]}" for ${name}`,
+      );
+    }
+  }
+});
+
 test("featured macro matches the category for the macro states", () => {
   const expected: Record<string, Macro> = {
     "macro-protein": "protein",

@@ -1,6 +1,7 @@
 import React, { ReactNode } from "react";
 import { View, Text, StyleSheet, StyleProp, ViewStyle, TextStyle } from "react-native";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
 
 // Single source of truth for the page-header and section-label type scale shared
@@ -10,14 +11,17 @@ import { fonts } from "@/constants/fonts";
 // - "default" (tab screens): title 34 / eyebrow letterSpacing 2
 // - "compact" (stacked/back-button screens like the library and admin tools):
 //   title 30 / eyebrow letterSpacing 3
-export const pageHeaderStyles = StyleSheet.create({
+//
+// Other screens that borrow these type tokens resolve them per-theme with
+// `useThemedStyles(createPageHeaderStyles)`.
+export const createPageHeaderStyles = (colors: AppColors) => StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", gap: 12 },
-  eyebrow: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.muted, letterSpacing: 2 },
+  eyebrow: { fontFamily: fonts.sansBold, fontSize: 10, color: colors.accentDark, letterSpacing: 3 },
   eyebrowCompact: { letterSpacing: 3 },
-  title: { fontFamily: fonts.serif, fontSize: 34, color: colors.foreground, marginTop: 2 },
-  titleCompact: { fontSize: 30 },
+  title: { fontFamily: fonts.serifMedium, fontSize: 32, color: colors.foreground, marginTop: 5, lineHeight: 37 },
+  titleCompact: { fontSize: 27, lineHeight: 32 },
   titleAccent: { fontFamily: fonts.serifItalic, fontStyle: "italic", color: colors.foreground },
-  sectionLabel: { fontFamily: fonts.sansMedium, fontSize: 12, letterSpacing: 2, color: colors.muted },
+  sectionLabel: { fontFamily: fonts.sansBold, fontSize: 11, letterSpacing: 1.8, color: colors.mutedForeground },
 });
 
 type PageHeaderProps = {
@@ -41,6 +45,7 @@ export function PageHeader({
   variant = "default",
   style,
 }: PageHeaderProps) {
+  const pageHeaderStyles = useThemedStyles(createPageHeaderStyles);
   const compact = variant === "compact";
   return (
     <View style={[pageHeaderStyles.header, style]}>
@@ -72,5 +77,6 @@ type SectionLabelProps = {
 // Small uppercase section label. Layout spacing (margins) is supplied by callers
 // via `style`; the type token lives here.
 export function SectionLabel({ children, style }: SectionLabelProps) {
+  const pageHeaderStyles = useThemedStyles(createPageHeaderStyles);
   return <Text style={[pageHeaderStyles.sectionLabel, style]}>{children}</Text>;
 }

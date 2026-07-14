@@ -5,12 +5,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Button } from "@/components/Button";
 import { StepHeader } from "@/components/StepHeader";
-import { useData } from "@/contexts/DataContext";
+import { Reveal, Bouncy, OnboardDecor } from "@/components/onboarding/OnboardKit";
+import { useOnboardingAnswers } from "@/hooks/useOnboardingAnswers";
 import { useInsets } from "@/hooks/useInsets";
 import { useOnboardingMode } from "@/hooks/useOnboardingMode";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
 import type { FitnessLevel } from "@/lib/profile";
+import { haptics } from "@/lib/haptics";
 
 const LEVELS: { id: FitnessLevel; label: string; desc: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { id: "beginner", label: "Beginner", desc: "I'm starting or getting back into it", icon: "leaf-outline" },
@@ -19,33 +22,47 @@ const LEVELS: { id: FitnessLevel; label: string; desc: string; icon: keyof typeo
 ];
 
 export default function FitnessLevelStep() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const insets = useInsets();
   const { total, withMode } = useOnboardingMode();
-  const { profile, updateProfile, ready } = useData();
+  const { answers: profile, save: updateProfile, ready } = useOnboardingAnswers();
   const [selected, setSelected] = useState<FitnessLevel | null>(profile.fitnessLevel);
 
   const next = async () => {
     if (!selected) return;
+    haptics.selection();
     await updateProfile({ fitnessLevel: selected });
     router.push(withMode("/onboarding/equipment") as any);
   };
 
   return (
     <GradientBackground>
+      <OnboardDecor />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
       >
         <StepHeader step={3} total={total} />
+        <Reveal index={0}>
         <Text style={styles.title}>What's your fitness level?</Text>
         <Text style={styles.subtitle}>Be honest, we'll meet you exactly where you are.</Text>
+        </Reveal>
 
         <View style={styles.list}>
-          {LEVELS.map((l) => {
+          {LEVELS.map((l, i) => {
             const on = selected === l.id;
             return (
-              <Pressable key={l.id} style={[styles.item, on && styles.itemOn]} onPress={() => setSelected(l.id)}>
+              <Bouncy
+                key={l.id}
+                style={[styles.item, on && styles.itemOn]}
+                onPress={() => {
+                  if (on) return;
+                  haptics.selection();
+                  setSelected(l.id);
+                }}
+              >
                 <View style={[styles.itemIcon, on && styles.itemIconOn]}>
                   <Ionicons name={l.icon} size={22} color={on ? colors.onPrimary : colors.accent} />
                 </View>
@@ -56,7 +73,7 @@ export default function FitnessLevelStep() {
                 <View style={[styles.check, on && styles.checkOn]}>
                   {on ? <Ionicons name="checkmark" size={15} color={colors.onPrimary} /> : null}
                 </View>
-              </Pressable>
+              </Bouncy>
             );
           })}
         </View>
@@ -68,7 +85,7 @@ export default function FitnessLevelStep() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   scroll: { paddingHorizontal: 24 },
   title: { fontFamily: fonts.serif, fontSize: 36, color: colors.foreground, lineHeight: 40 },
   subtitle: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted, marginTop: 10, marginBottom: 24, lineHeight: 22 },

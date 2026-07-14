@@ -5,21 +5,26 @@ import { Ionicons } from "@expo/vector-icons";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Button } from "@/components/Button";
 import { StepHeader } from "@/components/StepHeader";
-import { useData } from "@/contexts/DataContext";
+import { Reveal, Bouncy, OnboardDecor } from "@/components/onboarding/OnboardKit";
+import { useOnboardingAnswers } from "@/hooks/useOnboardingAnswers";
 import { useInsets } from "@/hooks/useInsets";
 import { useOnboardingMode } from "@/hooks/useOnboardingMode";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
 import { GOALS } from "@/constants/goals";
+import { haptics } from "@/lib/haptics";
 
 // Single-select among the goals chosen on the previous screen. The pick
 // becomes primaryGoal (drives the recommended program); the rest act as
 // secondary goals in ranking.
 export default function MainFocusStep() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const insets = useInsets();
   const { total, withMode } = useOnboardingMode();
-  const { profile, updateProfile, ready } = useData();
+  const { answers: profile, save: updateProfile, ready } = useOnboardingAnswers();
 
   const options = useMemo(() => GOALS.filter((g) => profile.goals.includes(g.id)), [profile.goals]);
   const [selected, setSelected] = useState<string | null>(
@@ -32,25 +37,37 @@ export default function MainFocusStep() {
 
   const next = async () => {
     if (!selected) return;
+    haptics.selection();
     await updateProfile({ primaryGoal: selected });
     router.push(withMode("/onboarding/fitness-level") as any);
   };
 
   return (
     <GradientBackground>
+      <OnboardDecor />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
       >
         <StepHeader step={2} total={total} />
+        <Reveal index={0}>
         <Text style={styles.title}>What's your main focus?</Text>
         <Text style={styles.subtitle}>We'll use this to shape your first plan.</Text>
+        </Reveal>
 
         <View style={styles.list}>
-          {options.map((g) => {
+          {options.map((g, i) => {
             const on = selected === g.id;
             return (
-              <Pressable key={g.id} style={[styles.item, on && styles.itemOn]} onPress={() => setSelected(g.id)}>
+              <Bouncy
+                key={g.id}
+                style={[styles.item, on && styles.itemOn]}
+                onPress={() => {
+                  if (on) return;
+                  haptics.selection();
+                  setSelected(g.id);
+                }}
+              >
                 <View style={[styles.itemIcon, on && styles.itemIconOn]}>
                   <Ionicons name={g.icon} size={22} color={on ? colors.onPrimary : colors.accent} />
                 </View>
@@ -61,7 +78,7 @@ export default function MainFocusStep() {
                 <View style={[styles.check, on && styles.checkOn]}>
                   {on ? <Ionicons name="checkmark" size={15} color={colors.onPrimary} /> : null}
                 </View>
-              </Pressable>
+              </Bouncy>
             );
           })}
         </View>
@@ -73,7 +90,7 @@ export default function MainFocusStep() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   scroll: { paddingHorizontal: 24 },
   title: { fontFamily: fonts.serif, fontSize: 36, color: colors.foreground, lineHeight: 40 },
   subtitle: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted, marginTop: 10, marginBottom: 24, lineHeight: 22 },

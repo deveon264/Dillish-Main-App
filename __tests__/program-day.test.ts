@@ -15,6 +15,7 @@ const program: Program = {
   title: "Test Program",
   goal: "tone",
   level: "Beginner",
+  phase: 1,
   description: "",
   weeks: [
     [

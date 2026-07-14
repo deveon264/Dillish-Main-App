@@ -5,6 +5,7 @@ import {
   getPost,
   getPostMeta,
   isPostType,
+  listPinned,
   listPosts,
   updatePost,
 } from "@/lib/communityStore";
@@ -58,7 +59,13 @@ export async function GET(request: Request): Promise<Response> {
         ? { createdAt: posts[posts.length - 1].createdAt, id: posts[posts.length - 1].id }
         : null;
 
-    return Response.json({ posts, nextCursor });
+    // Pinned posts ride along only on the first page (no cursor) of the
+    // unfiltered feed, so they show once at the very top and don't repeat as
+    // the member pages down or narrows to a type.
+    const isFirstUnfilteredPage = beforeCreatedAt == null && !type;
+    const pinned = isFirstUnfilteredPage ? await listPinned(session.sub) : [];
+
+    return Response.json({ posts, nextCursor, pinned });
   } catch (e: any) {
     console.error("community-posts GET error:", e?.message ?? e);
     return Response.json({ error: "Could not load the feed" }, { status: 500 });

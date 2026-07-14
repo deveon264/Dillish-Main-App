@@ -33,7 +33,12 @@ export type CommunityPost = {
   likeCount: number;
   commentCount: number;
   likedByMe: boolean;
+  // Admin-pinned to the top of the feed (the trainer's highlighted post).
+  pinned: boolean;
 };
+
+// Members active in the community today, for the strip above the feed.
+export type ActiveToday = { count: number; members: CommunityAuthor[] };
 
 export type CommunityComment = {
   id: string;
@@ -45,7 +50,13 @@ export type CommunityComment = {
 
 export type FeedCursor = { createdAt: number; id: string };
 
-type FeedResponse = { posts: CommunityPost[]; nextCursor: FeedCursor | null };
+// `pinned` is only populated on the first page of the unfiltered feed; it is an
+// empty array otherwise.
+type FeedResponse = {
+  posts: CommunityPost[];
+  nextCursor: FeedCursor | null;
+  pinned?: CommunityPost[];
+};
 
 // Resolves the renderable URL for a post photo. The endpoint 302-redirects to a
 // short-lived signed storage URL; an <Image> follows the redirect transparently
@@ -126,6 +137,36 @@ export async function fetchFeed(opts: {
     token: opts.token,
     fallback: "Could not load the feed",
   });
+}
+
+// Members active in the community today (for the strip above the feed).
+export async function fetchActiveToday(opts: { token: string }): Promise<ActiveToday> {
+  return authed<ActiveToday>(`/api/community-active-today`, {
+    token: opts.token,
+    fallback: "Could not load activity",
+  });
+}
+
+// Admin-only: pin or unpin a post at the top of the feed.
+export async function setPostPinned(opts: {
+  token: string;
+  postId: string;
+  pinned: boolean;
+}): Promise<void> {
+  if (opts.pinned) {
+    await authed(`/api/community-pin`, {
+      token: opts.token,
+      method: "POST",
+      body: { postId: opts.postId },
+      fallback: "Could not pin post",
+    });
+  } else {
+    await authed(`/api/community-pin?postId=${encodeURIComponent(opts.postId)}`, {
+      token: opts.token,
+      method: "DELETE",
+      fallback: "Could not unpin post",
+    });
+  }
 }
 
 export async function fetchPost(opts: { token: string; id: string }): Promise<CommunityPost> {

@@ -1,17 +1,20 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, Switch } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Switch } from "react-native";
+import { Bouncy as Pressable } from "@/components/Bouncy";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Button } from "@/components/Button";
 import { Logo } from "@/components/Logo";
-import { pageHeaderStyles } from "@/components/PageHeader";
+import { createPageHeaderStyles } from "@/components/PageHeader";
 import { useInsets } from "@/hooks/useInsets";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { PLANS as PLAN_CATALOG, TRIAL_DAYS, type PlanKey } from "@/lib/subscription";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
+import { haptics } from "@/lib/haptics";
 
 // Display order on the paywall (recommended first). Prices, period labels, and
 // the summary line all come from the shared catalog in lib/subscription so the
@@ -40,7 +43,7 @@ const PLANS = PLAN_DISPLAY_ORDER.map((key) => {
 const PLAN_PERKS = ["All workouts", "AI calorie tracker", "Progress analytics"];
 
 const FEATURES: { icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
-  { icon: "barbell-outline", label: "200+ Workouts" },
+  { icon: "barbell-outline", label: "50+ Workouts" },
   { icon: "restaurant-outline", label: "AI Food Log" },
   { icon: "trending-up-outline", label: "Progress Tracking" },
   { icon: "water-outline", label: "Hydration Goals" },
@@ -55,6 +58,9 @@ const TRUST: { icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
 const SEGMENTS = 6;
 
 export default function Paywall() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
+  const pageHeaderStyles = useThemedStyles(createPageHeaderStyles);
   const router = useRouter();
   const insets = useInsets();
   const [selected, setSelected] = useState<PlanKey>("yearly");
@@ -77,6 +83,7 @@ export default function Paywall() {
   // Plan tab reconciles with the server on next load.
   const subscribeAndProceed = () => {
     subscribe(selected, { trial });
+    haptics.success();
     proceed();
   };
 
@@ -114,7 +121,10 @@ export default function Paywall() {
           </View>
           <Switch
             value={trial}
-            onValueChange={setTrial}
+            onValueChange={(value) => {
+              haptics.selection();
+              setTrial(value);
+            }}
             trackColor={{ false: colors.track, true: colors.accent }}
             thumbColor={colors.onPrimary}
             ios_backgroundColor={colors.track}
@@ -127,7 +137,11 @@ export default function Paywall() {
             return (
               <Pressable
                 key={plan.key}
-                onPress={() => setSelected(plan.key)}
+                onPress={() => {
+                  if (on) return;
+                  haptics.selection();
+                  setSelected(plan.key);
+                }}
                 style={[styles.planCard, on && styles.planCardOn, plan.recommended && styles.planCardRecommended]}
               >
                 {plan.recommended ? (
@@ -216,7 +230,7 @@ export default function Paywall() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   scroll: { paddingHorizontal: 24 },
   topRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   skip: { fontFamily: fonts.sansMedium, fontSize: 14, color: colors.muted, letterSpacing: 1 },

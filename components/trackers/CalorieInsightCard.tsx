@@ -1,16 +1,14 @@
 import React, { ComponentType, ReactNode } from "react";
-import { colors } from "@/constants/colors";
+import { colors as defaultColors, type AppColors } from "@/constants/colors";
 import type { CalorieInsight, Macro } from "@/lib/calorieInsights";
 
 // Map the featured macro to its brand color so the chips (icon + grams) match
 // the macro the tip is steering toward. Protein is the default for the
 // non-macro states (start / over / balanced), which all feature protein.
-export function insightMacroColor(macro: Macro): string {
-  return macro === "carbs"
-    ? colors.carbs
-    : macro === "fats"
-      ? colors.fats
-      : colors.protein;
+// Macro colors are brand-stable across themes, but themed callers pass their
+// palette; the default keeps node tests (no theme provider) working.
+export function insightMacroColor(macro: Macro, c: AppColors = defaultColors): string {
+  return macro === "carbs" ? c.carbs : macro === "fats" ? c.fats : c.protein;
 }
 
 // The host elements the insight body renders through. The app passes its
@@ -22,10 +20,12 @@ export type InsightBodyComponents = {
   Text: ComponentType<{ children?: ReactNode }>;
   // Emphasized ("strong") run inside the tip.
   Strong: ComponentType<{ children?: ReactNode }>;
+  // Caption above the chips explaining what the food ideas are for.
+  ChipsCaption: ComponentType<{ children?: ReactNode }>;
   // Row that holds the two food chips.
   ChipsRow: ComponentType<{ children?: ReactNode }>;
-  // A single food chip container.
-  Chip: ComponentType<{ children?: ReactNode }>;
+  // A single food chip container. `onPress` (when provided) makes it tappable.
+  Chip: ComponentType<{ onPress?: () => void; children?: ReactNode }>;
   // The chip's leading macro icon.
   ChipIcon: ComponentType<{ name: string; color: string }>;
   // The food name.
@@ -42,10 +42,13 @@ export function CalorieInsightBody({
   insight,
   components,
   color = insightMacroColor(insight.featuredMacro),
+  onChipPress,
 }: {
   insight: CalorieInsight;
   components: InsightBodyComponents;
   color?: string;
+  // Called with the tapped food chip; when omitted the chips render inert.
+  onChipPress?: (chip: CalorieInsight["chips"][number]) => void;
 }) {
   const C = components;
   return (
@@ -59,9 +62,10 @@ export function CalorieInsightBody({
           ),
         )}
       </C.Text>
+      <C.ChipsCaption>{insight.chipsCaption}</C.ChipsCaption>
       <C.ChipsRow>
         {insight.chips.map((chip, i) => (
-          <C.Chip key={i}>
+          <C.Chip key={i} onPress={onChipPress ? () => onChipPress(chip) : undefined}>
             <C.ChipIcon name={chip.icon} color={color} />
             <C.ChipName numberOfLines={1}>{chip.name}</C.ChipName>
             <C.ChipValue color={color}>+{chip.value}g</C.ChipValue>

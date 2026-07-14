@@ -2,6 +2,12 @@ import { mintSessionToken } from "@/lib/adminAuth";
 import { verifyPassword } from "@/lib/userAuth";
 import { getUserByEmail, toPublicUser } from "@/lib/userStore";
 
+function logAuthError(scope: string, e: any) {
+  const code = e?.code ? ` code=${e.code}` : "";
+  const message = e?.message ?? String(e);
+  console.error(`${scope}:${code} ${message}`);
+}
+
 // Verifies email + password against the server-side account store and, on
 // success, issues a signed session token. The same generic error is returned
 // whether the email is unknown or the password is wrong, so neither is leaked.
@@ -32,7 +38,7 @@ export async function POST(request: Request): Promise<Response> {
     });
     return Response.json({ user: toPublicUser(user), token, expiresAt });
   } catch (e: any) {
-    console.error("login error:", e?.message ?? e);
+    logAuthError("login error", e);
     return Response.json({ error: "Could not sign in" }, { status: 500 });
   }
 }

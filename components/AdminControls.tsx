@@ -1,8 +1,10 @@
 import React from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
+import { Bouncy as Pressable } from "@/components/Bouncy";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
 
 // Shown to a verified coach. Coach tools are unlocked automatically by the
@@ -10,6 +12,8 @@ import { fonts } from "@/constants/fonts";
 // just a reminder of what uploading here means, plus a link to the separate
 // onboarding thank-you video the coach manages globally.
 export function AdminControls() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   return (
     <View style={styles.wrap}>
@@ -29,7 +33,7 @@ export function AdminControls() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   wrap: { marginTop: 18, gap: 12 },
   note: {
     flexDirection: "row",

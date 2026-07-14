@@ -14,6 +14,16 @@ const MACRO_LABEL: Record<Macro, string> = {
   fats: "fats",
 };
 
+// Caption shown above the food chips when the tip is steering toward a macro
+// gap. It frames the chips as macro-appropriate ideas to help close that gap, so
+// they read as alternatives ("add one of these") rather than an additive plan
+// that should sum to the grams remaining.
+const MACRO_CHIP_CAPTION: Record<Macro, string> = {
+  protein: "Protein-rich ideas to close the gap",
+  carbs: "Carb-rich ideas to close the gap",
+  fats: "Healthy fats to close the gap",
+};
+
 // A food idea. `protein`/`carbs`/`fats` are the grams that one sensible serving
 // adds, so the chip can show the contribution for whichever macro we feature.
 type Food = {
@@ -81,8 +91,12 @@ export type InsightSegment = { text: string; strong?: boolean };
 export type InsightChip = {
   name: string;
   icon: IoniconName;
-  // Grams of the featured macro this serving adds.
+  // Grams of the featured macro this serving adds (shown on the chip).
   value: number;
+  // Full per-serving macros, so a tapped chip can show the food's nutrition.
+  protein: number;
+  carbs: number;
+  fats: number;
 };
 
 export type CalorieInsight = {
@@ -91,6 +105,8 @@ export type CalorieInsight = {
   segments: InsightSegment[];
   // The macro the chips quantify (so the UI can color them to match).
   featuredMacro: Macro;
+  // Short label above the chips explaining what the food ideas are for.
+  chipsCaption: string;
   chips: InsightChip[];
 };
 
@@ -124,6 +140,9 @@ function chipsFor(pool: Food[], macro: Macro, seed: number): InsightChip[] {
     name: f.name,
     icon: f.icon,
     value: f[macro],
+    protein: f.protein,
+    carbs: f.carbs,
+    fats: f.fats,
   }));
 }
 
@@ -161,6 +180,7 @@ export function getCalorieInsight(input: InsightInput): CalorieInsight {
       category: "start",
       segments: pickOne(templates, seed),
       featuredMacro: "protein",
+      chipsCaption: "Protein-rich ways to begin",
       chips: chipsFor(PROTEIN_FOODS, "protein", seed),
     };
   }
@@ -189,6 +209,7 @@ export function getCalorieInsight(input: InsightInput): CalorieInsight {
       category: "over",
       segments: pickOne(templates, seed),
       featuredMacro: "protein",
+      chipsCaption: "Lighter picks if you're still hungry",
       chips: chipsFor(LIGHT_FOODS, "protein", seed),
     };
   }
@@ -204,6 +225,7 @@ export function getCalorieInsight(input: InsightInput): CalorieInsight {
       category: "balanced",
       segments: pickOne(templates, seed),
       featuredMacro: "protein",
+      chipsCaption: "Light snack ideas for later",
       chips: chipsFor(LIGHT_FOODS, "protein", seed),
     };
   }
@@ -250,6 +272,7 @@ export function getCalorieInsight(input: InsightInput): CalorieInsight {
     category: `macro-${macro}`,
     segments: pickOne(templates, seed),
     featuredMacro: macro,
+    chipsCaption: MACRO_CHIP_CAPTION[macro],
     chips: chipsFor(POOL_BY_MACRO[macro], macro, seed),
   };
 }

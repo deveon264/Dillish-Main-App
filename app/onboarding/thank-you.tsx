@@ -1,20 +1,28 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, Platform } from "react-native";
+import { View, Text, StyleSheet, Platform } from "react-native";
+import { Bouncy as Pressable } from "@/components/Bouncy";
 import { useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useEventListener } from "expo";
 import { useInsets } from "@/hooks/useInsets";
+import { useData } from "@/contexts/DataContext";
+import { SkeletonBlock, SkeletonGroup } from "@/components/Skeleton";
 import { thankYouVideoUrl, thankYouVideoExists } from "@/lib/thankYouVideo";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
+import { ScreenEntrance } from "@/components/Motion";
 
 // Plays once between the onboarding paywall and the dashboard. EVERY exit from
 // the paywall routes here. When playback ends (or the member taps Skip, or no
 // video is set / it fails to load) we continue to the dashboard. We use
 // `replace` so the back gesture never returns to the paywall.
 export default function ThankYouVideo() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const insets = useInsets();
+  const { queueWelcome } = useData();
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
 
   const player = useVideoPlayer(null, (p) => {
@@ -22,8 +30,11 @@ export default function ThankYouVideo() {
   });
 
   const goToApp = React.useCallback(() => {
+    // Queue the one-time home-screen welcome popup before handing off, so it
+    // greets the member the moment the dashboard appears.
+    queueWelcome();
     router.replace("/(tabs)");
-  }, [router]);
+  }, [router, queueWelcome]);
 
   useEffect(() => {
     let cancelled = false;
@@ -71,7 +82,7 @@ export default function ThankYouVideo() {
   });
 
   return (
-    <View style={styles.root}>
+    <ScreenEntrance style={styles.root}>
       <VideoView
         player={player}
         style={StyleSheet.absoluteFill}
@@ -82,9 +93,14 @@ export default function ThankYouVideo() {
       />
 
       {state === "loading" && (
-        <View style={styles.overlay} pointerEvents="none">
-          <ActivityIndicator color="#FFFFFF" />
-        </View>
+        <SkeletonGroup
+          label="Preparing your welcome video"
+          tone="dark"
+          style={styles.overlay}
+          pointerEvents="none"
+        >
+          <SkeletonBlock tone="dark" style={styles.videoSkeleton} />
+        </SkeletonGroup>
       )}
 
       <Pressable
@@ -94,17 +110,18 @@ export default function ThankYouVideo() {
       >
         <Text style={styles.skipText}>Skip</Text>
       </Pressable>
-    </View>
+    </ScreenEntrance>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   root: { flex: 1, backgroundColor: "#000" },
   overlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
   },
+  videoSkeleton: { width: "82%", height: "68%", borderRadius: 24 },
   skip: {
     position: "absolute",
     right: 18,

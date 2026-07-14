@@ -3,8 +3,22 @@ npm-debug.log*
 .DS_Store
 
 .expo/settings.json
+.expo/settings.json.*
 .expo/web/
 .expo/*.log
+
+# Local Claude Code session state
+.claude/
+
+# Local dev-server logs and QR helper images
+expo-*.log
+ngrok-*.log
+ws-tunnel*.log
+expo-go-*.png
+expo-go-qr.bmp
+
+# Rendered walkthrough video assets (generated, ~12MB)
+dist/walkthrough*/
 
 .env
 .env.*.local

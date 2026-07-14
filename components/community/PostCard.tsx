@@ -1,11 +1,15 @@
 import React from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
+import { Bouncy as Pressable } from "@/components/Bouncy";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { AnimatedNumber } from "@/components/AnimatedNumber";
 import { Avatar } from "@/components/community/Avatar";
-import { POST_TYPE_META } from "@/components/community/postTypes";
+import { POST_TYPE_META, POST_TYPE_TINT } from "@/components/community/postTypes";
 import { communityPhotoUri, timeAgo, type CommunityPost } from "@/lib/community";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
 
 type Props = {
@@ -18,34 +22,73 @@ type Props = {
 
 // A single feed item: author, type tag, text, optional photo, and the like /
 // comment actions. The card body opens the post detail; the action buttons
-// handle their own taps without bubbling up.
+// handle their own taps without bubbling up. A pinned post (the trainer's
+// highlighted post) gets a rose-gold gradient border, a haloed avatar, and a
+// PINNED badge instead of the plain hairline card.
 export function PostCard({ post, onPress, onLike, onComment, onMenu }: Props) {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const meta = POST_TYPE_META[post.type];
+  const tint = POST_TYPE_TINT[post.type];
 
-  return (
+  const body = (
     <Pressable
+      pressedScale={0.985}
       onPress={onPress}
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      style={({ pressed }) => [
+        styles.card,
+        post.pinned && styles.cardPinned,
+        pressed && styles.cardPressed,
+      ]}
     >
       <View style={styles.head}>
-        <Avatar author={post.author} size={42} />
+        {post.pinned ? (
+          <LinearGradient
+            colors={colors.gradientRoseGold}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.halo}
+          >
+            <View style={styles.haloInner}>
+              <Avatar author={post.author} size={40} />
+            </View>
+          </LinearGradient>
+        ) : (
+          <Avatar author={post.author} size={42} />
+        )}
         <View style={styles.headText}>
-          <Text style={styles.name} numberOfLines={1}>
-            {post.author.name}
+          <View style={styles.nameRow}>
+            <Text style={styles.name} numberOfLines={1}>
+              {post.author.name}
+            </Text>
+            {post.pinned ? (
+              <View style={styles.pinnedBadge}>
+                <Text style={styles.pinnedBadgeText}>PINNED</Text>
+              </View>
+            ) : null}
+          </View>
+          <Text style={styles.time}>
+            {post.pinned ? "Your trainer · " : ""}
+            {timeAgo(post.createdAt)}
           </Text>
-          <Text style={styles.time}>{timeAgo(post.createdAt)}</Text>
         </View>
+        {post.pinned ? (
+          <Ionicons name="ribbon" size={17} color={colors.accentDark} style={styles.pinIcon} />
+        ) : null}
         <Pressable hitSlop={8} onPress={onMenu} style={styles.menuBtn} accessibilityLabel="Post options">
-          <Ionicons name="ellipsis-horizontal" size={20} color={colors.muted} />
+          <Ionicons name="ellipsis-horizontal" size={18} color={colors.muted} />
         </Pressable>
       </View>
 
-      <View style={styles.tag}>
-        <Ionicons name={meta.icon} size={13} color={colors.accentDark} />
-        <Text style={styles.tagText}>{meta.label}</Text>
-      </View>
+      {post.pinned ? null : (
+        <View style={styles.tagRow}>
+          <View style={[styles.tag, { backgroundColor: tint.bg }]}>
+            <Text style={[styles.tagText, { color: tint.fg }]}>{meta.label.toUpperCase()}</Text>
+          </View>
+        </View>
+      )}
 
-      <Text style={styles.body}>{post.body}</Text>
+      <Text style={styles.bodyText}>{post.body}</Text>
 
       {post.photoKey ? (
         <Image
@@ -57,26 +100,67 @@ export function PostCard({ post, onPress, onLike, onComment, onMenu }: Props) {
       ) : null}
 
       <View style={styles.footer}>
-        <Pressable hitSlop={8} onPress={onLike} style={styles.action} accessibilityLabel="Like">
+        <Pressable
+          hitSlop={8}
+          onPress={onLike}
+          style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}
+          accessibilityLabel="Like"
+        >
           <Ionicons
             name={post.likedByMe ? "heart" : "heart-outline"}
-            size={20}
-            color={post.likedByMe ? colors.accent : colors.muted}
+            size={15}
+            color={post.likedByMe ? colors.primary : colors.muted}
           />
-          <Text style={[styles.actionText, post.likedByMe && styles.actionTextActive]}>
-            {post.likeCount}
-          </Text>
+          <AnimatedNumber
+            value={post.likeCount}
+            style={[styles.actionText, post.likedByMe && styles.actionTextActive]}
+          />
         </Pressable>
-        <Pressable hitSlop={8} onPress={onComment} style={styles.action} accessibilityLabel="Comments">
-          <Ionicons name="chatbubble-outline" size={19} color={colors.muted} />
-          <Text style={styles.actionText}>{post.commentCount}</Text>
+        <Pressable
+          hitSlop={8}
+          onPress={onComment}
+          style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}
+          accessibilityLabel="Comments"
+        >
+          <Ionicons name="chatbubble-outline" size={14} color={colors.muted} />
+          <AnimatedNumber value={post.commentCount} style={styles.actionText} />
         </Pressable>
+        {post.type === "progress" ? (
+          <Pressable
+            hitSlop={8}
+            onPress={onLike}
+            style={({ pressed }) => [styles.cheerAction, pressed && styles.actionPressed]}
+            accessibilityLabel="Cheer"
+          >
+            <Ionicons name="star-outline" size={14} color={colors.accentDark} />
+            <Text style={styles.cheerText}>Cheer</Text>
+          </Pressable>
+        ) : null}
       </View>
     </Pressable>
   );
+
+  // Pinned posts are wrapped in a thin rose-gold gradient frame.
+  if (post.pinned) {
+    return (
+      <LinearGradient
+        colors={colors.gradientRoseGold}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.pinnedFrame}
+      >
+        {body}
+      </LinearGradient>
+    );
+  }
+  return body;
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
+  pinnedFrame: {
+    borderRadius: colors.radiusLg,
+    padding: 1.5,
+  },
   card: {
     backgroundColor: colors.card,
     borderWidth: 1,
@@ -84,34 +168,72 @@ const styles = StyleSheet.create({
     borderRadius: colors.radiusLg,
     padding: 16,
   },
+  cardPinned: {
+    borderWidth: 0,
+    // Fill the gradient frame exactly (frame radius minus its 1.5px padding).
+    borderRadius: colors.radiusLg - 1.5,
+  },
   cardPressed: { opacity: 0.97 },
   head: { flexDirection: "row", alignItems: "center", gap: 12 },
   headText: { flex: 1 },
-  name: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  name: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground, flexShrink: 1 },
   time: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, marginTop: 1 },
-  menuBtn: { padding: 4 },
-  tag: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    alignSelf: "flex-start",
-    backgroundColor: colors.accentTint,
+  menuBtn: { padding: 2 },
+  pinIcon: { marginRight: 2 },
+
+  // Rose-gold halo around the pinned author's avatar.
+  halo: { padding: 2, borderRadius: 999 },
+  haloInner: { padding: 2, borderRadius: 999, backgroundColor: colors.card },
+
+  pinnedBadge: {
+    backgroundColor: colors.blush,
     borderRadius: 999,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    marginTop: 12,
+    paddingVertical: 3,
+    paddingHorizontal: 9,
   },
-  tagText: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.accentDark, letterSpacing: 0.2 },
-  body: { fontFamily: fonts.sans, fontSize: 15, lineHeight: 22, color: colors.foreground, marginTop: 10 },
+  pinnedBadgeText: { fontFamily: fonts.sansBold, fontSize: 9, letterSpacing: 1, color: colors.accentDark },
+
+  tagRow: { flexDirection: "row", marginTop: 12 },
+  tag: {
+    borderRadius: 999,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+  },
+  tagText: { fontFamily: fonts.sansBold, fontSize: 10, letterSpacing: 0.5 },
+  bodyText: { fontFamily: fonts.sans, fontSize: 14, lineHeight: 22, color: "rgba(62, 39, 51, 0.85)", marginTop: 12 },
   photo: {
     width: "100%",
     aspectRatio: 4 / 3,
-    borderRadius: colors.radius,
-    backgroundColor: colors.accentTintFaint,
+    borderRadius: colors.radiusSm,
+    backgroundColor: colors.blushSurface,
     marginTop: 12,
   },
-  footer: { flexDirection: "row", alignItems: "center", gap: 22, marginTop: 14 },
-  action: { flexDirection: "row", alignItems: "center", gap: 6 },
-  actionText: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.muted },
-  actionTextActive: { color: colors.accent },
+  footer: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 12 },
+  action: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 13,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(62, 39, 51, 0.1)",
+    backgroundColor: colors.card,
+  },
+  actionPressed: { transform: [{ scale: 0.93 }] },
+  actionText: { fontFamily: fonts.sansBold, fontSize: 12, color: colors.muted },
+  actionTextActive: { color: colors.accentDark },
+  cheerAction: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 13,
+    borderRadius: 999,
+    backgroundColor: colors.blush,
+    borderWidth: 1,
+    borderColor: colors.blushBorder,
+  },
+  cheerText: { fontFamily: fonts.sansBold, fontSize: 12, color: colors.accentDark },
 });

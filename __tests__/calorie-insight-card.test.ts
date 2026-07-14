@@ -24,8 +24,9 @@ import { colors } from "@/constants/colors";
 const STUB: InsightBodyComponents = {
   Text: ({ children }) => createElement("div", { "data-role": "text" }, children),
   Strong: ({ children }) => createElement("span", { "data-role": "strong" }, children),
+  ChipsCaption: ({ children }) => createElement("div", { "data-role": "chips-caption" }, children),
   ChipsRow: ({ children }) => createElement("div", { "data-role": "chips" }, children),
-  Chip: ({ children }) => createElement("div", { "data-role": "chip" }, children),
+  Chip: ({ onPress, children }) => createElement("div", { "data-role": "chip", onPress }, children),
   ChipIcon: ({ name, color }) =>
     createElement("span", { "data-role": "chip-icon", "data-name": name, "data-color": color }),
   ChipName: ({ children }) => createElement("span", { "data-role": "chip-name" }, children),
@@ -92,6 +93,13 @@ for (const state of DAY_STATES) {
       strongSegments.map((s) => s.text).sort(),
     );
 
+    // The chips caption renders exactly what the engine produced, framing the
+    // food ideas (and is never empty).
+    const caption = byRole("chips-caption");
+    assert.equal(caption.length, 1);
+    assert.equal(textOf(caption[0]), insight.chipsCaption);
+    assert.ok(insight.chipsCaption.length > 0);
+
     // Both food chips appear, with the engine's names and "+Ng" grams.
     const chips = byRole("chip");
     assert.equal(chips.length, 2);
@@ -116,6 +124,30 @@ for (const state of DAY_STATES) {
     );
   });
 }
+
+// Tapping a chip must call back with that exact food chip, so the host can open
+// its detail popup for the right food.
+test("invokes onChipPress with the tapped food chip", () => {
+  const insight = getCalorieInsight({
+    totals: { kcal: 1000, protein: 150, carbs: 0, fats: 67 },
+    goals: GOALS,
+    seed: SEED,
+  });
+  const calls: (typeof insight.chips)[number][] = [];
+  let renderer!: TestRenderer.ReactTestRenderer;
+  act(() => {
+    renderer = TestRenderer.create(
+      createElement(CalorieInsightBody, { insight, components: STUB, onChipPress: (c) => calls.push(c) }),
+    );
+  });
+  const chips = renderer.root.findAll((n) => (n.props as any)?.["data-role"] === "chip");
+  assert.equal(chips.length, 2);
+  act(() => {
+    (chips[1].props as any).onPress();
+  });
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0], insight.chips[1]);
+});
 
 // The featured-macro color mapping is the exact wiring a render mistake would
 // silently break, so pin each macro to its brand color explicitly.

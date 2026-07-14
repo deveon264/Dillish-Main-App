@@ -30,6 +30,12 @@
     "plugins": [
       "expo-router",
       [
+        "expo-video",
+        {
+          "supportsPictureInPicture": true
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#2C2422",
@@ -44,7 +50,20 @@
           "cameraPermission": "Florish needs access to your camera to take a profile photo."
         }
       ],
-      "expo-notifications"
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Florish needs access to your camera to scan food barcodes.",
+          "barcodeScannerEnabled": true
+        }
+      ],
+      "expo-notifications",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Florish uses the microphone so you can log meals by voice."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": false

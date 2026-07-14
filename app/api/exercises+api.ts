@@ -40,13 +40,16 @@ function mapRow(r: any) {
     hasPoster: !!r.poster_object_path,
     workoutId: r.workout_id ?? null,
     workoutExerciseId: r.workout_exercise_id ?? null,
+    moveId: r.move_id ?? null,
     createdAt: Number(r.created_at),
   };
 }
 
 // Optionally filters by workoutId (and workoutExerciseId) so the workout player
-// can fetch only the videos tied to a given workout. Without those params it
-// returns the full library, newest first.
+// can fetch only the videos tied to a given workout. `moveIds` (comma-separated
+// canonical move ids) widens the result to clips uploaded for the same moves in
+// other workouts, so one clip serves every workout that shares the move.
+// Without those params it returns the full library, newest first.
 export async function GET(request: Request): Promise<Response> {
   try {
     await ensureSchema();
@@ -54,16 +57,29 @@ export async function GET(request: Request): Promise<Response> {
     const params = new URL(request.url).searchParams;
     const workoutId = (params.get("workoutId") ?? "").trim();
     const exerciseId = (params.get("exerciseId") ?? "").trim();
+    const moveIds = (params.get("moveIds") ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
 
     const where: string[] = [];
     const values: any[] = [];
-    if (workoutId) {
-      values.push(workoutId);
-      where.push(`workout_id = $${values.length}`);
-      if (exerciseId) {
-        values.push(exerciseId);
-        where.push(`workout_exercise_id = $${values.length}`);
+    if (workoutId || moveIds.length > 0) {
+      const or: string[] = [];
+      if (workoutId) {
+        values.push(workoutId);
+        let cond = `workout_id = $${values.length}`;
+        if (exerciseId) {
+          values.push(exerciseId);
+          cond = `(${cond} AND workout_exercise_id = $${values.length})`;
+        }
+        or.push(cond);
       }
+      if (moveIds.length > 0) {
+        values.push(moveIds);
+        or.push(`move_id = ANY($${values.length})`);
+      }
+      where.push(or.length > 1 ? `(${or.join(" OR ")})` : or[0]);
     } else {
       // The generic library must NOT show videos that were uploaded for a
       // specific exercise inside a workout; those belong to the workout only.
@@ -72,7 +88,7 @@ export async function GET(request: Request): Promise<Response> {
     const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
     const { rows } = await pool.query(
-      `SELECT id, title, description, cues, category, level, duration, video_mime, video_size, poster_object_path, workout_id, workout_exercise_id, created_by, created_at
+      `SELECT id, title, description, cues, category, level, duration, video_mime, video_size, poster_object_path, workout_id, workout_exercise_id, move_id, created_by, created_at
        FROM exercises ${whereSql} ORDER BY created_at DESC`,
       values
     );
@@ -106,6 +122,8 @@ export async function POST(request: Request): Promise<Response> {
     // tie the video to that exact exercise. Empty for generic library uploads.
     const workoutId = (params.get("workoutId") ?? "").trim() || null;
     const workoutExerciseId = (params.get("exerciseId") ?? "").trim() || null;
+    // Canonical move id: lets this clip play in every workout using the move.
+    const moveId = (params.get("moveId") ?? "").trim() || null;
 
     // Title is optional: when the coach doesn't provide one, derive a clean
     // title from the uploaded video's filename (strip extension, turn
@@ -170,9 +188,9 @@ export async function POST(request: Request): Promise<Response> {
     try {
       await pool.query(
         `INSERT INTO exercises
-           (id, title, description, cues, category, level, duration, video_object_path, video_mime, video_size, workout_id, workout_exercise_id, created_by, created_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
-        [id, title, description, cues, category, level, duration, objectPath, mime, contentLength, workoutId, workoutExerciseId, String(email).toLowerCase(), createdAt]
+           (id, title, description, cues, category, level, duration, video_object_path, video_mime, video_size, workout_id, workout_exercise_id, move_id, created_by, created_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+        [id, title, description, cues, category, level, duration, objectPath, mime, contentLength, workoutId, workoutExerciseId, moveId, String(email).toLowerCase(), createdAt]
       );
     } catch (dbErr) {
       // Don't leave orphaned objects if the DB write fails.
@@ -194,6 +212,7 @@ export async function POST(request: Request): Promise<Response> {
         hasPoster: false,
         workoutId,
         workoutExerciseId,
+        moveId,
         createdAt,
       },
     });
@@ -241,7 +260,7 @@ export async function PATCH(request: Request): Promise<Response> {
       `UPDATE exercises
          SET title = $1, description = $2, cues = $3, category = $4, level = $5, duration = $6
        WHERE id = $7
-       RETURNING id, title, description, cues, category, level, duration, video_mime, video_size, poster_object_path, workout_id, workout_exercise_id, created_at`,
+       RETURNING id, title, description, cues, category, level, duration, video_mime, video_size, poster_object_path, workout_id, workout_exercise_id, move_id, created_at`,
       [title, description, cues, category, level, duration, id]
     );
     if (rows.length === 0) {

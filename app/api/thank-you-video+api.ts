@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/adminAuth";
 import {
   uploadThankYouVideoStream,
   getVideoSignedUrl,
+  signedObjectResponse,
   deleteObject,
 } from "@/lib/objectStorageServer";
 
@@ -57,13 +58,7 @@ export async function thankYouVideoGet(
     if (!path) return new Response("Not found", { status: 404 });
 
     const url = await storage.getVideoSignedUrl(path, 3600);
-    return new Response(null, {
-      status: 302,
-      headers: {
-        Location: url,
-        "Cache-Control": "no-store",
-      },
-    });
+    return signedObjectResponse(url, request);
   } catch (e: any) {
     console.error("thank-you-video GET error:", e?.message ?? e);
     return new Response("Failed to stream video", { status: 500 });

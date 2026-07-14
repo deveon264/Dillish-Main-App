@@ -37,8 +37,10 @@ test("countdown: a timer completion opens the rest gap and marks the exercise do
 });
 
 test("countdown: a second timer signal for the same exercise is ignored (no double-count)", () => {
-  // First tick marked index 0 done; the guard now holds 0.
-  const second = decideExerciseCompletion(input({ source: "timer", completedIndex: 0 }));
+  // First tick marked (index 0, set 0) done; the guard now holds that pair.
+  const second = decideExerciseCompletion(
+    input({ source: "timer", completedIndex: 0, completedSetIndex: 0 }),
+  );
   assert.equal(second.action, "ignore");
   assert.equal(second.completedIndex, null);
 });
@@ -74,7 +76,13 @@ test("video then countdown: once the clip completes, a same-exercise timer is ig
   assert.equal(fromVideo.completedIndex, 0);
   // The countdown then hits zero for the SAME exercise: it must not fire again.
   const fromTimer = decideExerciseCompletion(
-    input({ source: "timer", currentVideoId: "vid-A", loadedVideoId: "vid-A", completedIndex: 0 }),
+    input({
+      source: "timer",
+      currentVideoId: "vid-A",
+      loadedVideoId: "vid-A",
+      completedIndex: 0,
+      completedSetIndex: 0,
+    }),
   );
   assert.equal(fromTimer.action, "ignore");
   assert.equal(fromTimer.completedIndex, null);
@@ -267,4 +275,56 @@ test("rest tick step: ticking from a start value reaches zero in exactly that ma
   assert.deepEqual(seen, [3, 2, 1, 0]);
   // One more tick at zero stays at zero (clamped, never negative).
   assert.equal(tickRestRemaining(r), 0);
+});
+
+// --- (9) per-set playback: sets rest, repeat, then hand over to the exercise flow
+
+test("sets: completing a mid-exercise set opens a SET rest, not the exercise rest", () => {
+  const d = decideExerciseCompletion(input({ source: "timer", setIndex: 0, sets: 3 }));
+  assert.equal(d.action, "setRest");
+  assert.equal(d.completedIndex, 0);
+  assert.equal(d.completedSetIndex, 0);
+});
+
+test("sets: with rest off, a mid-exercise set starts the next set immediately", () => {
+  const d = decideExerciseCompletion(input({ source: "timer", setIndex: 1, sets: 3, restGap: 0 }));
+  assert.equal(d.action, "nextSet");
+  assert.equal(d.completedSetIndex, 1);
+});
+
+test("sets: the LAST set of an exercise behaves exactly like the old completion", () => {
+  const mid = decideExerciseCompletion(input({ source: "timer", setIndex: 2, sets: 3 }));
+  assert.equal(mid.action, "rest");
+  const last = decideExerciseCompletion(
+    input({ source: "timer", setIndex: 2, sets: 3, index: 2, total: 3 }),
+  );
+  assert.equal(last.action, "finish");
+});
+
+test("sets: a clip end mid-sets is a SET completion, and a stale clip end is still ignored", () => {
+  const d = decideExerciseCompletion(
+    input({ source: "video", currentVideoId: "vid-A", loadedVideoId: "vid-A", setIndex: 0, sets: 2 }),
+  );
+  assert.equal(d.action, "setRest");
+  const stale = decideExerciseCompletion(
+    input({ source: "video", currentVideoId: "vid-A", loadedVideoId: null, setIndex: 0, sets: 2 }),
+  );
+  assert.equal(stale.action, "ignore");
+});
+
+test("sets: a duplicate signal for the same (exercise, set) pair is ignored, but the NEXT set can complete", () => {
+  const dup = decideExerciseCompletion(
+    input({ source: "timer", setIndex: 1, sets: 3, completedIndex: 0, completedSetIndex: 1 }),
+  );
+  assert.equal(dup.action, "ignore");
+  const nextSet = decideExerciseCompletion(
+    input({ source: "timer", setIndex: 2, sets: 3, completedIndex: 0, completedSetIndex: 1 }),
+  );
+  assert.equal(nextSet.action, "rest"); // last of 3 sets -> exercise rest
+});
+
+test("sets: defaults (sets omitted) reproduce the one-completion-per-exercise behavior", () => {
+  const d = decideExerciseCompletion(input({ source: "timer" }));
+  assert.equal(d.action, "rest");
+  assert.equal(d.completedSetIndex, 0);
 });

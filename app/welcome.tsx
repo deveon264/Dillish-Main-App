@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useRef } from "react";
-import { View, Text, StyleSheet, Pressable, Animated, Platform } from "react-native";
+import React, { useMemo } from "react";
+import { View, Text, StyleSheet, Platform } from "react-native";
+import { Bouncy as Pressable } from "@/components/Bouncy";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,8 +9,11 @@ import { Button } from "@/components/Button";
 import { Logo } from "@/components/Logo";
 import { useInsets } from "@/hooks/useInsets";
 import { useScale } from "@/hooks/useScale";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
+import { haptics } from "@/lib/haptics";
+import { ScreenEntrance } from "@/components/Motion";
 
 const heroSource = require("@/assets/images/photos/welcomehero.webp");
 
@@ -28,34 +32,18 @@ const TRUST = [
 function TrustItem({
   icon,
   label,
-  delay,
   iconBox,
   iconSize,
   labelSize,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
-  delay: number;
   iconBox: number;
   iconSize: number;
   labelSize: number;
 }) {
-  const scale = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    const anim = Animated.sequence([
-      Animated.delay(delay),
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(scale, { toValue: 1.18, duration: 850, useNativeDriver: true }),
-          Animated.timing(scale, { toValue: 1, duration: 850, useNativeDriver: true }),
-        ]),
-      ),
-    ]);
-    anim.start();
-    return () => anim.stop();
-  }, [scale, delay]);
-
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.trustItem}>
       <View
@@ -64,9 +52,9 @@ function TrustItem({
           { width: iconBox, height: iconBox, borderRadius: iconBox / 2.8 },
         ]}
       >
-        <Animated.View style={{ transform: [{ scale }] }}>
+        <View>
           <Ionicons name={icon} size={iconSize} color={colors.accent} />
-        </Animated.View>
+        </View>
       </View>
       <Text style={[styles.trustLabel, { fontSize: labelSize }]} numberOfLines={1}>
         {label}
@@ -81,6 +69,8 @@ function TrustItem({
 const webFill = Platform.OS === "web" ? ({ minHeight: "100vh" } as object) : null;
 
 export default function Welcome() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const insets = useInsets();
   const { ms } = useScale();
@@ -113,7 +103,7 @@ export default function Welcome() {
         locations={[0, 0.5, 0.92]}
         style={StyleSheet.absoluteFill}
       />
-      <View
+      <ScreenEntrance
         style={[
           styles.content,
           dynamic.content,
@@ -129,16 +119,15 @@ export default function Welcome() {
             Bloom into{"\n"}your <Text style={styles.titleItalic}>best self</Text>
           </Text>
           <Text style={[styles.subtitle, dynamic.subtitle]}>
-            A beautiful space for women to feel stronger, calmer and more confident.
+            A beautiful space for anyone to feel stronger, calmer and more confident.
           </Text>
 
           <View style={[styles.trustRow, dynamic.trustRow]}>
-            {TRUST.map((t, i) => (
+            {TRUST.map((t) => (
               <TrustItem
                 key={t.label}
                 icon={t.icon}
                 label={t.label}
-                delay={i * 350}
                 iconBox={ms(34)}
                 iconSize={ms(18)}
                 labelSize={ms(12)}
@@ -148,19 +137,26 @@ export default function Welcome() {
         </View>
 
         <View style={styles.actions}>
-          <Button label="Begin Your Journey" iconRight="arrow-forward" onPress={() => router.push("/(auth)/signup")} />
+          <Button
+            label="Begin Your Journey"
+            iconRight="arrow-forward"
+            onPress={() => {
+              haptics.selection();
+              router.push("/onboarding/goal");
+            }}
+          />
           <Pressable style={styles.signin} onPress={() => router.push("/(auth)/login")}>
             <Text style={[styles.signinText, dynamic.signinText]} numberOfLines={1}>
               Already have an account? <Text style={styles.signinLink}>Sign in</Text>
             </Text>
           </Pressable>
         </View>
-      </View>
+      </ScreenEntrance>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   bg: { flex: 1, backgroundColor: colors.background },
   heroImg: { position: "absolute", top: 0, left: 0, width: "100%", height: "100%" },
   content: { flex: 1, paddingHorizontal: 24, justifyContent: "space-between" },

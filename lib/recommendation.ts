@@ -172,13 +172,18 @@ export function getRecommendedProgram(profile: Profile, programs: Program[]): Pr
   if (!goal) return null;
   const matching = programs.filter((p) => p.goal === goal);
   if (matching.length === 0) return null;
+  // Beginners (and unknown levels) start the journey at phase 1; intermediate
+  // and advanced users skip straight to the goal's phase-2 program when one
+  // exists, falling back to whatever the goal has.
+  const preferredPhase = profile.fitnessLevel === "intermediate" || profile.fitnessLevel === "advanced" ? 2 : 1;
+  const phased = matching.filter((p) => p.phase === preferredPhase);
+  const pool = phased.length > 0 ? phased : matching;
   const levelFits = (p: Program) => {
     if (p.level === "All") return true;
-    if (!profile.fitnessLevel) return p.level === "Beginner";
-    if (profile.fitnessLevel === "beginner") return p.level === "Beginner";
+    if (!profile.fitnessLevel || profile.fitnessLevel === "beginner") return p.level === "Beginner";
     return true;
   };
-  return matching.find(levelFits) ?? matching[0];
+  return pool.find(levelFits) ?? pool[0];
 }
 
 export type TodayWorkout<T extends RecWorkout> = {
@@ -187,6 +192,9 @@ export type TodayWorkout<T extends RecWorkout> = {
   program?: Program;
   dayNumber?: number;
   programComplete?: boolean;
+  // Set alongside programComplete when the finished program chains into a
+  // next phase, so Home can offer "Start Phase 2".
+  nextProgram?: Program;
 };
 
 type CompletionLike = { workoutId: string; ts: number };
@@ -217,10 +225,14 @@ export function getTodayWorkout<T extends RecWorkout>(
         }
       }
     } else {
-      // Program finished: celebrate on Home and keep recommending.
+      // Program finished: celebrate on Home, offer the next phase, and keep
+      // recommending in the meantime.
+      const nextProgram = program.nextProgramId
+        ? programs.find((p) => p.id === program.nextProgramId)
+        : undefined;
       const ranked = getRecommendedWorkouts(profile, workouts);
       if (ranked.length > 0) {
-        return { workout: ranked[0], source: "recommended", program, programComplete: true };
+        return { workout: ranked[0], source: "recommended", program, programComplete: true, nextProgram };
       }
     }
   }

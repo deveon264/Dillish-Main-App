@@ -5,14 +5,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Button } from "@/components/Button";
 import { StepHeader } from "@/components/StepHeader";
-import { useData } from "@/contexts/DataContext";
+import { Reveal, Bouncy, OnboardDecor } from "@/components/onboarding/OnboardKit";
+import { useOnboardingAnswers } from "@/hooks/useOnboardingAnswers";
 import { useInsets } from "@/hooks/useInsets";
 import { useOnboardingMode } from "@/hooks/useOnboardingMode";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
 import { getRecommendedProgram } from "@/lib/recommendation";
 import { PROGRAMS } from "@/constants/programs";
 import type { LimitationId } from "@/lib/profile";
+import { haptics } from "@/lib/haptics";
 
 const NONE = "none" as const;
 type OptionId = LimitationId | typeof NONE;
@@ -29,16 +32,19 @@ const OPTIONS: { id: OptionId; label: string; desc: string; icon: keyof typeof I
 // "No limitations" is mutually exclusive and stored as an empty array. These
 // answers only filter which workouts we suggest; they are not medical advice.
 export default function LimitationsStep() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const insets = useInsets();
   const { personalize, total, withMode } = useOnboardingMode();
-  const { profile, updateProfile, ready } = useData();
+  const { answers: profile, save: updateProfile, ready } = useOnboardingAnswers();
   const [selected, setSelected] = useState<OptionId[]>(
     profile.limitations.length > 0 ? profile.limitations : []
   );
   const [saving, setSaving] = useState(false);
 
   const toggle = (id: OptionId) => {
+    haptics.selection();
     setSelected((prev) => {
       if (prev.includes(id)) return prev.filter((l) => l !== id);
       if (id === NONE) return [NONE];
@@ -59,33 +65,38 @@ export default function LimitationsStep() {
           programId: program?.id ?? null,
           programStartedAt: program ? Date.now() : null,
         });
+        haptics.success();
         router.replace("/(tabs)");
       } finally {
         setSaving(false);
       }
       return;
     }
+    haptics.selection();
     await updateProfile({ limitations });
     router.push("/onboarding/profile");
   };
 
   return (
     <GradientBackground>
+      <OnboardDecor />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
       >
         <StepHeader step={7} total={total} />
+        <Reveal index={0}>
         <Text style={styles.title}>Anything we should be mindful of?</Text>
         <Text style={styles.subtitle}>
           We use this only to choose kinder workouts for you. It isn't medical advice, always listen to your body.
         </Text>
+        </Reveal>
 
         <View style={styles.list}>
-          {OPTIONS.map((o) => {
+          {OPTIONS.map((o, i) => {
             const on = selected.includes(o.id);
             return (
-              <Pressable key={o.id} style={[styles.item, on && styles.itemOn]} onPress={() => toggle(o.id)}>
+              <Bouncy key={o.id} style={[styles.item, on && styles.itemOn]} onPress={() => toggle(o.id)}>
                 <View style={[styles.itemIcon, on && styles.itemIconOn]}>
                   <Ionicons name={o.icon} size={22} color={on ? colors.onPrimary : colors.accent} />
                 </View>
@@ -96,7 +107,7 @@ export default function LimitationsStep() {
                 <View style={[styles.check, on && styles.checkOn]}>
                   {on ? <Ionicons name="checkmark" size={15} color={colors.onPrimary} /> : null}
                 </View>
-              </Pressable>
+              </Bouncy>
             );
           })}
         </View>
@@ -115,7 +126,7 @@ export default function LimitationsStep() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   scroll: { paddingHorizontal: 24 },
   title: { fontFamily: fonts.serif, fontSize: 36, color: colors.foreground, lineHeight: 40 },
   subtitle: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted, marginTop: 10, marginBottom: 24, lineHeight: 22 },

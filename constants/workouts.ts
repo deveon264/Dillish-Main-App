@@ -4,6 +4,10 @@ import { getDbExercise } from "@/constants/exerciseDb";
 
 export type Exercise = {
   id: string;
+  // Canonical move identity shared across workouts (POOL key, aliased db id,
+  // or an explicit literal for inline exercises). Coach video clips are keyed
+  // by moveId so one uploaded clip plays in every workout that uses the move.
+  moveId: string;
   name: string;
   detail: string;
   description: string;
@@ -75,7 +79,7 @@ const ALL_LIMITATIONS: LimitationId[] = [
 // seed with its own per-workout id plus sets/seconds via ex(), because coach
 // video uploads are keyed by (workoutId, exerciseId) and every workout needs
 // stable, unique exercise ids.
-type ExerciseSeed = Omit<Exercise, "id" | "sets" | "seconds">;
+type ExerciseSeed = Omit<Exercise, "id" | "moveId" | "sets" | "seconds">;
 
 const POOL = {
   marchInPlace: {
@@ -390,6 +394,40 @@ const POOL = {
     modifications: "Keep feet higher or slow the tempo.",
     image: require("@/assets/exercises/bicycle-crunch.webp"),
   },
+  hollowHold: {
+    name: "Hollow Hold",
+    detail: "Deep core hold",
+    description: "A low, braced hold that teaches the ribs and pelvis to stay connected while the limbs reach long.",
+    cues: [
+      "Lie on your back and press low back down.",
+      "Lift shoulders, arms, and legs into a shallow curve.",
+      "Keep ribs heavy and breathe without losing the brace.",
+    ],
+    modifications: "Bend knees or keep arms by your sides.",
+    image: require("@/assets/exercises/hollow-hold.webp"),
+  },
+  birdDog: {
+    name: "Bird Dog",
+    detail: "Core and posture",
+    description: "Reach opposite arm and leg from all fours to train balance, back-body strength, and steady breathing.",
+    cues: [
+      "Start on all fours with a long spine.",
+      "Reach opposite arm and leg away from center.",
+      "Pause, then return without rocking the hips.",
+    ],
+    modifications: "Keep toes down or move only one limb at a time.",
+  },
+  standingCoreTwist: {
+    name: "Standing Core Twists",
+    detail: "Waist and cardio",
+    description: "A grounded rotation pattern that wakes the waist and raises your pulse without any jumping.",
+    cues: [
+      "Stand with feet wide and knees soft.",
+      "Rotate through the ribs, letting arms follow.",
+      "Pivot lightly through the back heel and keep hips steady.",
+    ],
+    modifications: "Slow the pace or keep the twist smaller.",
+  },
   theHundred: {
     name: "The Hundred",
     detail: "Pilates warm-up",
@@ -486,6 +524,30 @@ const POOL = {
     modifications: "Pad the back knee with a towel.",
     image: require("@/assets/exercises/low-lunge.webp"),
   },
+  downwardDog: {
+    name: "Downward Dog",
+    detail: "Full-body length",
+    description: "Press hips high and lengthen from hands to heels for a strong, breath-led stretch.",
+    cues: [
+      "Plant hands wide and lift hips up and back.",
+      "Press the floor away and lengthen the spine.",
+      "Bend knees as needed while heels reach heavy.",
+    ],
+    modifications: "Keep knees bent or place hands on a bench.",
+    image: require("@/assets/exercises/downward-dog.webp"),
+  },
+  hipFlexorStretch: {
+    name: "Hip Flexor Stretch",
+    detail: "Front-hip release",
+    description: "A kneeling lunge stretch that opens the front of the hips after sitting, walking, or strength work.",
+    cues: [
+      "Set one foot forward and lower the back knee.",
+      "Tuck pelvis slightly and glide hips forward.",
+      "Reach tall through the crown of your head.",
+    ],
+    modifications: "Pad the back knee or keep the stretch shallower.",
+    image: require("@/assets/exercises/hip-flexor-stretch.webp"),
+  },
   figureFour: {
     name: "Figure Four Stretch",
     detail: "Glute release",
@@ -509,6 +571,18 @@ const POOL = {
     ],
     modifications: "Place a pillow under the knees.",
     image: require("@/assets/exercises/supine-twist.webp"),
+  },
+  seatedTwist: {
+    name: "Seated Twist",
+    detail: "Spinal rotation",
+    description: "Sit tall and rotate gently through the ribs to unwind the spine and open the side body.",
+    cues: [
+      "Sit tall with legs crossed or extended.",
+      "Place one hand behind you and rotate from the ribs.",
+      "Inhale to lengthen, exhale to soften deeper.",
+    ],
+    modifications: "Sit on a folded towel or keep the twist smaller.",
+    image: require("@/assets/exercises/seated-twist.webp"),
   },
   threadTheNeedle: {
     name: "Thread the Needle",
@@ -546,6 +620,83 @@ const POOL = {
     modifications: "Place a pillow under the knees or head.",
     image: require("@/assets/exercises/savasana.webp"),
   },
+  pigeonPose: {
+    name: "Pigeon Pose",
+    detail: "Deep glute stretch",
+    description: "A deep hip opener that releases the glutes and outer hips while the breath stays slow and easy.",
+    cues: [
+      "Bring one shin forward and extend the other leg back.",
+      "Square the hips and lower them toward the floor.",
+      "Fold over the front leg and breathe.",
+    ],
+    modifications: "Place a cushion under the front hip, or do a lying figure four instead.",
+  },
+  standingQuadStretch: {
+    name: "Standing Quad Stretch",
+    detail: "Front-thigh release",
+    description: "A standing stretch for the front of the thigh that also trains quiet, steady balance.",
+    cues: [
+      "Stand tall and catch one ankle behind you.",
+      "Draw the heel toward the glutes, knees together.",
+      "Tuck the tailbone slightly and hold.",
+    ],
+    modifications: "Hold a wall or chair for balance.",
+  },
+  worldsGreatestStretch: {
+    name: "World's Greatest Stretch",
+    detail: "Total-body opener",
+    description: "A flowing lunge-and-reach that opens the hips, hamstrings, and spine in one smooth sequence.",
+    cues: [
+      "Step into a long lunge and plant both hands inside the front foot.",
+      "Rotate one arm to the ceiling, following it with your gaze.",
+      "Return the hand down and switch sides smoothly.",
+    ],
+    modifications: "Drop the back knee to the floor for support.",
+  },
+  hipCircles: {
+    name: "Hip Circles",
+    detail: "Hip mobility",
+    description: "Slow, controlled circles from all fours that loosen the hips and wake the surrounding muscles.",
+    cues: [
+      "Start on all fours with a level spine.",
+      "Draw a wide, slow circle with one knee.",
+      "Keep the hips level and switch direction halfway.",
+    ],
+    modifications: "Make the circles smaller, or stand and circle the hips instead.",
+  },
+  treePose: {
+    name: "Tree Pose",
+    detail: "Standing balance",
+    description: "A grounding single-leg balance that steadies the mind as much as the ankles.",
+    cues: [
+      "Root down through one foot and lift the other to calf or thigh.",
+      "Press the foot and leg gently into each other.",
+      "Reach the arms overhead or keep hands at heart center.",
+    ],
+    modifications: "Rest the toes on the floor or hold a wall.",
+  },
+  warriorII: {
+    name: "Warrior II",
+    detail: "Strong standing hold",
+    description: "A wide, powerful stance that builds leg endurance while the chest stays open and calm.",
+    cues: [
+      "Step wide and bend the front knee over the ankle.",
+      "Reach the arms long in opposite directions.",
+      "Sink low, gaze over the front hand, and breathe.",
+    ],
+    modifications: "Shorten the stance or bend the front knee less deeply.",
+  },
+  legsUpTheWall: {
+    name: "Legs Up the Wall",
+    detail: "Restorative inversion",
+    description: "A restorative pose that drains tension from the legs and settles the nervous system.",
+    cues: [
+      "Lie on your back with the hips close to a wall.",
+      "Rest the legs up the wall and let them be heavy.",
+      "Soften the shoulders and breathe slowly.",
+    ],
+    modifications: "Rest the legs on a chair or sofa instead of a wall.",
+  },
 } satisfies Record<string, ExerciseSeed>;
 
 const ex = (
@@ -556,6 +707,7 @@ const ex = (
   over: Partial<Exercise> = {}
 ): Exercise => ({
   id,
+  moveId: key,
   sets,
   seconds,
   ...POOL[key],
@@ -579,6 +731,27 @@ const LEVEL_LABEL: Record<FitnessLevel, string> = {
   advanced: "Advanced",
 };
 
+// Maps exercise-database ids onto canonical move ids so a db-sourced exercise
+// that duplicates a POOL move (or another db entry) shares the same coach
+// clip. Ids without an alias fall back to the db id itself.
+const DB_MOVE_ID: Record<string, string> = {
+  Bodyweight_Squat: "bodyweightSquat",
+  Butt_Lift_Bridge: "gluteBridge",
+  Pushups: "kneePushup",
+  Plank: "plank",
+  Mountain_Climbers: "mountainClimbers",
+  Dead_Bug: "deadBug",
+  Childs_Pose: "childsPose",
+  FP_Bicycle_Crunch: "bicycleCrunch",
+  Flat_Bench_Lying_Leg_Raise: "legRaises",
+  Russian_Twist: "russianTwist",
+  FP_March_In_Place: "marchInPlace",
+  FP_Side_Steps: "sideSteps",
+  FP_Standing_Knee_Drive: "standingKneeDrive",
+  FP_Standing_Punches: "standingPunches",
+  FP_Standing_Core_Twist: "standingCoreTwist",
+};
+
 // Builds a player Exercise from the internal exercise database
 // (constants/exerciseDb.ts, sourced from the public-domain free-exercise-db;
 // see docs/exercise-db-source.md). Throws at module load on a bad id so a
@@ -594,6 +767,7 @@ const dbEx = (
   if (!d) throw new Error(`Unknown exercise database id: ${dbId}`);
   return {
     id,
+    moveId: DB_MOVE_ID[dbId] ?? dbId,
     sets,
     seconds,
     name: d.name,
@@ -617,7 +791,7 @@ export const WORKOUTS: Workout[] = [
     level: "Intermediate",
     // Matches the session length computed from the exercises (the app always
     // displays the computed value); also feeds duration-preference scoring.
-    durationMin: 25,
+    durationMin: 23,
     kcal: 280,
     image: require("@/assets/images/photos/reformer-pilates-flow-alt.webp"),
     description:
@@ -632,6 +806,7 @@ export const WORKOUTS: Workout[] = [
     exercises: [
       {
         id: "e1",
+        moveId: "theHundred",
         image: require("@/assets/exercises/the-hundred.webp"),
         name: "The Hundred",
         detail: "Core warm-up",
@@ -649,6 +824,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "e2",
+        moveId: "rollUp",
         image: require("@/assets/exercises/roll-up.webp"),
         name: "Roll Up",
         detail: "Spine articulation",
@@ -665,6 +841,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "e3",
+        moveId: "singleLegCircles",
         image: require("@/assets/exercises/single-leg-circles.webp"),
         name: "Single Leg Circles",
         detail: "Hip mobility",
@@ -681,6 +858,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "e4",
+        moveId: "rollingLikeABall",
         image: require("@/assets/exercises/rolling-like-a-ball.webp"),
         name: "Rolling Like a Ball",
         detail: "Balance & control",
@@ -697,6 +875,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "e5",
+        moveId: "singleLegStretch",
         image: require("@/assets/exercises/single-leg-stretch.webp"),
         name: "Single Leg Stretch",
         detail: "Core series",
@@ -713,6 +892,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "e6",
+        moveId: "spineStretchForward",
         image: require("@/assets/exercises/spine-stretch-forward.webp"),
         name: "Spine Stretch Forward",
         detail: "Lengthen",
@@ -729,6 +909,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "e7",
+        moveId: "saw",
         image: require("@/assets/exercises/saw.webp"),
         name: "Saw",
         detail: "Rotation",
@@ -745,6 +926,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "e8",
+        moveId: "seal",
         image: require("@/assets/exercises/seal.webp"),
         name: "Seal",
         detail: "Cool down",
@@ -769,7 +951,7 @@ export const WORKOUTS: Workout[] = [
     level: "Beginner",
     // Matches the session length computed from the exercises (the app always
     // displays the computed value); also feeds duration-preference scoring.
-    durationMin: 14,
+    durationMin: 16,
     kcal: 150,
     image: require("@/assets/images/photos/yoga.jpg"),
     description:
@@ -784,6 +966,7 @@ export const WORKOUTS: Workout[] = [
     exercises: [
       {
         id: "y1",
+        moveId: "childsPose",
         image: require("@/assets/exercises/childs-pose.webp"),
         name: "Child's Pose",
         detail: "Ground",
@@ -800,6 +983,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "y2",
+        moveId: "catCow",
         image: require("@/assets/exercises/cat-cow.webp"),
         name: "Cat-Cow",
         detail: "Spinal warm-up",
@@ -816,6 +1000,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "y3",
+        moveId: "downwardDog",
         image: require("@/assets/exercises/downward-dog.webp"),
         name: "Downward Dog",
         detail: "Lengthen",
@@ -832,6 +1017,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "y4",
+        moveId: "lowLunge",
         image: require("@/assets/exercises/low-lunge.webp"),
         name: "Low Lunge",
         detail: "Hip opener",
@@ -848,6 +1034,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "y5",
+        moveId: "forwardFold",
         image: require("@/assets/exercises/forward-fold.webp"),
         name: "Forward Fold",
         detail: "Release",
@@ -864,6 +1051,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "y6",
+        moveId: "seatedTwist",
         image: require("@/assets/exercises/seated-twist.webp"),
         name: "Seated Twist",
         detail: "Detox",
@@ -880,6 +1068,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "y7",
+        moveId: "savasana",
         image: require("@/assets/exercises/savasana.webp"),
         name: "Savasana",
         detail: "Rest",
@@ -909,7 +1098,7 @@ export const WORKOUTS: Workout[] = [
     level: "Intermediate",
     // Matches the session length computed from the exercises (the app always
     // displays the computed value); also feeds duration-preference scoring.
-    durationMin: 23,
+    durationMin: 27,
     kcal: 240,
     image: require("@/assets/images/photos/strength.jpg"),
     description:
@@ -949,7 +1138,7 @@ export const WORKOUTS: Workout[] = [
     category: "HIIT",
     focusAreas: ["Core/Abs", "Full Body"],
     level: "Advanced",
-    durationMin: 20,
+    durationMin: 21,
     kcal: 240,
     image: require("@/assets/images/photos/hiit.jpg"),
     description:
@@ -963,6 +1152,7 @@ export const WORKOUTS: Workout[] = [
     exercises: [
       {
         id: "h1",
+        moveId: "jumpingJacks",
         image: require("@/assets/exercises/jumping-jacks.webp"),
         name: "Jumping Jacks",
         detail: "Warm-up",
@@ -979,6 +1169,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "h2",
+        moveId: "squatJumps",
         image: require("@/assets/exercises/squat-jumps.webp"),
         name: "Squat Jumps",
         detail: "Power",
@@ -995,6 +1186,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "h3",
+        moveId: "mountainClimbers",
         image: require("@/assets/exercises/mountain-climbers.webp"),
         name: "Mountain Climbers",
         detail: "Cardio core",
@@ -1011,6 +1203,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "h4",
+        moveId: "burpees",
         image: require("@/assets/exercises/burpees.webp"),
         name: "Burpees",
         detail: "Full body",
@@ -1027,6 +1220,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "h5",
+        moveId: "highKnees",
         image: require("@/assets/exercises/high-knees.webp"),
         name: "High Knees",
         detail: "Cardio",
@@ -1043,6 +1237,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "h6",
+        moveId: "plankShoulderTaps",
         image: require("@/assets/exercises/plank-shoulder-taps.webp"),
         name: "Plank Shoulder Taps",
         detail: "Core",
@@ -1065,7 +1260,7 @@ export const WORKOUTS: Workout[] = [
     category: "Yoga",
     focusAreas: ["Lower Body (Legs, Glutes)", "Upper Body (Chest, Back, Shoulders, Arms)", "Mobility", "Stretch", "Low Impact"],
     level: "Beginner",
-    durationMin: 18,
+    durationMin: 11,
     kcal: 90,
     image: require("@/assets/images/photos/gentle-mobility-reset.webp"),
     description:
@@ -1079,6 +1274,7 @@ export const WORKOUTS: Workout[] = [
     exercises: [
       {
         id: "m1",
+        moveId: "neckRolls",
         image: require("@/assets/exercises/neck-rolls.webp"),
         name: "Neck Rolls",
         detail: "Release",
@@ -1095,6 +1291,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "m2",
+        moveId: "threadTheNeedle",
         image: require("@/assets/exercises/thread-the-needle.webp"),
         name: "Thread the Needle",
         detail: "Upper back",
@@ -1111,6 +1308,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "m3",
+        moveId: "hipFlexorStretch",
         image: require("@/assets/exercises/hip-flexor-stretch.webp"),
         name: "Hip Flexor Stretch",
         detail: "Hips",
@@ -1127,6 +1325,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "m4",
+        moveId: "figureFour",
         image: require("@/assets/exercises/figure-four.webp"),
         name: "Figure Four",
         detail: "Glutes",
@@ -1143,6 +1342,7 @@ export const WORKOUTS: Workout[] = [
       },
       {
         id: "m5",
+        moveId: "supineTwist",
         image: require("@/assets/exercises/supine-twist.webp"),
         name: "Supine Twist",
         detail: "Spine",
@@ -1165,7 +1365,7 @@ export const WORKOUTS: Workout[] = [
     category: "Strength",
     focusAreas: ["Core/Abs"],
     level: "Intermediate",
-    durationMin: 15,
+    durationMin: 17,
     kcal: 120,
     image: require("@/assets/images/photos/core-define.webp"),
     description:
@@ -1197,7 +1397,7 @@ export const WORKOUTS: Workout[] = [
     category: "HIIT",
     focusAreas: ["Full Body"],
     level: "Beginner",
-    durationMin: 20,
+    durationMin: 23,
     kcal: 160,
     image: require("@/assets/images/photos/hiit.jpg"),
     description:
@@ -1222,9 +1422,9 @@ export const WORKOUTS: Workout[] = [
     category: "Low Impact",
     focusAreas: ["Full Body"],
     level: "Beginner",
-    durationMin: 25,
+    durationMin: 29,
     kcal: 180,
-    image: require("@/assets/images/photos/homehero.webp"),
+    image: require("@/assets/images/photos/hiit.jpg"),
     description:
       "All the sweat, none of the impact. A standing cardio flow that keeps both feet close to the floor and your joints happy.",
     primaryGoals: ["lose-weight"],
@@ -1253,7 +1453,7 @@ export const WORKOUTS: Workout[] = [
     category: "Low Impact",
     focusAreas: ["HIIT", "Full Body"],
     level: "Intermediate",
-    durationMin: 25,
+    durationMin: 29,
     kcal: 200,
     image: require("@/assets/images/photos/hiit.jpg"),
     description:
@@ -1279,9 +1479,9 @@ export const WORKOUTS: Workout[] = [
     category: "Full Body",
     focusAreas: ["HIIT"],
     level: "Intermediate",
-    durationMin: 30,
+    durationMin: 33,
     kcal: 260,
-    image: require("@/assets/images/photos/homehero.webp"),
+    image: require("@/assets/images/photos/hiit.jpg"),
     description:
       "Cardio and sculpting in one session. Bigger movements, a quicker pace, and a full-body burn that earns its name.",
     primaryGoals: ["lose-weight"],
@@ -1305,7 +1505,7 @@ export const WORKOUTS: Workout[] = [
     category: "Lower Body (Legs, Glutes)",
     focusAreas: ["Strength"],
     level: "Intermediate",
-    durationMin: 30,
+    durationMin: 33,
     kcal: 220,
     image: require("@/assets/images/photos/strength.jpg"),
     description:
@@ -1331,7 +1531,7 @@ export const WORKOUTS: Workout[] = [
     category: "Lower Body (Legs, Glutes)",
     focusAreas: ["Low Impact"],
     level: "Beginner",
-    durationMin: 20,
+    durationMin: 22,
     kcal: 150,
     image: require("@/assets/images/photos/pilates.jpg"),
     description:
@@ -1356,7 +1556,7 @@ export const WORKOUTS: Workout[] = [
     category: "Core/Abs",
     focusAreas: ["Upper Body (Chest, Back, Shoulders, Arms)"],
     level: "Beginner",
-    durationMin: 25,
+    durationMin: 29,
     kcal: 170,
     image: require("@/assets/images/photos/core-define.webp"),
     description:
@@ -1382,7 +1582,7 @@ export const WORKOUTS: Workout[] = [
     category: "Pilates",
     focusAreas: ["Full Body", "Low Impact"],
     level: "Beginner",
-    durationMin: 30,
+    durationMin: 33,
     kcal: 180,
     image: require("@/assets/images/photos/pilates.jpg"),
     description:
@@ -1408,7 +1608,7 @@ export const WORKOUTS: Workout[] = [
     category: "Strength",
     focusAreas: ["Full Body"],
     level: "Beginner",
-    durationMin: 25,
+    durationMin: 28,
     kcal: 180,
     image: require("@/assets/images/photos/strength.jpg"),
     description:
@@ -1433,7 +1633,7 @@ export const WORKOUTS: Workout[] = [
     category: "Strength",
     focusAreas: ["Lower Body (Legs, Glutes)"],
     level: "Advanced",
-    durationMin: 35,
+    durationMin: 40,
     kcal: 300,
     image: require("@/assets/images/photos/strength.jpg"),
     description:
@@ -1459,7 +1659,7 @@ export const WORKOUTS: Workout[] = [
     category: "Strength",
     focusAreas: ["Upper Body (Chest, Back, Shoulders, Arms)"],
     level: "Intermediate",
-    durationMin: 30,
+    durationMin: 33,
     kcal: 220,
     image: require("@/assets/images/photos/strength.jpg"),
     description:
@@ -1485,7 +1685,7 @@ export const WORKOUTS: Workout[] = [
     category: "Strength",
     focusAreas: ["Full Body"],
     level: "Intermediate",
-    durationMin: 35,
+    durationMin: 40,
     kcal: 280,
     image: require("@/assets/images/photos/strength.jpg"),
     description:
@@ -1511,7 +1711,7 @@ export const WORKOUTS: Workout[] = [
     category: "Stretch",
     focusAreas: ["Mobility", "Recovery", "Full Body"],
     level: "Beginner",
-    durationMin: 20,
+    durationMin: 22,
     kcal: 80,
     image: require("@/assets/images/photos/yoga.jpg"),
     description:
@@ -1537,7 +1737,7 @@ export const WORKOUTS: Workout[] = [
     category: "Recovery",
     focusAreas: ["Stretch", "Yoga"],
     level: "Beginner",
-    durationMin: 15,
+    durationMin: 17,
     kcal: 60,
     image: require("@/assets/images/photos/yoga.jpg"),
     description:
@@ -1562,9 +1762,9 @@ export const WORKOUTS: Workout[] = [
     category: "Full Body",
     focusAreas: ["Low Impact"],
     level: "Beginner",
-    durationMin: 10,
+    durationMin: 12,
     kcal: 90,
-    image: require("@/assets/images/photos/homehero.webp"),
+    image: require("@/assets/images/photos/hiit.jpg"),
     description:
       "Ten minutes to shake off the slump. Quick, gentle movement that wakes the body and lifts your mood.",
     primaryGoals: ["energy"],
@@ -1579,6 +1779,269 @@ export const WORKOUTS: Workout[] = [
       ex("bodyweightSquat", "eb3", 2, 55),
       ex("standingPunches", "eb4", 2, 55),
       ex("catCow", "eb5", 2, 55),
+    ],
+  },
+  {
+    id: "gentle-mobility-reset",
+    title: "Everyday Mobility Flow",
+    category: "Mobility",
+    focusAreas: ["Recovery", "Stretch"],
+    level: "Beginner",
+    durationMin: 17,
+    kcal: 70,
+    image: require("@/assets/images/photos/yoga.jpg"),
+    description:
+      "A soft reset for stiff days. Move through hips, spine, shoulders, and breath without rushing your body.",
+    primaryGoals: ["flexibility"],
+    secondaryGoals: ["wellness"],
+    equipment: [],
+    bodyFocus: ["mobility", "back_posture"],
+    suitableFor: ALL_LIMITATIONS,
+    intensity: "low",
+    exercises: [
+      ex("neckRolls", "gmr1", 2, 70),
+      ex("catCow", "gmr2", 2, 70),
+      ex("threadTheNeedle", "gmr3", 2, 70),
+      ex("hipFlexorStretch", "gmr4", 2, 70),
+      ex("seatedTwist", "gmr5", 2, 70),
+      ex("savasana", "gmr6", 1, 140),
+    ],
+  },
+  {
+    id: "posture-core-reset",
+    title: "Posture Core Reset",
+    category: "Strength",
+    focusAreas: ["Core/Abs", "Recovery"],
+    level: "Beginner",
+    durationMin: 18,
+    kcal: 110,
+    image: require("@/assets/images/photos/core-define.webp"),
+    description:
+      "A calm core-and-posture circuit that steadies the midline, wakes the back body, and leaves you standing taller.",
+    primaryGoals: ["strength"],
+    secondaryGoals: ["tone", "wellness"],
+    equipment: [],
+    bodyFocus: ["core_abs", "back_posture"],
+    suitableFor: ["knee_friendly", "low_impact", "no_jumping", "postpartum_friendly"],
+    intensity: "low",
+    exercises: [
+      ex("birdDog", "pcr1", 2, 75),
+      ex("deadBug", "pcr2", 2, 75),
+      ex("plank", "pcr3", 2, 75),
+      ex("bentOverRow", "pcr4", 2, 75),
+      ex("threadTheNeedle", "pcr5", 2, 75),
+      ex("childsPose", "pcr6", 2, 75),
+    ],
+  },
+  {
+    id: "low-impact-cardio-core",
+    title: "Low Impact Cardio Core",
+    category: "Low Impact",
+    focusAreas: ["Full Body", "Core/Abs"],
+    level: "Beginner",
+    durationMin: 25,
+    kcal: 170,
+    image: require("@/assets/images/photos/hiit.jpg"),
+    description:
+      "Standing cardio with grounded core work, built for a satisfying sweat without jumps or complicated choreography.",
+    primaryGoals: ["lose-weight"],
+    secondaryGoals: ["energy", "tone"],
+    equipment: [],
+    bodyFocus: ["full_body", "core_abs"],
+    suitableFor: ["knee_friendly", "low_impact", "no_jumping"],
+    intensity: "moderate",
+    exercises: [
+      ex("marchInPlace", "lic1", 3, 60),
+      ex("sideSteps", "lic2", 3, 60),
+      ex("standingKneeDrive", "lic3", 3, 60),
+      ex("standingCoreTwist", "lic4", 3, 60),
+      ex("standingPunches", "lic5", 3, 60),
+      ex("bodyweightSquat", "lic6", 3, 60),
+      ex("catCow", "lic7", 2, 60),
+    ],
+  },
+  {
+    id: "mindful-mat-pilates",
+    title: "Mindful Mat Pilates",
+    category: "Pilates",
+    focusAreas: ["Core/Abs", "Low Impact"],
+    level: "Beginner",
+    durationMin: 27,
+    kcal: 170,
+    image: require("@/assets/images/photos/pilates.jpg"),
+    description:
+      "A slower Pilates flow for control, breath, and deep core connection, with enough shape work to feel beautifully awake.",
+    primaryGoals: ["tone"],
+    secondaryGoals: ["wellness", "flexibility"],
+    equipment: ["yoga_mat"],
+    bodyFocus: ["core_abs", "full_body"],
+    suitableFor: ALL_LIMITATIONS,
+    intensity: "low",
+    exercises: [
+      ex("theHundred", "mmp1", 3, 70),
+      ex("singleLegStretch", "mmp2", 3, 70),
+      ex("gluteBridge", "mmp3", 3, 70),
+      ex("birdDog", "mmp4", 3, 70),
+      ex("hollowHold", "mmp5", 3, 70),
+      ex("spineStretchForward", "mmp6", 2, 70),
+      ex("savasana", "mmp7", 1, 140),
+    ],
+  },
+  {
+    id: "restorative-yoga-flow",
+    title: "Restorative Yoga Flow",
+    category: "Yoga",
+    focusAreas: ["Recovery", "Stretch"],
+    level: "Beginner",
+    durationMin: 21,
+    kcal: 75,
+    image: require("@/assets/images/photos/yoga.jpg"),
+    description:
+      "A breath-led restorative flow for low-energy days, bedtime, or anytime you want movement to feel like care.",
+    primaryGoals: ["wellness"],
+    secondaryGoals: ["flexibility"],
+    equipment: [],
+    bodyFocus: ["mobility", "back_posture"],
+    suitableFor: ALL_LIMITATIONS,
+    intensity: "low",
+    exercises: [
+      ex("childsPose", "ryf1", 2, 90),
+      ex("catCow", "ryf2", 2, 90),
+      ex("downwardDog", "ryf3", 2, 90),
+      ex("lowLunge", "ryf4", 2, 90),
+      ex("seatedTwist", "ryf5", 2, 90),
+      ex("savasana", "ryf6", 1, 180),
+    ],
+  },
+  {
+    id: "deep-stretch-flow",
+    title: "Deep Stretch Flow",
+    category: "Stretch",
+    focusAreas: ["Mobility", "Recovery"],
+    level: "Intermediate",
+    durationMin: 26,
+    kcal: 90,
+    image: require("@/assets/images/photos/yoga.jpg"),
+    description:
+      "Longer holds and deeper shapes for when your body is ready to go past the basics. Sink in, breathe, and let go.",
+    primaryGoals: ["flexibility"],
+    secondaryGoals: ["wellness"],
+    equipment: [],
+    bodyFocus: ["mobility", "legs"],
+    suitableFor: ALL_LIMITATIONS,
+    intensity: "low",
+    exercises: [
+      ex("downwardDog", "dsf1", 2, 95),
+      ex("lowLunge", "dsf2", 2, 95),
+      ex("hipFlexorStretch", "dsf3", 2, 95),
+      ex("pigeonPose", "dsf4", 2, 95),
+      ex("standingQuadStretch", "dsf5", 2, 95),
+      ex("forwardFold", "dsf6", 2, 95),
+      ex("supineTwist", "dsf7", 2, 95),
+    ],
+  },
+  {
+    id: "hip-mobility-flow",
+    title: "Hip Mobility Flow",
+    category: "Mobility",
+    focusAreas: ["Stretch", "Low Impact"],
+    level: "Intermediate",
+    durationMin: 20,
+    kcal: 80,
+    image: require("@/assets/images/photos/gentle-mobility-reset.webp"),
+    description:
+      "A focused session for the hips: flowing openers and controlled circles that restore range where you need it most.",
+    primaryGoals: ["flexibility"],
+    secondaryGoals: ["wellness"],
+    equipment: [],
+    bodyFocus: ["mobility", "glutes"],
+    suitableFor: ALL_LIMITATIONS,
+    intensity: "low",
+    exercises: [
+      ex("catCow", "hmf1", 2, 85),
+      ex("worldsGreatestStretch", "hmf2", 2, 85),
+      ex("hipCircles", "hmf3", 2, 85),
+      ex("figureFour", "hmf4", 2, 85),
+      ex("threadTheNeedle", "hmf5", 2, 85),
+      ex("childsPose", "hmf6", 2, 85),
+    ],
+  },
+  {
+    id: "sunrise-energizer-15",
+    title: "15-Minute Sunrise Energizer",
+    category: "Full Body",
+    focusAreas: ["HIIT"],
+    level: "Intermediate",
+    durationMin: 16,
+    kcal: 140,
+    image: require("@/assets/images/photos/hiit.jpg"),
+    description:
+      "A quick, upbeat wake-up call. Fifteen minutes of rhythmic cardio to switch the whole body on before your day starts.",
+    primaryGoals: ["energy"],
+    secondaryGoals: ["lose-weight"],
+    equipment: [],
+    bodyFocus: ["full_body"],
+    suitableFor: [],
+    intensity: "moderate",
+    exercises: [
+      ex("jumpingJacks", "sre1", 2, 65),
+      ex("standingKneeDrive", "sre2", 2, 65),
+      ex("sideSteps", "sre3", 2, 65),
+      ex("highKnees", "sre4", 2, 65),
+      ex("standingPunches", "sre5", 2, 65),
+      ex("forwardFold", "sre6", 2, 65),
+    ],
+  },
+  {
+    id: "energy-flow-20",
+    title: "Everyday Energy Flow",
+    category: "Low Impact",
+    focusAreas: ["Full Body"],
+    level: "Beginner",
+    durationMin: 20,
+    kcal: 150,
+    image: require("@/assets/images/photos/hiit.jpg"),
+    description:
+      "Gentle, steady movement to lift a flat afternoon. No jumps, no pressure, just twenty minutes that leave you brighter.",
+    primaryGoals: ["energy"],
+    secondaryGoals: ["wellness"],
+    equipment: [],
+    bodyFocus: ["full_body", "mobility"],
+    suitableFor: ["knee_friendly", "low_impact", "no_jumping"],
+    intensity: "moderate",
+    exercises: [
+      ex("marchInPlace", "eef1", 3, 60),
+      ex("bodyweightSquat", "eef2", 3, 60),
+      ex("standingCoreTwist", "eef3", 3, 60),
+      ex("armCircles", "eef4", 3, 60),
+      ex("catCow", "eef5", 2, 60),
+      ex("downwardDog", "eef6", 2, 60),
+    ],
+  },
+  {
+    id: "breath-and-balance",
+    title: "Breath & Balance",
+    category: "Yoga",
+    focusAreas: ["Recovery", "Stretch"],
+    level: "Intermediate",
+    durationMin: 20,
+    kcal: 80,
+    image: require("@/assets/images/photos/yoga.jpg"),
+    description:
+      "Standing balances and slow, deliberate breath work that build calm focus and quiet strength in equal measure.",
+    primaryGoals: ["wellness"],
+    secondaryGoals: ["flexibility"],
+    equipment: [],
+    bodyFocus: ["full_body", "mobility"],
+    suitableFor: ALL_LIMITATIONS,
+    intensity: "low",
+    exercises: [
+      ex("treePose", "bab1", 2, 85),
+      ex("warriorII", "bab2", 2, 85),
+      ex("seatedTwist", "bab3", 2, 85),
+      ex("forwardFold", "bab4", 2, 85),
+      ex("legsUpTheWall", "bab5", 1, 180),
+      ex("savasana", "bab6", 1, 150),
     ],
   },
 ];

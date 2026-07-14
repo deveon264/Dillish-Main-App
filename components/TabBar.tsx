@@ -1,33 +1,42 @@
 import React, { useEffect } from "react";
 import { View, Text, StyleSheet, Pressable, Platform } from "react-native";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import * as Haptics from "expo-haptics";
+import { Bouncy } from "@/components/Bouncy";
 import { useInsets } from "@/hooks/useInsets";
 import { useNotices } from "@/contexts/NoticesContext";
 import { useNotifications } from "@/contexts/NotificationsContext";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
 
-type IconConf =
-  | { lib: "ion"; name: keyof typeof Ionicons.glyphMap; nameFocused: keyof typeof Ionicons.glyphMap }
-  | { lib: "mci"; name: keyof typeof MaterialCommunityIcons.glyphMap; nameFocused: keyof typeof MaterialCommunityIcons.glyphMap };
-
-const CONF: Record<string, { label: string; icon: IconConf }> = {
-  index: { label: "Home", icon: { lib: "ion", name: "home-outline", nameFocused: "home" } },
-  workouts: { label: "Workouts", icon: { lib: "mci", name: "dumbbell", nameFocused: "dumbbell" } },
-  tracker: { label: "Tracker", icon: { lib: "ion", name: "flame-outline", nameFocused: "flame" } },
-  progress: { label: "Progress", icon: { lib: "ion", name: "stats-chart-outline", nameFocused: "stats-chart" } },
-  community: { label: "Circle", icon: { lib: "ion", name: "people-outline", nameFocused: "people" } },
-  profile: { label: "Profile", icon: { lib: "ion", name: "person-outline", nameFocused: "person" } },
+// Every icon is an Ionicon so the whole bar renders from one reliable glyph
+// font — a mixed second font (MaterialCommunityIcons) was intermittently
+// failing to load and showing tofu/garbled characters for the Workouts tab.
+const CONF: Record<
+  string,
+  { label: string; name: keyof typeof Ionicons.glyphMap; nameFocused: keyof typeof Ionicons.glyphMap }
+> = {
+  index: { label: "Home", name: "home-outline", nameFocused: "home" },
+  workouts: { label: "Workouts", name: "barbell-outline", nameFocused: "barbell" },
+  tracker: { label: "Tracker", name: "flame-outline", nameFocused: "flame" },
+  community: { label: "Circle", name: "people-outline", nameFocused: "people" },
+  profile: { label: "Profile", name: "person-outline", nameFocused: "person" },
 };
 
-const ORDER = ["index", "workouts", "tracker", "progress", "community", "profile"];
+const ORDER = ["index", "workouts", "tracker", "community", "profile"];
 
 type TabBarProps = Pick<BottomTabBarProps, "state" | "navigation">;
 
+// Airy Studio floating tab bar: a frosted pill lifted off the bottom edge.
+// Every tab is an equal-width slot (flex: 1) that never changes size, so
+// switching tabs can never shift the layout or push icons off-screen. The
+// active tab fills its own slot with a pink pill; inactive tabs show a bare
+// line icon centered in their slot.
 export function TabBar({ state, navigation }: TabBarProps) {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const insets = useInsets();
   const { hasUnread, unreadCount: noticeCount, hasBlock } = useNotices();
   const { unreadCount, refreshUnread } = useNotifications();
@@ -42,7 +51,7 @@ export function TabBar({ state, navigation }: TabBarProps) {
   }, [activeRoute, refreshUnread]);
 
   return (
-    <View style={[styles.wrap, { paddingBottom: insets.bottom + 3 }]}>
+    <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 12) + 2 }]}>
       <View style={styles.bar}>
         {/* Native frosted-glass blur — content scrolls through it on iOS. */}
         <BlurView
@@ -63,36 +72,36 @@ export function TabBar({ state, navigation }: TabBarProps) {
             const focused = state.index === routeIndex;
 
             const onPress = () => {
-              if (Platform.OS !== "web") Haptics.selectionAsync();
               const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
               if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
             };
 
-            const color = focused ? colors.primary : colors.mutedForeground;
-            const iconName = focused ? conf.icon.nameFocused : conf.icon.name;
+            const color = focused ? colors.onPrimary : colors.tabBarInactive;
+            const iconName = focused ? conf.nameFocused : conf.name;
             // The Circle tab carries two signals. An unread like/comment count
             // bubble takes priority; when there are none, a pending moderation
             // notice (warning or block) shows its own indicator so the member
             // notices it from any screen.
             const showCount = name === "community" && unreadCount > 0;
-            // Moderation indicator (only when there's no like/comment bubble):
-            // a single notice is a dot, several show the count so the member can
-            // tell more than one warning arrived. A block (the most severe kind)
-            // tints it red; a warning-only state uses the softer amber tone.
             const showNotice = name === "community" && !showCount && hasUnread;
             const showNoticeCount = showNotice && noticeCount > 1;
             const showNoticeDot = showNotice && !showNoticeCount;
             const noticeColor = hasBlock ? colors.danger : colors.highlight;
 
             return (
-              <Pressable key={name} style={styles.item} onPress={onPress}>
-                <View style={[styles.itemInner, focused && styles.itemInnerActive]}>
+              // Outer slot is always flex: 1 and fixed height, so the five
+              // slots always sum to the full row and never move.
+              <Bouncy
+                key={name}
+                accessibilityRole="button"
+                accessibilityState={{ selected: focused }}
+                accessibilityLabel={conf.label}
+                style={styles.slot}
+                onPress={onPress}
+              >
+                <View style={[styles.pill, focused && styles.pillActive]}>
                   <View style={styles.iconWrap}>
-                    {conf.icon.lib === "ion" ? (
-                      <Ionicons name={iconName as keyof typeof Ionicons.glyphMap} size={22} color={color} />
-                    ) : (
-                      <MaterialCommunityIcons name={iconName as keyof typeof MaterialCommunityIcons.glyphMap} size={22} color={color} />
-                    )}
+                    <Ionicons name={iconName} size={22} color={color} />
                     {showCount ? (
                       <View style={styles.badge}>
                         <Text style={styles.badgeText} numberOfLines={1}>
@@ -109,9 +118,8 @@ export function TabBar({ state, navigation }: TabBarProps) {
                     ) : null}
                     {showNoticeDot ? <View style={[styles.dot, { backgroundColor: noticeColor }]} /> : null}
                   </View>
-                  <Text numberOfLines={1} style={[styles.label, { color }, focused && styles.labelActive]}>{conf.label}</Text>
                 </View>
-              </Pressable>
+              </Bouncy>
             );
           })}
         </View>
@@ -120,22 +128,27 @@ export function TabBar({ state, navigation }: TabBarProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   wrap: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    paddingHorizontal: 12,
+    paddingHorizontal: 20,
     paddingTop: 8,
     backgroundColor: "transparent",
   },
   bar: {
-    borderRadius: 28,
+    borderRadius: 999,
     borderWidth: 1,
     borderColor: colors.tabBarGlassBorder,
     // Clip the blur layer to the rounded pill.
     overflow: "hidden",
+    shadowColor: "#3E2733",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.14,
+    shadowRadius: 32,
+    elevation: 10,
   },
   glassTint: {
     backgroundColor: colors.tabBarGlass,
@@ -146,12 +159,33 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 8,
     paddingVertical: 8,
+    paddingHorizontal: 6,
   },
-  item: { flex: 1, alignItems: "center" },
-  iconWrap: { position: "relative" },
+  // Fixed equal-width slot: five of these always fill the row exactly.
+  slot: {
+    flex: 1,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 2,
+  },
+  pill: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pillActive: {
+    backgroundColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 6,
+  },
+  iconWrap: { position: "relative", alignItems: "center", justifyContent: "center" },
   dot: {
     position: "absolute",
     top: -3,
@@ -161,25 +195,8 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: colors.danger,
     borderWidth: 1.5,
-    borderColor: colors.tabBarGlassBorder,
+    borderColor: "#FFFFFF",
   },
-  itemInner: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
-    paddingVertical: 8,
-    paddingHorizontal: 3,
-    borderRadius: 16,
-    width: "100%",
-    borderWidth: 1,
-    borderColor: "transparent",
-  },
-  itemInnerActive: {
-    backgroundColor: colors.accentTintMd,
-    borderColor: colors.accentBorder,
-  },
-  label: { fontFamily: fonts.sansMedium, fontSize: 10 },
-  labelActive: { fontFamily: fonts.sansSemibold },
   badge: {
     position: "absolute",
     top: -6,
@@ -192,7 +209,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1.5,
-    borderColor: colors.background,
+    borderColor: "#FFFFFF",
   },
   badgeText: {
     fontFamily: fonts.sansBold,

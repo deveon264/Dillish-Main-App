@@ -1,21 +1,25 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, Animated, Share, Modal } from "react-native";
+import { View, Text, StyleSheet, Pressable as StructuralPressable, ScrollView, Animated, Share, Modal } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
 import { Platform } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useVideoPlayer, VideoView } from "expo-video";
+import { useVideoPlayer, VideoView, isPictureInPictureSupported } from "expo-video";
+import { MaterialIcons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
 import { Asset } from "expo-asset";
 import { useEventListener } from "expo";
 import { GradientBackground } from "@/components/GradientBackground";
-import { pageHeaderStyles } from "@/components/PageHeader";
+import { createPageHeaderStyles } from "@/components/PageHeader";
+import { Bouncy as Pressable } from "@/components/Bouncy";
 import { InfoTip } from "@/components/InfoTip";
 import { Button } from "@/components/Button";
 import { getWorkout, type Exercise } from "@/constants/workouts";
 import { findDbExerciseByName } from "@/constants/exerciseDb";
 import { listWorkoutExercises, videoUrl, posterUrl } from "@/lib/exercises";
+import { buildClipMap, type ClipRef } from "@/lib/workoutClips";
+import { resolveClipSource, type VideoCacheFs } from "@/lib/videoCache";
+import * as FileSystem from "expo-file-system/legacy";
 import {
   computeWorkoutProgress,
   estimateKcalBurned,
@@ -36,13 +40,44 @@ import {
   DEFAULT_REST_GAP,
   REST_GAP_KEY,
   REST_OPTIONS,
+  exerciseSets,
+  exerciseSetSeconds,
   exerciseTimedSeconds,
   workoutDurationMinutes,
 } from "@/lib/workoutDuration";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
+import { haptics } from "@/lib/haptics";
 
 const WEEK_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+// Whether this device/browser can do picture-in-picture at all; gates the PiP
+// button so unsupported platforms never show a dead control.
+const PIP_SUPPORTED = (() => {
+  try {
+    return isPictureInPictureSupported();
+  } catch {
+    return false;
+  }
+})();
+
+// expo-file-system adapter for the phone-side clip cache (lib/videoCache.ts).
+// cacheDir is null on web, which turns the cache into a passthrough there.
+const clipCacheFs: VideoCacheFs = {
+  cacheDir: Platform.OS === "web" ? null : FileSystem.cacheDirectory,
+  exists: async (uri) => (await FileSystem.getInfoAsync(uri)).exists,
+  makeDir: async (uri) => {
+    await FileSystem.makeDirectoryAsync(uri, { intermediates: true }).catch(() => {});
+  },
+  download: async (url, toUri) => {
+    const r = await FileSystem.downloadAsync(url, toUri);
+    if (r.status !== 200 && r.status !== 206) throw new Error(`download status ${r.status}`);
+  },
+  move: (from, to) => FileSystem.moveAsync({ from, to }),
+  remove: (uri) => FileSystem.deleteAsync(uri, { idempotent: true }),
+  list: (dir) => FileSystem.readDirectoryAsync(dir),
+};
 
 const TARGET_LABELS: Record<string, string> = {
   full_body: "Full body",
@@ -81,6 +116,9 @@ function exerciseTargets(e: Exercise): string | null {
 }
 
 export default function WorkoutPlayer() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
+  const pageHeaderStyles = useThemedStyles(createPageHeaderStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useInsets();
@@ -123,13 +161,17 @@ export default function WorkoutPlayer() {
 
   // Each exercise in this workout can have its OWN uploaded video, keyed by the
   // exercise id. We load them up front and play the matching one in the header.
-  const [videoMap, setVideoMap] = useState<Record<string, { id: string; hasPoster: boolean }>>({});
+  const [videoMap, setVideoMap] = useState<Record<string, ClipRef>>({});
   // Live playback position/length of the currently loaded video. When a video is
   // present the progress bar reflects THESE (the real clip), not the simulated
   // per-exercise countdown.
   const [videoTime, setVideoTime] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
+  // Full sets x seconds per exercise (whole-workout cumulative math) alongside
+  // the single-set durations and set counts that drive per-set playback.
   const exerciseDurations = workout?.exercises.map(exerciseTimedSeconds) ?? [];
+  const exerciseSetDurations = workout?.exercises.map(exerciseSetSeconds) ?? [];
+  const exerciseSetCounts = workout?.exercises.map(exerciseSets) ?? [];
   const sessionDurationMin = workoutDurationMinutes(workout?.exercises ?? [], restGap);
   // The member's body weight in kg (converting from lbs when needed) used to
   // personalize the kcal estimate. Undefined when no weight is set, so the
@@ -152,6 +194,24 @@ export default function WorkoutPlayer() {
   // (or auto-play) after the user has already moved to another exercise.
   const loadSeq = useRef(0);
   const [isImmersiveVideo, setIsImmersiveVideo] = useState(false);
+  // The mounted VideoViews, for entering picture-in-picture from the custom
+  // controls (native controls are off, so the OS button never shows).
+  const inlineVideoRef = useRef<VideoView>(null);
+  const immersiveVideoRef = useRef<VideoView>(null);
+
+  const enterPictureInPicture = async (immersive: boolean) => {
+    const view = immersive ? immersiveVideoRef.current : inlineVideoRef.current;
+    try {
+      // Rejects when the running binary lacks the PiP entitlement (Expo Go
+      // can't apply the config plugin) or PiP is otherwise unavailable.
+      await view?.startPictureInPicture();
+    } catch {
+      // The toast host lives outside the immersive modal, so drop back to the
+      // inline player before explaining why nothing happened.
+      if (immersive) closeImmersiveVideo();
+      showToast("Picture in picture needs the installed app build", "tv-outline");
+    }
+  };
 
   // Keep the progress bar in sync with the real video clip.
   useEventListener(player, "timeUpdate", (e: { currentTime: number }) => {
@@ -205,18 +265,32 @@ export default function WorkoutPlayer() {
     index,
     remaining,
     restRemaining,
+    currentSet,
+    restKind,
     setRemaining,
     setRestRemaining,
-    goNext,
     jumpTo,
     finish,
     completeExercise,
+    skipRest,
   } = useWorkoutAdvanceCore({
     total: workout?.exercises.length ?? 0,
     restGap,
     paused,
-    durationAt: (i) => exerciseDurations[i] ?? 0,
-    initialRemaining: exerciseDurations[0] ?? 0,
+    durationAt: (i) => exerciseSetDurations[i] ?? 0,
+    initialRemaining: exerciseSetDurations[0] ?? 0,
+    setsAt: (i) => exerciseSetCounts[i] ?? 1,
+    // A new set of the same exercise: replay its clip from the start (the same
+    // uploaded video serves every set). No-op for countdown-only exercises.
+    onSetStart: (i) => {
+      const ex = workout?.exercises[i];
+      const vid = ex ? videoMap[ex.id]?.id : undefined;
+      if (vid && loadedVideoIdRef.current === vid) {
+        try {
+          player.replay();
+        } catch {}
+      }
+    },
     videoIdAt: (i) => {
       const ex = workout?.exercises[i];
       const v = ex ? videoMap[ex.id] : undefined;
@@ -224,9 +298,7 @@ export default function WorkoutPlayer() {
     },
     getLoadedVideoId: () => loadedVideoIdRef.current,
     videoDuration,
-    onComplete: () => {
-      if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    },
+    onComplete: () => {},
     onFinish: () => {
       if (timer.current) clearInterval(timer.current);
       if (!savedRef.current && workout) {
@@ -238,23 +310,20 @@ export default function WorkoutPlayer() {
           kcal: estimateKcalBurned({ workoutKcal: workout.kcal, overall: 1, weightKg }),
           durationMin: sessionDurationMin,
         });
+        haptics.success();
       }
-      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
     onReplay: (i) => {
-      if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setPaused(false);
       if (workout) showToast(`Replaying ${workout.exercises[i].name}`, "reload");
     },
-    onRestTick: (rr) => {
-      if (Platform.OS !== "web" && rr <= 4) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    },
+    onRestTick: () => {},
   });
 
   const changeRestGap = (v: (typeof REST_OPTIONS)[number]) => {
     setRestGap(v);
     setJSON(REST_GAP_KEY, v);
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (v !== restGap) haptics.selection();
     showToast(v === 0 ? "Rest off" : `Rest set to ${v}s`, "hourglass");
   };
 
@@ -264,12 +333,12 @@ export default function WorkoutPlayer() {
       showToast(next ? "Paused" : "Resumed", next ? "pause" : "play");
       return next;
     });
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.selection();
   };
 
   const toggleFav = () => {
     if (!workout) return;
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.selection();
     toggleFavorite(workout.id);
     showToast(fav ? "Removed from saved" : "Saved to favorites", fav ? "heart-dislike" : "heart");
   };
@@ -287,7 +356,6 @@ export default function WorkoutPlayer() {
   // is still shareable wherever the app runs.
   const sharePersonalBest = async () => {
     if (newBestToday == null) return;
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const days = newBestToday;
     const message = `New personal best on Florish: a ${days}-day workout streak! Showing up for myself, one session at a time.`;
     try {
@@ -317,7 +385,6 @@ export default function WorkoutPlayer() {
   // no video we nudge the simulated countdown so the controls still do something.
   const SEEK_STEP = 15;
   const seekRelative = (delta: number) => {
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     showToast(delta > 0 ? "Forward 15s" : "Back 15s", delta > 0 ? "play-forward" : "play-back");
     // Seek the real clip when one is loaded, otherwise nudge the simulated
     // countdown so the buttons stay responsive. The branch decision lives in
@@ -353,21 +420,19 @@ export default function WorkoutPlayer() {
     };
   }, []);
 
-  // Fetch the videos uploaded for this workout and map each to its exercise.
-  // Newest first from the server, so the first row per exercise wins.
+  // Fetch clips uploaded for this workout plus any shared clips keyed by the
+  // workout's canonical move ids, then pick the best clip per exercise.
   useEffect(() => {
     if (!workout) return;
     let cancelled = false;
     (async () => {
       try {
-        const items = await listWorkoutExercises(workout.id);
+        const items = await listWorkoutExercises(
+          workout.id,
+          workout.exercises.map((e) => e.moveId)
+        );
         if (cancelled) return;
-        const map: Record<string, { id: string; hasPoster: boolean }> = {};
-        for (const it of items) {
-          const exId = it.workoutExerciseId;
-          if (exId && !map[exId]) map[exId] = { id: it.id, hasPoster: it.hasPoster };
-        }
-        setVideoMap(map);
+        setVideoMap(buildClipMap(workout.exercises, items, workout.id));
       } catch {
         // No videos / offline: the player falls back to the workout image.
       }
@@ -397,6 +462,10 @@ export default function WorkoutPlayer() {
           });
           return { ok: resp.ok, status: resp.status, url: resp.url };
         },
+        // Cached local file when the clip has been watched before; otherwise
+        // the remote URL streams now and the download fills the cache.
+        toPlayableSource: (videoId, remoteUrl) =>
+          resolveClipSource(clipCacheFs, videoId, currentVideo?.videoSize, remoteUrl),
         replaceAsync: (src) => player.replaceAsync(src),
         play: () => player.play(),
         isPaused: () => pausedRef.current,
@@ -438,7 +507,6 @@ export default function WorkoutPlayer() {
   // notification uses, so it never re-fires for an already-celebrated best.
   useEffect(() => {
     if (phase !== "done" || newBestToday == null) return;
-    if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     Animated.spring(pbAnim, {
       toValue: 1,
       friction: 6,
@@ -451,7 +519,7 @@ export default function WorkoutPlayer() {
   const scheduleHide = () => {
     if (hideTimer.current) clearTimeout(hideTimer.current);
     hideTimer.current = setTimeout(() => {
-      Animated.timing(overlayOpacity, { toValue: 0, duration: 350, useNativeDriver: true }).start(({ finished }) => {
+      Animated.timing(overlayOpacity, { toValue: 0, duration: 260, useNativeDriver: true }).start(({ finished }) => {
         if (finished) setControlsShown(false);
       });
     }, 3000);
@@ -478,7 +546,6 @@ export default function WorkoutPlayer() {
 
   const openImmersiveVideo = () => {
     if (!currentVideo) return;
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (hideTimer.current) clearTimeout(hideTimer.current);
     setIsImmersiveVideo(true);
     setControlsShown(true);
@@ -488,7 +555,6 @@ export default function WorkoutPlayer() {
   };
 
   const closeImmersiveVideo = () => {
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (hideTimer.current) clearTimeout(hideTimer.current);
     setIsImmersiveVideo(false);
     setControlsShown(true);
@@ -521,12 +587,7 @@ export default function WorkoutPlayer() {
   useEffect(() => {
     if (phase !== "active" || paused || !current || remaining <= 0) return;
     timer.current = setInterval(() => {
-      setRemaining((r) => {
-        if (r <= 1 && Platform.OS !== "web") {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        }
-        return tickExerciseRemaining(r);
-      });
+      setRemaining((r) => tickExerciseRemaining(r));
     }, 1000);
     return () => {
       if (timer.current) clearInterval(timer.current);
@@ -580,8 +641,11 @@ export default function WorkoutPlayer() {
   // stale clip end before finishing, advancing, or opening the rest countdown.
   onVideoEndRef.current = () => completeExercise("video");
 
-  if (phase === "rest" && current && index + 1 < total) {
-    const next = workout.exercises[index + 1];
+  if (phase === "rest" && current && (restKind === "set" || index + 1 < total)) {
+    // A "set" rest leads back into the SAME exercise (next set); an "exercise"
+    // rest previews the next exercise.
+    const isSetRest = restKind === "set";
+    const next = isSetRest ? current : workout.exercises[index + 1];
     const restPct = `${restGap > 0 ? Math.max(0, Math.min(100, Math.round(((restGap - restRemaining) / restGap) * 100))) : 0}%` as const;
     return (
       <GradientBackground>
@@ -613,11 +677,25 @@ export default function WorkoutPlayer() {
             <View style={styles.restTrack}>
               <View style={[styles.restFill, { width: restPct }]} />
             </View>
-            <Text style={styles.restUpNext}>UP NEXT · {index + 2}/{total}</Text>
-            <Text style={styles.restNextName}>{next.name}</Text>
-            <Text style={styles.restNextMeta}>
-              {next.detail} · {next.sets} sets · {next.seconds} sec
-            </Text>
+            {isSetRest ? (
+              <>
+                <Text style={styles.restUpNext}>
+                  UP NEXT · SET {currentSet + 2} OF {current.sets}
+                </Text>
+                <Text style={styles.restNextName}>{current.name}</Text>
+                <Text style={styles.restNextMeta}>
+                  {current.detail} · {current.seconds} sec
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.restUpNext}>UP NEXT · {index + 2}/{total}</Text>
+                <Text style={styles.restNextName}>{next.name}</Text>
+                <Text style={styles.restNextMeta}>
+                  {next.detail} · {next.sets} sets · {next.seconds} sec
+                </Text>
+              </>
+            )}
           </View>
 
           <View style={[styles.restActions, { paddingBottom: insets.bottom + 24 }]}>
@@ -625,7 +703,7 @@ export default function WorkoutPlayer() {
               <Ionicons name="add" size={18} color={colors.onPrimary} />
               <Text style={styles.restAddText}>15s</Text>
             </Pressable>
-            <Pressable style={styles.restStartBtn} onPress={goNext}>
+            <Pressable style={styles.restStartBtn} onPress={skipRest}>
               <Ionicons name="play" size={18} color={colors.onPrimaryStrong} />
               <Text style={styles.restStartText}>Start now</Text>
             </Pressable>
@@ -638,12 +716,12 @@ export default function WorkoutPlayer() {
   if (phase === "active" && current) {
     // When this exercise has an uploaded video, the bar always tracks the clip:
     // 0:00 / empty while it loads, then the real clip time. Exercises with no
-    // video show the current exercise's own configured duration and the time
-    // elapsed within that single exercise, resetting as the workout advances.
-    // Whole-workout stats (overall %, kcal, bpm/zone) keep using cumulative
-    // time. See lib/workoutProgress.ts (unit-tested) for the math.
+    // video show ONE SET's configured duration and the time elapsed within that
+    // set, resetting at every set/exercise boundary. Whole-workout stats
+    // (overall %, kcal) keep using cumulative time, which now counts
+    // set rests too. See lib/workoutProgress.ts (unit-tested) for the math.
     const hasMappedVideo = !!currentVideo;
-    const { totalSeconds, elapsed, overall, overallPct, barElapsed, barTotal, barPct, kcalBurned, bpm, zone, bpmPct } =
+    const { totalSeconds, elapsed, overall, overallPct, barElapsed, barTotal, barPct, kcalBurned } =
       computeWorkoutProgress({
         exerciseSeconds: exerciseDurations,
         index,
@@ -653,6 +731,8 @@ export default function WorkoutPlayer() {
         videoTime,
         videoDuration,
         restGap,
+        setsPerExercise: exerciseSetCounts,
+        setSeconds: exerciseSetDurations[index] ?? 0,
         activeElapsedSeconds: sessionSeconds,
         weightKg,
       });
@@ -684,7 +764,7 @@ export default function WorkoutPlayer() {
           { opacity: overlayOpacity, pointerEvents: controlsShown ? "auto" : "none" },
         ]}
       >
-        <Pressable style={StyleSheet.absoluteFill} onPress={toggleOverlay} />
+        <StructuralPressable style={StyleSheet.absoluteFill} onPress={toggleOverlay} />
 
         {immersive && (
           <View style={[styles.immersiveTop, { paddingTop: insets.top + 10 }]}>
@@ -696,7 +776,13 @@ export default function WorkoutPlayer() {
               {titleHead ? " " : ""}
               <Text style={styles.immersiveTitleAccent}>{titleTail}</Text>
             </Text>
-            <View style={styles.immersiveBtnSpacer} />
+            {PIP_SUPPORTED ? (
+              <Pressable style={styles.immersiveRoundBtn} onPress={() => enterPictureInPicture(true)} hitSlop={8}>
+                <MaterialIcons name="picture-in-picture-alt" size={22} color="#FFFFFF" />
+              </Pressable>
+            ) : (
+              <View style={styles.immersiveBtnSpacer} />
+            )}
           </View>
         )}
 
@@ -766,24 +852,32 @@ export default function WorkoutPlayer() {
             )}
             {currentVideo && !isImmersiveVideo && (
               <VideoView
+                ref={inlineVideoRef}
                 player={player}
                 style={StyleSheet.absoluteFill}
                 contentFit="cover"
                 nativeControls={false}
                 pointerEvents="none"
+                allowsPictureInPicture
+                startsPictureInPictureAutomatically
               />
             )}
             <LinearGradient
               colors={["rgba(16,17,17,0.5)", "rgba(16,17,17,0.2)", "rgba(16,17,17,0.85)"]}
               style={StyleSheet.absoluteFill}
             />
-            <Pressable style={StyleSheet.absoluteFill} onPress={toggleOverlay} />
+            <StructuralPressable style={StyleSheet.absoluteFill} onPress={toggleOverlay} />
 
             {renderPlaybackOverlay(false)}
 
             {currentVideo ? (
               <Pressable style={styles.playerFullscreenBtn} onPress={openImmersiveVideo} hitSlop={8}>
                 <Ionicons name="expand" size={20} color="#FFFFFF" />
+              </Pressable>
+            ) : null}
+            {currentVideo && PIP_SUPPORTED ? (
+              <Pressable style={styles.playerPipBtn} onPress={() => enterPictureInPicture(false)} hitSlop={8}>
+                <MaterialIcons name="picture-in-picture-alt" size={19} color="#FFFFFF" />
               </Pressable>
             ) : null}
           </View>
@@ -827,9 +921,9 @@ export default function WorkoutPlayer() {
 
             <View style={styles.statCards}>
               <View style={styles.statCard}>
-                <Ionicons name="flame" size={18} color={colors.highlight} />
-                <Text style={[styles.statNum, { color: colors.highlight }]}>{kcalBurned}</Text>
-                <Text style={styles.statLbl}>kcal burned</Text>
+                <Ionicons name="repeat" size={18} color={colors.accent} />
+                <Text testID="set-counter" style={styles.statNum}>{currentSet + 1}/{current.sets}</Text>
+                <Text style={styles.statLbl}>set</Text>
               </View>
               <View style={styles.statCard}>
                 <Ionicons name="time" size={18} color={colors.accent} />
@@ -940,6 +1034,7 @@ export default function WorkoutPlayer() {
                                 params: {
                                   workoutId: workout.id,
                                   exerciseId: e.id,
+                                  moveId: e.moveId,
                                   title: e.name,
                                   category: workout.category,
                                   level: workout.level,
@@ -1024,38 +1119,20 @@ export default function WorkoutPlayer() {
                   </View>
                 </View>
 
-                <View style={{ flexDirection: "row", gap: 14 }}>
-                  <View style={[styles.guideCard, { flex: 1 }]}>
-                    <View style={styles.statHead}>
-                      <Ionicons name="flame-outline" size={15} color={colors.accent} />
-                      <Text style={styles.statHeadText}>Calories</Text>
-                    </View>
-                    <Text style={styles.statBig}>{kcalBurned}</Text>
-                    <Text style={styles.statSub}>of {workout.kcal} kcal</Text>
-                    <View style={[styles.miniBar, { marginTop: 12 }]}>
-                      <LinearGradient
-                        colors={colors.gradient}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={[styles.miniBarFill, { width: overallPct }]}
-                      />
-                    </View>
+                <View style={styles.guideCard}>
+                  <View style={styles.statHead}>
+                    <Ionicons name="repeat" size={15} color={colors.accent} />
+                    <Text style={styles.statHeadText}>Sets</Text>
                   </View>
-                  <View style={[styles.guideCard, { flex: 1 }]}>
-                    <View style={styles.statHead}>
-                      <Ionicons name="heart-outline" size={15} color={colors.accent} />
-                      <Text style={styles.statHeadText}>Heart Rate</Text>
-                    </View>
-                    <Text style={styles.statBig}>{bpm}</Text>
-                    <Text style={styles.statSub}>bpm · {zone}</Text>
-                    <View style={[styles.miniBar, { marginTop: 12 }]}>
-                      <LinearGradient
-                        colors={colors.gradient}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={[styles.miniBarFill, { width: bpmPct }]}
-                      />
-                    </View>
+                  <Text style={styles.statBig}>{currentSet + 1}/{current.sets}</Text>
+                  <Text style={styles.statSub} numberOfLines={1}>{current.name}</Text>
+                  <View style={[styles.miniBar, { marginTop: 12 }]}>
+                    <LinearGradient
+                      colors={colors.gradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={[styles.miniBarFill, { width: overallPct }]}
+                    />
                   </View>
                 </View>
 
@@ -1117,14 +1194,16 @@ export default function WorkoutPlayer() {
           <View style={styles.immersiveRoot}>
             {currentVideo && (
               <VideoView
+                ref={immersiveVideoRef}
                 player={player}
                 style={StyleSheet.absoluteFill}
                 contentFit="contain"
                 nativeControls={false}
                 pointerEvents="none"
+                allowsPictureInPicture
               />
             )}
-            <Pressable style={StyleSheet.absoluteFill} onPress={toggleOverlay} />
+            <StructuralPressable style={StyleSheet.absoluteFill} onPress={toggleOverlay} />
             <LinearGradient
               colors={["rgba(0,0,0,0.65)", "rgba(0,0,0,0.04)", "rgba(0,0,0,0.75)"]}
               style={StyleSheet.absoluteFill}
@@ -1218,7 +1297,7 @@ export default function WorkoutPlayer() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   notFound: { fontFamily: fonts.serif, fontSize: 22, color: colors.foreground },
   metaItem: { flexDirection: "row", alignItems: "center", gap: 6 },
@@ -1252,6 +1331,17 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 12,
     right: 12,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "rgba(16,17,17,0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  playerPipBtn: {
+    position: "absolute",
+    top: 12,
+    right: 58,
     width: 38,
     height: 38,
     borderRadius: 19,

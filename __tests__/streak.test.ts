@@ -178,7 +178,7 @@ test("combineDays unions active and completion days, dropping invalid keys", () 
 // --- displayStreak ---------------------------------------------------------
 
 test("displayStreak takes the live union run when it is the longer one", () => {
-  const state: StreakState = { count: 1, lastActiveDay: "2026-06-09", recentDays: ["2026-06-09"], updatedAt: 1 };
+  const state: StreakState = { count: 1, longest: 1, lastActiveDay: "2026-06-09", recentDays: ["2026-06-09"], updatedAt: 1 };
   // Workout-completion days extend the live run beyond the server count.
   const combined = combineDays(["2026-06-09"], ["2026-06-07", "2026-06-08"]);
   assert.equal(displayStreak(state, combined, "2026-06-09"), 3);
@@ -187,19 +187,19 @@ test("displayStreak takes the live union run when it is the longer one", () => {
 test("displayStreak takes the alive server count when it beats the live run", () => {
   // Server tracked a long streak (e.g. restored on a fresh device with an empty
   // local window) whose last active day is today: it stays counted.
-  const state: StreakState = { count: 10, lastActiveDay: "2026-06-09", recentDays: ["2026-06-09"], updatedAt: 1 };
+  const state: StreakState = { count: 10, longest: 10, lastActiveDay: "2026-06-09", recentDays: ["2026-06-09"], updatedAt: 1 };
   const combined = combineDays(["2026-06-09"], []);
   assert.equal(displayStreak(state, combined, "2026-06-09"), 10);
 });
 
 test("displayStreak counts the server streak when its last day is yesterday", () => {
-  const state: StreakState = { count: 7, lastActiveDay: "2026-06-08", recentDays: ["2026-06-08"], updatedAt: 1 };
+  const state: StreakState = { count: 7, longest: 7, lastActiveDay: "2026-06-08", recentDays: ["2026-06-08"], updatedAt: 1 };
   const combined = combineDays(["2026-06-08"], []);
   assert.equal(displayStreak(state, combined, "2026-06-09"), 7);
 });
 
 test("displayStreak drops a stale server streak (last day older than yesterday)", () => {
-  const state: StreakState = { count: 99, lastActiveDay: "2026-06-01", recentDays: ["2026-06-01"], updatedAt: 1 };
+  const state: StreakState = { count: 99, longest: 99, lastActiveDay: "2026-06-01", recentDays: ["2026-06-01"], updatedAt: 1 };
   const combined = combineDays([], []);
   assert.equal(displayStreak(state, combined, "2026-06-09"), 0);
 });

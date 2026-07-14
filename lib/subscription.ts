@@ -44,11 +44,11 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export type PlanInfo = {
   key: PlanKey;
   name: string;
-  // Short price, e.g. "$19.99".
+  // Short price, e.g. "$39.99".
   amountLabel: string;
   // Period suffix, e.g. "/ year".
   periodLabel: string;
-  // Full marketing line, e.g. "$19.99 / year · Save 67%".
+  // Full marketing line, e.g. "$39.99 / year · Save 33%".
   fullLabel: string;
   periodDays: number;
   best?: boolean;
@@ -76,9 +76,9 @@ export const PLANS: Record<PlanKey, PlanInfo> = {
   yearly: {
     key: "yearly",
     name: "Yearly",
-    amountLabel: "$19.99",
+    amountLabel: "$39.99",
     periodLabel: "/ year",
-    fullLabel: "$19.99 / year · Save 67%",
+    fullLabel: "$39.99 / year · Save 33%",
     periodDays: 365,
     best: true,
   },

@@ -3,6 +3,12 @@ import { verifyPasscode, mintSessionToken } from "@/lib/adminAuth";
 import { hashPassword } from "@/lib/userAuth";
 import { createUser, emailTaken, toPublicUser } from "@/lib/userStore";
 
+function logAuthError(scope: string, e: any) {
+  const code = e?.code ? ` code=${e.code}` : "";
+  const message = e?.message ?? String(e);
+  console.error(`${scope}:${code} ${message}`);
+}
+
 function genId(): string {
   return Date.now().toString() + Math.random().toString(36).slice(2, 11);
 }
@@ -63,7 +69,7 @@ export async function POST(request: Request): Promise<Response> {
     });
     return Response.json({ user: toPublicUser(user), token, expiresAt });
   } catch (e: any) {
-    console.error("signup error:", e?.message ?? e);
+    logAuthError("signup error", e);
     return Response.json({ error: "Could not create account" }, { status: 500 });
   }
 }

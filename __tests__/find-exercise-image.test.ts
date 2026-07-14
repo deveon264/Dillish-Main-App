@@ -21,7 +21,7 @@ const { findExerciseImage } = req("@/constants/workouts") as typeof import("@/co
 function fileOf(image: unknown): string | undefined {
   if (image && typeof image === "object" && "uri" in image) {
     const uri = (image as { uri: unknown }).uri;
-    if (typeof uri === "string") return uri.split("/").pop();
+    if (typeof uri === "string") return uri.split(/[/\\]/).pop();
   }
   return undefined;
 }

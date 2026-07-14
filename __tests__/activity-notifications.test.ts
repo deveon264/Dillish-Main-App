@@ -172,3 +172,27 @@ test("meals card does not fire once a meal is logged today", () => {
   const out = buildWith({ calorieLogs: mealLoggedToday() });
   assert.equal(out.some((n) => n.id === MEALS_ID), false);
 });
+
+// =========================================================================
+// Welcome card: greets a brand-new member who has no activity yet.
+// =========================================================================
+
+test("welcome card fires for a new member with no activity and sits on top", () => {
+  const out = buildWith({ waterLogs: [], calorieLogs: [], completions: [] });
+  const card = out.find((n) => n.id === "welcome");
+  assert.ok(card, "welcome card fires when the member has no activity at all");
+  assert.equal(out[0].id, "welcome", "welcome sits at the top of the feed");
+  assert.equal(card.title, "Welcome to Florish! 🌸");
+  assert.equal(card.tone, "accent");
+  assert.equal(card.icon, "sparkles-outline");
+});
+
+test("welcome card does not fire once the member has any activity", () => {
+  // Default buildWith has water met, a meal, and a workout logged today.
+  assert.equal(buildWith({}).some((n) => n.id === "welcome"), false);
+  // Partial activity (only today's workout missing) is still not a new member.
+  assert.equal(
+    buildWith({ completions: [], streak: 0 }).some((n) => n.id === "welcome"),
+    false
+  );
+});

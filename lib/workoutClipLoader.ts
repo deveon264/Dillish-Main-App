@@ -28,6 +28,10 @@ export type ClipLoaderDeps = {
   // Native-only HEAD/Range probe that follows redirects and surfaces the final
   // URL. Throws / returns ok:false to abort the load (header image stays).
   probe?: (url: string) => Promise<{ ok: boolean; status: number; url: string }>;
+  // Optional cache resolver: maps the streamable URL to what the player should
+  // actually load (a cached local file when present, the same URL otherwise).
+  // Runs inside the staleness guard, so a slow resolution can't misload.
+  toPlayableSource?: (videoId: string, remoteUrl: string) => Promise<string>;
   // Swaps the player's source. Called with null to clear it for a no-video
   // exercise, or the resolved URL to load the clip.
   replaceAsync: (src: string | null) => Promise<void>;
@@ -73,6 +77,10 @@ export async function loadExerciseClip(
       finalUrl = resp.url || finalUrl;
     }
     if (isStale()) return;
+    if (deps.toPlayableSource) {
+      finalUrl = await deps.toPlayableSource(videoId, finalUrl);
+      if (isStale()) return;
+    }
     await deps.replaceAsync(finalUrl);
     if (isStale()) return;
     refs.loadedVideoId.current = videoId;

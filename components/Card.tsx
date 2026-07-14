@@ -1,6 +1,7 @@
 import React from "react";
 import { View, StyleSheet, StyleProp, ViewStyle } from "react-native";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 
 export function Card({
   children,
@@ -11,17 +12,19 @@ export function Card({
   style?: StyleProp<ViewStyle>;
   elevated?: boolean;
 }) {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={[styles.card, elevated && styles.elevated, style]}>{children}</View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   card: {
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    borderRadius: colors.radiusLg,
+    borderRadius: colors.radius,
     padding: 18,
   },
   elevated: { backgroundColor: colors.cardElevated },

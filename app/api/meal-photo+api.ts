@@ -1,6 +1,7 @@
 import {
   getPrivateDir,
   getVideoSignedUrl,
+  signedObjectResponse,
   uploadMealPhotoStream,
 } from "@/lib/objectStorageServer";
 
@@ -62,15 +63,9 @@ export async function mealPhotoGet(
 
     const objectPath = `${getPrivateDir()}/meal-photos/${key}`;
     const url = await deps.getVideoSignedUrl(objectPath, 3600);
-    return new Response(null, {
-      status: 302,
-      headers: {
-        Location: url,
-        // The object is immutable once written (a new log re-hosts to a new
-        // uuid), so the redirect target is safe to cache.
-        "Cache-Control": "private, max-age=600",
-      },
-    });
+    // The object is immutable once written (a new log re-hosts to a new
+    // uuid), so the response is safe to cache.
+    return signedObjectResponse(url, request, "private, max-age=600");
   } catch (e: any) {
     console.error("meal-photo GET error:", e?.message ?? e);
     return new Response("Failed to load photo", { status: 500 });

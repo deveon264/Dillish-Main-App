@@ -1,26 +1,30 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  Pressable,
-  ActivityIndicator,
   Alert,
   Platform,
 } from "react-native";
+import { Bouncy as Pressable } from "@/components/Bouncy";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter, useFocusEffect } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
+import { MotionListItem } from "@/components/Motion";
 import { useInsets } from "@/hooks/useInsets";
 import { useAuth } from "@/contexts/AuthContext";
 import { AdminControls } from "@/components/AdminControls";
 import { PageHeader } from "@/components/PageHeader";
+import { ListRowsSkeleton } from "@/components/LoadingSkeletons";
+import { EmptyState } from "@/components/EmptyState";
 import { listExercises, deleteExercise, posterUrl, UploadedExercise } from "@/lib/exercises";
 import { findExerciseImage } from "@/constants/workouts";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
+import { haptics } from "@/lib/haptics";
 
 function formatSize(bytes: number): string {
   if (!bytes) return "";
@@ -29,6 +33,8 @@ function formatSize(bytes: number): string {
 }
 
 export default function ExerciseLibrary() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const insets = useInsets();
   const { isAdmin, adminToken } = useAuth();
@@ -36,6 +42,7 @@ export default function ExerciseLibrary() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [posterErrors, setPosterErrors] = useState<Record<string, boolean>>({});
+  const loadedOnceRef = useRef(false);
 
   const load = useCallback(async () => {
     try {
@@ -45,23 +52,26 @@ export default function ExerciseLibrary() {
     } catch {
       setError("Couldn't load exercise videos. Pull to retry.");
     } finally {
+      loadedOnceRef.current = true;
       setLoading(false);
     }
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      setLoading(true);
+      if (!loadedOnceRef.current) setLoading(true);
       load();
     }, [load])
   );
 
   const confirmDelete = (item: UploadedExercise) => {
     const run = async () => {
+      haptics.warning();
       try {
         await deleteExercise(item.id, adminToken ?? "");
         setItems((prev) => prev.filter((i) => i.id !== item.id));
       } catch {
+        haptics.warning();
         if (Platform.OS === "web") window.alert("Could not delete this exercise.");
         else Alert.alert("Delete failed", "Could not delete this exercise.");
       }
@@ -104,9 +114,7 @@ export default function ExerciseLibrary() {
         {isAdmin && <AdminControls />}
 
         {loading ? (
-          <View style={styles.center}>
-            <ActivityIndicator color={colors.accent} />
-          </View>
+          <ListRowsSkeleton rows={4} label="Loading exercise videos" />
         ) : error ? (
           <View style={styles.center}>
             <Ionicons name="cloud-offline-outline" size={36} color={colors.mutedForeground} />
@@ -116,18 +124,19 @@ export default function ExerciseLibrary() {
             </Pressable>
           </View>
         ) : items.length === 0 ? (
-          <View style={styles.center}>
-            <Ionicons name="film-outline" size={40} color={colors.blush} />
-            <Text style={styles.emptyTitle}>No videos yet</Text>
-            <Text style={styles.muted}>
-              {isAdmin ? "Tap + to upload the first exercise video." : "Check back soon for guided exercise videos."}
-            </Text>
-          </View>
+          <EmptyState
+            icon="film-outline"
+            title="No videos yet"
+            description={isAdmin ? "Upload the first guided exercise video." : "Browse complete workouts while the video library grows."}
+            actionLabel={isAdmin ? "Upload first video" : "Browse workouts"}
+            onAction={() => router.push(isAdmin ? "/admin/upload-exercise" : "/(tabs)/workouts")}
+          />
         ) : (
           <View style={styles.list}>
             {items.map((item) => (
-              <View key={item.id} style={styles.card}>
+              <MotionListItem key={item.id} style={styles.card}>
                 <Pressable
+                  pressedScale={0.985}
                   style={styles.cardMain}
                   onPress={() =>
                     router.push({
@@ -235,7 +244,7 @@ export default function ExerciseLibrary() {
                     </Pressable>
                   </View>
                 )}
-              </View>
+              </MotionListItem>
             ))}
           </View>
         )}
@@ -244,7 +253,7 @@ export default function ExerciseLibrary() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   scroll: { paddingHorizontal: 20 },
   roundBtn: {
     width: 42,

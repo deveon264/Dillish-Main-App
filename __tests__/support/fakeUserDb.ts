@@ -97,6 +97,10 @@ export function installFakeDb(): FakeDb {
   ): Promise<{ rows: Row[]; rowCount?: number }> {
     const sql = text.trim();
 
+    if (/^(BEGIN|COMMIT|ROLLBACK)$/i.test(sql)) {
+      return { rows: [], rowCount: 0 };
+    }
+
     // --- community_reports (moderation queue grouping + dismiss-by-post) -----
     // Insert mirrors reportPost(): the report is only recorded when its post
     // exists (INSERT ... SELECT ... WHERE EXISTS).
@@ -184,6 +188,7 @@ export function installFakeDb(): FakeDb {
           like_count: likeCount,
           comment_count: commentCount,
           liked_by_me: likedByMe,
+          pinned: !!post.pinned,
           author_report_count: authorReportCount,
           author_blocked: authorBlocked,
           author_warned: authorWarned,
@@ -355,6 +360,7 @@ export function installFakeDb(): FakeDb {
           like_count: likeCount,
           comment_count: commentCount,
           liked_by_me: likedByMe,
+          pinned: !!post.pinned,
         };
       };
 
@@ -363,6 +369,23 @@ export function installFakeDb(): FakeDb {
         const post = communityPosts.find((p) => p.id === params[1]);
         if (!post || !users.get(post.author_id)) return { rows: [] };
         return { rows: [buildRow(post)] };
+      }
+
+      if (/WHERE\s+p\.pinned/i.test(sql)) {
+        let pinned = communityPosts.filter(
+          (p) =>
+            !!p.pinned &&
+            !!users.get(p.author_id) &&
+            !communityBlocks.some(
+              (b) => b.blocker_id === viewerId && b.blocked_id === p.author_id
+            ) &&
+            !adminBlocks.has(p.author_id)
+        );
+        pinned.sort((a, b) => {
+          if (b.created_at !== a.created_at) return b.created_at - a.created_at;
+          return a.id < b.id ? 1 : a.id > b.id ? -1 : 0;
+        });
+        return { rows: pinned.map(buildRow) };
       }
 
       // listPosts: drop posts whose author no longer exists (INNER JOIN users),
@@ -375,6 +398,9 @@ export function installFakeDb(): FakeDb {
           ) &&
           !adminBlocks.has(p.author_id)
       );
+      if (/NOT\s+p\.pinned/i.test(sql)) {
+        list = list.filter((p) => !p.pinned);
+      }
       const typeMatch = /p\.type\s*=\s*\$(\d+)/i.exec(sql);
       if (typeMatch) {
         const t = params[Number(typeMatch[1]) - 1];
@@ -397,6 +423,60 @@ export function installFakeDb(): FakeDb {
       });
       const limit = Number(params[params.length - 1]);
       return { rows: list.slice(0, limit).map(buildRow) };
+    }
+
+    // --- community active-today / pinning ----------------------------------
+    if (/WITH\s+activity\s+AS/i.test(sql)) {
+      const [viewerId, since, limit] = params as [string, number, number];
+      const latest = new Map<string, number>();
+      const note = (uid: string | null | undefined, ts: number | null | undefined) => {
+        if (!uid || typeof ts !== "number" || ts < since) return;
+        if (uid === viewerId) return;
+        if (!users.has(uid)) return;
+        if (communityBlocks.some((b) => b.blocker_id === viewerId && b.blocked_id === uid)) return;
+        if (adminBlocks.has(uid)) return;
+        latest.set(uid, Math.max(latest.get(uid) ?? 0, ts));
+      };
+      for (const p of communityPosts) note(p.author_id, p.created_at);
+      for (const l of communityLikes) note(l.user_id, l.created_at);
+      for (const c of communityComments) note(c.author_id, c.created_at);
+      const ordered = [...latest.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit);
+      return {
+        rows: ordered.map(([uid, last_at]) => {
+          const u = users.get(uid)!;
+          return {
+            author_id: u.id,
+            author_name: u.name,
+            author_avatar: u.avatar_object_path == null ? (u.avatar ?? null) : null,
+            author_avatar_path: u.avatar_object_path ?? null,
+            last_at,
+            total: latest.size,
+          };
+        }),
+      };
+    }
+
+    if (/SELECT\s+1\s+FROM\s+community_posts\s+WHERE\s+id\s*=\s*\$1/i.test(sql)) {
+      return { rows: communityPosts.some((p) => p.id === params[0]) ? [{ "?column?": 1 }] : [] };
+    }
+
+    if (/UPDATE\s+community_posts\s+SET\s+pinned/i.test(sql)) {
+      if (/WHERE\s+pinned\s*=\s*TRUE/i.test(sql)) {
+        let changed = 0;
+        for (const p of communityPosts) {
+          if (p.pinned) {
+            p.pinned = false;
+            changed++;
+          }
+        }
+        return { rows: [], rowCount: changed };
+      }
+      const id = params[0];
+      const pinned = /SET\s+pinned\s*=\s*TRUE/i.test(sql) ? true : /SET\s+pinned\s*=\s*FALSE/i.test(sql) ? false : !!params[1];
+      const post = communityPosts.find((p) => p.id === id);
+      if (!post) return { rows: [], rowCount: 0 };
+      post.pinned = pinned;
+      return { rows: [], rowCount: 1 };
     }
 
     // --- community_likes (toggleLike: insert-or-delete + count) ------------
@@ -794,6 +874,7 @@ export function installFakeDb(): FakeDb {
         body: p.body ?? "",
         photo_object_path: p.photo_object_path ?? null,
         created_at: p.created_at ?? Date.now(),
+        pinned: !!p.pinned,
       };
       communityPosts.push(row);
       return row;

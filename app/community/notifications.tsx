@@ -4,13 +4,14 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  Pressable,
-  ActivityIndicator,
   RefreshControl,
 } from "react-native";
+import { Bouncy as Pressable } from "@/components/Bouncy";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
+import { ListRowsSkeleton } from "@/components/LoadingSkeletons";
+import { EmptyState } from "@/components/EmptyState";
 import { Avatar } from "@/components/community/Avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationsContext";
@@ -21,7 +22,8 @@ import {
   timeAgo,
   type CommunityNotification,
 } from "@/lib/community";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
 
 function actionText(type: CommunityNotification["type"]): string {
@@ -29,6 +31,8 @@ function actionText(type: CommunityNotification["type"]): string {
 }
 
 export default function Notifications() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const insets = useInsets();
   const router = useRouter();
   const { token } = useAuth();
@@ -98,13 +102,13 @@ export default function Notifications() {
       );
     }
     return (
-      <View style={styles.empty}>
-        <Ionicons name="notifications-outline" size={30} color={colors.muted} />
-        <Text style={styles.emptyTitle}>No activity yet</Text>
-        <Text style={styles.emptyText}>
-          When someone likes or comments on your posts, you'll see it here.
-        </Text>
-      </View>
+      <EmptyState
+        icon="notifications-outline"
+        title="No activity yet"
+        description="Visit the community to share an update or support another member."
+        actionLabel="Visit community"
+        onAction={() => router.replace("/(tabs)/community")}
+      />
     );
   };
 
@@ -119,15 +123,14 @@ export default function Notifications() {
       </View>
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.accent} />
-        </View>
+        <ListRowsSkeleton rows={5} label="Loading activity" style={styles.loadingList} />
       ) : (
         <FlatList
           data={items}
           keyExtractor={(n) => n.id}
           renderItem={({ item }) => (
             <Pressable
+              pressedScale={0.985}
               style={styles.row}
               onPress={() => router.push(`/community/${item.postId}`)}
             >
@@ -174,7 +177,7 @@ export default function Notifications() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   topBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -185,6 +188,7 @@ const styles = StyleSheet.create({
   iconBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   topTitle: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.foreground },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10, padding: 30 },
+  loadingList: { paddingHorizontal: 20, paddingTop: 8 },
   row: {
     flexDirection: "row",
     alignItems: "center",

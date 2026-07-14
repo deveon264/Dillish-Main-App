@@ -1,36 +1,37 @@
-import React, { useEffect, useRef } from "react";
-import { View, Animated, Easing } from "react-native";
+import React, { useEffect } from "react";
+import { View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "@/constants/colors";
+import Animated, {
+  ReduceMotion,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 
 export function WaterCircle({ size, progress }: { size: number; progress: number }) {
+  const colors = useColors();
   const clamped = Math.max(0, Math.min(1, progress));
-  const surfaceTop = size * (1 - clamped);
   const band = size * 0.18;
   const blob = size * 1.8;
 
-  const rot1 = useRef(new Animated.Value(0)).current;
-  const rot2 = useRef(new Animated.Value(0)).current;
+  const fill = useSharedValue(0);
   const showWater = clamped > 0.001;
 
   useEffect(() => {
-    if (!showWater) return;
-    const make = (v: Animated.Value, duration: number) =>
-      Animated.loop(
-        Animated.timing(v, { toValue: 1, duration, easing: Easing.linear, useNativeDriver: false })
-      );
-    const a1 = make(rot1, 7000);
-    const a2 = make(rot2, 9500);
-    a1.start();
-    a2.start();
-    return () => {
-      a1.stop();
-      a2.stop();
-    };
-  }, [rot1, rot2, showWater]);
+    fill.value = withTiming(clamped, { duration: 280, reduceMotion: ReduceMotion.System });
+  }, [clamped, fill]);
 
-  const spin1 = rot1.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] });
-  const spin2 = rot2.interpolate({ inputRange: [0, 1], outputRange: ["360deg", "0deg"] });
+  const solidStyle = useAnimatedStyle(() => {
+    const surfaceTop = size * (1 - fill.value);
+    return { top: surfaceTop + band * 0.45 };
+  });
+
+  const waveStyle = useAnimatedStyle(() => {
+    const surfaceTop = size * (1 - fill.value);
+    return { top: Math.max(0, surfaceTop - band) };
+  });
 
   return (
     <View
@@ -53,52 +54,58 @@ export function WaterCircle({ size, progress }: { size: number; progress: number
 
       {showWater && (
         <>
-          <View
-            style={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              top: surfaceTop + band * 0.45,
-              bottom: 0,
-              backgroundColor: colors.primary,
-            }}
+          <Animated.View
+            style={[
+              {
+                position: "absolute",
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: colors.primary,
+              },
+              solidStyle,
+            ]}
           />
-          <View
-            style={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              top: Math.max(0, surfaceTop - band),
-              height: band * 2.4,
-              overflow: "hidden",
-            }}
+          <Animated.View
+            style={[
+              {
+                position: "absolute",
+                left: 0,
+                right: 0,
+                height: band * 2.4,
+                overflow: "hidden",
+              },
+              waveStyle,
+            ]}
           >
             <Animated.View
-              style={{
-                position: "absolute",
-                width: blob,
-                height: blob,
-                left: size / 2 - blob / 2,
-                top: band,
-                borderRadius: blob * 0.42,
-                backgroundColor: colors.accentSoft,
-                opacity: 0.55,
-                transform: [{ rotate: spin2 }],
-              }}
+              style={[
+                {
+                  position: "absolute",
+                  width: blob,
+                  height: blob,
+                  left: size / 2 - blob / 2,
+                  top: band,
+                  borderRadius: blob * 0.42,
+                  backgroundColor: colors.accentSoft,
+                  opacity: 0.55,
+                },
+              ]}
             />
             <Animated.View
-              style={{
-                position: "absolute",
-                width: blob,
-                height: blob,
-                left: size / 2 - blob / 2,
-                top: band + size * 0.02,
-                borderRadius: blob * 0.42,
-                backgroundColor: colors.primary,
-                transform: [{ rotate: spin1 }],
-              }}
+              style={[
+                {
+                  position: "absolute",
+                  width: blob,
+                  height: blob,
+                  left: size / 2 - blob / 2,
+                  top: band + size * 0.02,
+                  borderRadius: blob * 0.42,
+                  backgroundColor: colors.primary,
+                },
+              ]}
             />
-          </View>
+          </Animated.View>
         </>
       )}
     </View>

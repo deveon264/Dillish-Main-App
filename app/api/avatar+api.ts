@@ -7,6 +7,7 @@ import {
 } from "@/lib/userStore";
 import {
   getVideoSignedUrl,
+  signedObjectResponse,
   uploadAvatarStream,
   deleteObject,
 } from "@/lib/objectStorageServer";
@@ -58,15 +59,9 @@ export async function avatarGet(
     }
 
     const url = await storage.getVideoSignedUrl(user.avatar_object_path, 3600);
-    return new Response(null, {
-      status: 302,
-      headers: {
-        Location: url,
-        // The URL carries a per-upload version token, so a longer cache is safe:
-        // a new photo produces a new object path (new token) and a fresh URL.
-        "Cache-Control": "private, max-age=600",
-      },
-    });
+    // The URL carries a per-upload version token, so a longer cache is safe:
+    // a new photo produces a new object path (new token) and a fresh URL.
+    return signedObjectResponse(url, request, "private, max-age=600");
   } catch (e: any) {
     console.error("avatar GET error:", e?.message ?? e);
     return new Response("Failed to load photo", { status: 500 });

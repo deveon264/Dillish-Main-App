@@ -196,6 +196,43 @@ export async function getVideoSignedUrl(objectPath: string, ttlSec = 3600): Prom
   return signObjectURL(objectPath, "GET", ttlSec);
 }
 
+// localhost and RFC 1918 ranges — hosts a phone off this network can't reach.
+const PRIVATE_HOST_RE = /^(localhost$|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/;
+
+// Serves a signed GET URL to the client. Public hosts (GCS) get the usual 302
+// redirect, which offloads the bytes and gives native Range support. The local
+// dev sidecar signs LAN-only URLs that remote clients (Expo tunnel mode) can't
+// reach, so those are proxied through this server instead, forwarding Range so
+// iOS <video> still gets 206 slices.
+export async function signedObjectResponse(
+  signedUrl: string,
+  request: Request,
+  cacheControl = "no-store"
+): Promise<Response> {
+  let host = "";
+  try {
+    host = new URL(signedUrl).hostname;
+  } catch {}
+  if (!PRIVATE_HOST_RE.test(host)) {
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: signedUrl,
+        "Cache-Control": cacheControl,
+      },
+    });
+  }
+
+  const range = request.headers.get("range");
+  const upstream = await fetch(signedUrl, range ? { headers: { Range: range } } : undefined);
+  const headers = new Headers({ "Cache-Control": cacheControl });
+  for (const name of ["content-type", "content-length", "content-range", "accept-ranges"]) {
+    const value = upstream.headers.get(name);
+    if (value) headers.set(name, value);
+  }
+  return new Response(upstream.body, { status: upstream.status, headers });
+}
+
 export async function deleteObject(objectPath: string): Promise<void> {
   const delUrl = await signObjectURL(objectPath, "DELETE", 300);
   const res = await fetch(delUrl, { method: "DELETE" });

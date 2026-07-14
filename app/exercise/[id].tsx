@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Platform } from "react-native";
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Platform } from "react-native";
+import { Bouncy as Pressable } from "@/components/Bouncy";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -10,10 +11,13 @@ import { useFullscreenOrientation } from "@/hooks/useFullscreenOrientation";
 import { useInsets } from "@/hooks/useInsets";
 import { videoUrl, posterUrl } from "@/lib/exercises";
 import { findExerciseImage } from "@/constants/workouts";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
 
 export default function ExercisePlayer() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const { id, title, description, cues, category, level, duration, hasPoster, workoutId, workoutExerciseId } =
     useLocalSearchParams<{
       id: string;
@@ -96,7 +100,10 @@ export default function ExercisePlayer() {
           <Pressable style={styles.roundBtn} onPress={() => router.back()} hitSlop={8}>
             <Ionicons name="chevron-back" size={22} color={colors.foreground} />
           </Pressable>
-          <Text style={styles.topLabel}>NOW PLAYING</Text>
+          <View style={styles.topTitleWrap}>
+            <Text style={styles.topLabel}>NOW PLAYING</Text>
+            <Text style={styles.topTitle} numberOfLines={2}>{title || "Exercise"}</Text>
+          </View>
           <View style={{ width: 42 }} />
         </View>
 
@@ -149,7 +156,6 @@ export default function ExercisePlayer() {
 
         <View style={styles.info}>
           {!!category && <Text style={styles.cat}>{String(category).toUpperCase()}</Text>}
-          <Text style={styles.title}>{title || "Exercise"}</Text>
           <View style={styles.metaRow}>
             {!!level && (
               <View style={styles.pill}>
@@ -176,11 +182,12 @@ export default function ExercisePlayer() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   topBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 12,
     paddingHorizontal: 20,
   },
   roundBtn: {
@@ -193,7 +200,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  topLabel: { fontFamily: fonts.sansSemibold, fontSize: 11, color: colors.muted, letterSpacing: 1.5 },
+  topTitleWrap: { flex: 1, minWidth: 0, alignItems: "center", gap: 2 },
+  topLabel: { fontFamily: fonts.sansSemibold, fontSize: 10, color: colors.muted, letterSpacing: 1.5 },
+  topTitle: {
+    fontFamily: fonts.serifSemibold,
+    fontSize: 20,
+    lineHeight: 24,
+    color: colors.foreground,
+    textAlign: "center",
+  },
   videoWrap: {
     marginTop: 16,
     marginHorizontal: 20,
@@ -229,7 +244,6 @@ const styles = StyleSheet.create({
   retryText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.foreground },
   info: { paddingHorizontal: 20, marginTop: 24, gap: 8 },
   cat: { fontFamily: fonts.sansSemibold, fontSize: 12, color: colors.accent, letterSpacing: 0.6 },
-  title: { fontFamily: fonts.serifSemibold, fontSize: 28, color: colors.foreground },
   pill: {
     alignSelf: "flex-start",
     backgroundColor: "rgba(16,17,17,0.1)",

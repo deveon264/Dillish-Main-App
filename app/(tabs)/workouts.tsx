@@ -1,19 +1,25 @@
-import React, { useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, ImageBackground, TextInput, Modal } from "react-native";
+import React, { useMemo, useRef, useState } from "react";
+import { View, Text, StyleSheet, ScrollView, Pressable as StructuralPressable, TextInput, Modal, Animated, Keyboard } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
+import { Bouncy as Pressable } from "@/components/Bouncy";
+import { ImageBackground } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
 import { HelpButton } from "@/components/HelpButton";
 import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
 import { useInsets } from "@/hooks/useInsets";
 import { useData } from "@/contexts/DataContext";
 import { useDataRefresh } from "@/hooks/useDataRefresh";
 import { WORKOUTS, CATEGORIES, Workout } from "@/constants/workouts";
 import { rankForLibrary } from "@/lib/recommendation";
 import { DEFAULT_REST_GAP, workoutDurationMinutes } from "@/lib/workoutDuration";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
+import { haptics } from "@/lib/haptics";
 
 type DurationOption = { key: string; label: string; test: (min: number) => boolean };
 
@@ -28,6 +34,8 @@ const LEVEL_OPTIONS: Workout["level"][] = ["Beginner", "Intermediate", "Advanced
 const displayDuration = (workout: Workout) => workoutDurationMinutes(workout.exercises, DEFAULT_REST_GAP);
 
 export default function Workouts() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const insets = useInsets();
   const { favorites, toggleFavorite, isFavorite, profile } = useData();
@@ -39,6 +47,52 @@ export default function Workouts() {
   const [savedOnly, setSavedOnly] = useState(false);
   const [forYou, setForYou] = useState(false);
   const [picker, setPicker] = useState<"duration" | "level" | null>(null);
+
+  // Floating back-to-top button: fades in once the list is scrolled past the
+  // first cards and jumps the ScrollView back to the header/filters.
+  const [showTopBtn, setShowTopBtn] = useState(false);
+  const topBtnAnim = useRef(new Animated.Value(0)).current;
+  const setTopBtnVisible = (visible: boolean) => {
+    setShowTopBtn((prev) => {
+      if (prev === visible) return prev;
+      Animated.timing(topBtnAnim, {
+        toValue: visible ? 1 : 0,
+        duration: 180,
+        useNativeDriver: true,
+      }).start();
+      return visible;
+    });
+  };
+  const scrollToTop = () => {
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
+  const selectCategory = (next: string) => {
+    if (next === category) return;
+    haptics.selection();
+    setCategory(next);
+  };
+
+  const toggleForYou = () => {
+    haptics.selection();
+    setForYou((value) => !value);
+  };
+
+  const toggleSavedOnly = () => {
+    haptics.selection();
+    setSavedOnly((value) => !value);
+  };
+
+  const clearFilters = () => {
+    setCategory("All");
+    setQuery("");
+    setDuration(null);
+    setLevel(null);
+    setSavedOnly(false);
+    setForYou(false);
+    setPicker(null);
+    Keyboard.dismiss();
+  };
 
   const durationLabel = DURATION_OPTIONS.find((o) => o.key === duration)?.label ?? "Duration";
 
@@ -59,11 +113,16 @@ export default function Workouts() {
 
   return (
     <GradientBackground>
-      <ScrollView
+      <KeyboardAwareScrollView
         ref={scrollRef}
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 110 }]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        bottomOffset={72}
         refreshControl={refreshControl}
+        onScroll={(e) => setTopBtnVisible(e.nativeEvent.contentOffset.y > 600)}
+        scrollEventThrottle={32}
       >
         <PageHeader
           eyebrow="EXPLORE"
@@ -90,6 +149,8 @@ export default function Workouts() {
             style={styles.searchInput}
             value={query}
             onChangeText={setQuery}
+            returnKeyType="search"
+            onSubmitEditing={Keyboard.dismiss}
           />
         </View>
 
@@ -101,7 +162,7 @@ export default function Workouts() {
           {CATEGORIES.map((c) => {
             const on = category === c;
             return (
-              <Pressable key={c} style={[styles.cat, on && styles.catOn]} onPress={() => setCategory(c)}>
+              <Pressable key={c} style={[styles.cat, on && styles.catOn]} onPress={() => selectCategory(c)}>
                 <Text style={[styles.catText, on && styles.catTextOn]}>{c}</Text>
               </Pressable>
             );
@@ -115,7 +176,7 @@ export default function Workouts() {
         >
           <Pressable
             style={[styles.filterChip, forYou && styles.filterChipActive]}
-            onPress={() => setForYou((s) => !s)}
+            onPress={toggleForYou}
           >
             <Ionicons name={forYou ? "sparkles" : "sparkles-outline"} size={15} color={forYou ? colors.accent : colors.muted} />
             <Text style={[styles.filterText, forYou && styles.filterTextActive]}>For You</Text>
@@ -138,7 +199,7 @@ export default function Workouts() {
           </Pressable>
           <Pressable
             style={[styles.filterChip, savedOnly && styles.filterChipActive]}
-            onPress={() => setSavedOnly((s) => !s)}
+            onPress={toggleSavedOnly}
           >
             <Ionicons name={savedOnly ? "heart" : "heart-outline"} size={15} color={savedOnly ? colors.accent : colors.muted} />
             <Text style={[styles.filterText, savedOnly && styles.filterTextActive]}>Saved</Text>
@@ -146,19 +207,27 @@ export default function Workouts() {
         </ScrollView>
 
         {filtered.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="leaf-outline" size={40} color={colors.blush} />
-            <Text style={styles.emptyText}>
-              {savedOnly ? "No saved workouts yet. Tap the heart on a workout" : "No workouts match your search"}
-            </Text>
-          </View>
+          <EmptyState
+            icon="leaf-outline"
+            title={savedOnly ? "No saved workouts yet" : "No workouts found"}
+            description={savedOnly ? "Clear the filters to browse the full workout library." : "Try the full library, then narrow it down again."}
+            actionLabel="Show all workouts"
+            onAction={clearFilters}
+          />
         ) : (
           <View style={styles.list}>
             {filtered.map((w) => {
               const fav = isFavorite(w.id);
               return (
-              <Pressable key={w.id} testID={`workout-card-${w.id}`} style={styles.card} onPress={() => router.push(`/workout/${w.id}`)}>
-                <ImageBackground source={w.image} style={styles.cardImg} imageStyle={styles.cardImgRadius}>
+              <Pressable pressedScale={0.985} key={w.id} testID={`workout-card-${w.id}`} style={styles.card} onPress={() => router.push(`/workout/${w.id}`)}>
+                <ImageBackground
+                  source={w.image}
+                  style={styles.cardImg}
+                  imageStyle={styles.cardImgRadius}
+                  contentFit="cover"
+                  transition={150}
+                  cachePolicy="memory-disk"
+                >
                   <LinearGradient
                     colors={["rgba(51,28,38,0.25)", "rgba(51,28,38,0)", "rgba(51,28,38,0)", "rgba(51,28,38,0.82)"]}
                     locations={[0, 0.3, 0.4, 1]}
@@ -169,6 +238,7 @@ export default function Workouts() {
                     hitSlop={8}
                     onPress={(e) => {
                       e.stopPropagation();
+                      haptics.selection();
                       toggleFavorite(w.id);
                     }}
                   >
@@ -208,11 +278,26 @@ export default function Workouts() {
             })}
           </View>
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
+
+      <Animated.View
+        style={[styles.topBtnWrap, { bottom: insets.bottom + 92, opacity: topBtnAnim }]}
+        pointerEvents={showTopBtn ? "auto" : "none"}
+      >
+        <Pressable
+          style={styles.topBtn}
+          onPress={scrollToTop}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Back to top"
+        >
+          <Ionicons name="chevron-up" size={20} color={colors.accent} />
+        </Pressable>
+      </Animated.View>
 
       <Modal visible={picker !== null} transparent animationType="fade" onRequestClose={() => setPicker(null)}>
-        <Pressable style={styles.modalBackdrop} onPress={() => setPicker(null)}>
-          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+        <StructuralPressable style={styles.modalBackdrop} onPress={() => setPicker(null)}>
+          <StructuralPressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
             <View style={styles.sheetHandle} />
             <Text style={styles.sheetTitle}>{picker === "duration" ? "Duration" : "Level"}</Text>
             {picker === "duration" &&
@@ -223,6 +308,7 @@ export default function Workouts() {
                     key={o.key}
                     style={[styles.sheetRow, on && styles.sheetRowActive]}
                     onPress={() => {
+                      haptics.selection();
                       setDuration(on ? null : o.key);
                       setPicker(null);
                     }}
@@ -240,6 +326,7 @@ export default function Workouts() {
                     key={lvl}
                     style={[styles.sheetRow, on && styles.sheetRowActive]}
                     onPress={() => {
+                      haptics.selection();
                       setLevel(on ? null : lvl);
                       setPicker(null);
                     }}
@@ -249,14 +336,30 @@ export default function Workouts() {
                   </Pressable>
                 );
               })}
-          </Pressable>
-        </Pressable>
+          </StructuralPressable>
+        </StructuralPressable>
       </Modal>
     </GradientBackground>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
+  topBtnWrap: { position: "absolute", right: 20 },
+  topBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: colors.foreground,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 4,
+  },
   scroll: { paddingHorizontal: 20 },
   search: {
     flexDirection: "row",

@@ -5,21 +5,27 @@ import { Ionicons } from "@expo/vector-icons";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Button } from "@/components/Button";
 import { StepHeader } from "@/components/StepHeader";
-import { useData } from "@/contexts/DataContext";
+import { Reveal, Bouncy, OnboardDecor } from "@/components/onboarding/OnboardKit";
+import { useOnboardingAnswers } from "@/hooks/useOnboardingAnswers";
 import { useInsets } from "@/hooks/useInsets";
 import { useOnboardingMode } from "@/hooks/useOnboardingMode";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
 import { GOALS } from "@/constants/goals";
+import { haptics } from "@/lib/haptics";
 
 export default function GoalStep() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const insets = useInsets();
   const { personalize, total, withMode } = useOnboardingMode();
-  const { profile, updateProfile, ready } = useData();
+  const { answers: profile, save: updateProfile, ready } = useOnboardingAnswers();
   const [selected, setSelected] = useState<string[]>(profile.goals);
 
   const toggle = (id: string) => {
+    haptics.selection();
     setSelected((prev) => (prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]));
   };
 
@@ -28,25 +34,29 @@ export default function GoalStep() {
     // never preselects something that is no longer chosen.
     const patch: Parameters<typeof updateProfile>[0] = { goals: selected };
     if (profile.primaryGoal && !selected.includes(profile.primaryGoal)) patch.primaryGoal = null;
+    haptics.selection();
     await updateProfile(patch);
     router.push(withMode("/onboarding/main-focus") as any);
   };
 
   return (
     <GradientBackground>
+      <OnboardDecor />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
       >
         <StepHeader step={1} total={total} canBack={personalize} />
-        <Text style={styles.title}>What brings you here?</Text>
-        <Text style={styles.subtitle}>Choose all that resonate. We'll shape your experience around them.</Text>
+        <Reveal index={0}>
+          <Text style={styles.title}>What brings you here?</Text>
+          <Text style={styles.subtitle}>Choose all that resonate. We'll shape your experience around them.</Text>
+        </Reveal>
 
         <View style={styles.list}>
-          {GOALS.map((g) => {
+          {GOALS.map((g, i) => {
             const on = selected.includes(g.id);
             return (
-              <Pressable key={g.id} style={[styles.item, on && styles.itemOn]} onPress={() => toggle(g.id)}>
+              <Bouncy key={g.id} style={[styles.item, on && styles.itemOn]} onPress={() => toggle(g.id)}>
                 <View style={[styles.itemIcon, on && styles.itemIconOn]}>
                   <Ionicons name={g.icon} size={22} color={on ? colors.onPrimary : colors.accent} />
                 </View>
@@ -57,7 +67,7 @@ export default function GoalStep() {
                 <View style={[styles.check, on && styles.checkOn]}>
                   {on ? <Ionicons name="checkmark" size={15} color={colors.onPrimary} /> : null}
                 </View>
-              </Pressable>
+              </Bouncy>
             );
           })}
         </View>
@@ -69,7 +79,7 @@ export default function GoalStep() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   scroll: { paddingHorizontal: 24 },
   title: { fontFamily: fonts.serif, fontSize: 36, color: colors.foreground, lineHeight: 40 },
   subtitle: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted, marginTop: 10, marginBottom: 24, lineHeight: 22 },

@@ -1,9 +1,231 @@
 {
   "apiRoutes": [
     {
+      "file": "_expo/functions/api/me+api.js",
+      "page": "/api/me",
+      "namedRegex": "^/api/me(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/login+api.js",
+      "page": "/api/login",
+      "namedRegex": "^/api/login(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/avatar+api.js",
+      "page": "/api/avatar",
+      "namedRegex": "^/api/avatar(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/signup+api.js",
+      "page": "/api/signup",
+      "namedRegex": "^/api/signup(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/streak+api.js",
+      "page": "/api/streak",
+      "namedRegex": "^/api/streak(?:/)?$",
+      "routeKeys": {}
+    },
+    {
       "file": "_expo/functions/api/analyze+api.js",
       "page": "/api/analyze",
       "namedRegex": "^/api/analyze(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/profile+api.js",
+      "page": "/api/profile",
+      "namedRegex": "^/api/profile(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/exercises+api.js",
+      "page": "/api/exercises",
+      "namedRegex": "^/api/exercises(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/food-photo+api.js",
+      "page": "/api/food-photo",
+      "namedRegex": "^/api/food\\-photo(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/meal-photo+api.js",
+      "page": "/api/meal-photo",
+      "namedRegex": "^/api/meal\\-photo(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/transcribe+api.js",
+      "page": "/api/transcribe",
+      "namedRegex": "^/api/transcribe(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/food-barcode+api.js",
+      "page": "/api/food-barcode",
+      "namedRegex": "^/api/food\\-barcode(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/subscription+api.js",
+      "page": "/api/subscription",
+      "namedRegex": "^/api/subscription(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/community-pin+api.js",
+      "page": "/api/community-pin",
+      "namedRegex": "^/api/community\\-pin(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/push-register+api.js",
+      "page": "/api/push-register",
+      "namedRegex": "^/api/push\\-register(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/community-like+api.js",
+      "page": "/api/community-like",
+      "namedRegex": "^/api/community\\-like(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/exercise-video+api.js",
+      "page": "/api/exercise-video",
+      "namedRegex": "^/api/exercise\\-video(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/community-block+api.js",
+      "page": "/api/community-block",
+      "namedRegex": "^/api/community\\-block(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/community-photo+api.js",
+      "page": "/api/community-photo",
+      "namedRegex": "^/api/community\\-photo(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/community-posts+api.js",
+      "page": "/api/community-posts",
+      "namedRegex": "^/api/community\\-posts(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/exercise-poster+api.js",
+      "page": "/api/exercise-poster",
+      "namedRegex": "^/api/exercise\\-poster(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/thank-you-video+api.js",
+      "page": "/api/thank-you-video",
+      "namedRegex": "^/api/thank\\-you\\-video(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/community-report+api.js",
+      "page": "/api/community-report",
+      "namedRegex": "^/api/community\\-report(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/exercise-cleanup+api.js",
+      "page": "/api/exercise-cleanup",
+      "namedRegex": "^/api/exercise\\-cleanup(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/community-blocked+api.js",
+      "page": "/api/community-blocked",
+      "namedRegex": "^/api/community\\-blocked(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/community-notices+api.js",
+      "page": "/api/community-notices",
+      "namedRegex": "^/api/community\\-notices(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/community-reports+api.js",
+      "page": "/api/community-reports",
+      "namedRegex": "^/api/community\\-reports(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/community-comments+api.js",
+      "page": "/api/community-comments",
+      "namedRegex": "^/api/community\\-comments(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/meal-photo-cleanup+api.js",
+      "page": "/api/meal-photo-cleanup",
+      "namedRegex": "^/api/meal\\-photo\\-cleanup(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/notification-cleanup+api.js",
+      "page": "/api/notification-cleanup",
+      "namedRegex": "^/api/notification\\-cleanup(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/community-author-warn+api.js",
+      "page": "/api/community-author-warn",
+      "namedRegex": "^/api/community\\-author\\-warn(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/community-active-today+api.js",
+      "page": "/api/community-active-today",
+      "namedRegex": "^/api/community\\-active\\-today(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/community-author-block+api.js",
+      "page": "/api/community-author-block",
+      "namedRegex": "^/api/community\\-author\\-block(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/password-reset-request+api.js",
+      "page": "/api/password-reset-request",
+      "namedRegex": "^/api/password\\-reset\\-request(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/profile-avatar-cleanup+api.js",
+      "page": "/api/profile-avatar-cleanup",
+      "namedRegex": "^/api/profile\\-avatar\\-cleanup(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/community-notifications+api.js",
+      "page": "/api/community-notifications",
+      "namedRegex": "^/api/community\\-notifications(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/community-photo-cleanup+api.js",
+      "page": "/api/community-photo-cleanup",
+      "namedRegex": "^/api/community\\-photo\\-cleanup(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "_expo/functions/api/password-reset-complete+api.js",
+      "page": "/api/password-reset-complete",
+      "namedRegex": "^/api/password\\-reset\\-complete(?:/)?$",
       "routeKeys": {}
     }
   ],
@@ -33,6 +255,12 @@
       "routeKeys": {}
     },
     {
+      "file": "./(auth)/forgot-password.tsx",
+      "page": "/(auth)/forgot-password",
+      "namedRegex": "^(?:/\\(auth\\))?/forgot\\-password(?:/)?$",
+      "routeKeys": {}
+    },
+    {
       "file": "./onboarding/goal.tsx",
       "page": "/onboarding/goal",
       "namedRegex": "^/onboarding/goal(?:/)?$",
@@ -45,15 +273,27 @@
       "routeKeys": {}
     },
     {
-      "file": "./(tabs)/water.tsx",
-      "page": "/(tabs)/water",
-      "namedRegex": "^(?:/\\(tabs\\))?/water(?:/)?$",
-      "routeKeys": {}
-    },
-    {
       "file": "./onboarding/profile.tsx",
       "page": "/onboarding/profile",
       "namedRegex": "^/onboarding/profile(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./onboarding/paywall.tsx",
+      "page": "/onboarding/paywall",
+      "namedRegex": "^/onboarding/paywall(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./onboarding/calorie.tsx",
+      "page": "/onboarding/calorie",
+      "namedRegex": "^/onboarding/calorie(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./(tabs)/tracker.tsx",
+      "page": "/(tabs)/tracker",
+      "namedRegex": "^(?:/\\(tabs\\))?/tracker(?:/)?$",
       "routeKeys": {}
     },
     {
@@ -69,21 +309,21 @@
       "routeKeys": {}
     },
     {
+      "file": "./recipes.tsx",
+      "page": "/recipes",
+      "namedRegex": "^/recipes(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./onboarding/schedule.tsx",
+      "page": "/onboarding/schedule",
+      "namedRegex": "^/onboarding/schedule(?:/)?$",
+      "routeKeys": {}
+    },
+    {
       "file": "./(tabs)/workouts.tsx",
       "page": "/(tabs)/workouts",
       "namedRegex": "^(?:/\\(tabs\\))?/workouts(?:/)?$",
-      "routeKeys": {}
-    },
-    {
-      "file": "./(tabs)/progress.tsx",
-      "page": "/(tabs)/progress",
-      "namedRegex": "^(?:/\\(tabs\\))?/progress(?:/)?$",
-      "routeKeys": {}
-    },
-    {
-      "file": "./(tabs)/calories.tsx",
-      "page": "/(tabs)/calories",
-      "namedRegex": "^(?:/\\(tabs\\))?/calories(?:/)?$",
       "routeKeys": {}
     },
     {
@@ -94,9 +334,135 @@
       "generated": true
     },
     {
+      "file": "./onboarding/thank-you.tsx",
+      "page": "/onboarding/thank-you",
+      "namedRegex": "^/onboarding/thank\\-you(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./onboarding/equipment.tsx",
+      "page": "/onboarding/equipment",
+      "namedRegex": "^/onboarding/equipment(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./(tabs)/community.tsx",
+      "page": "/(tabs)/community",
+      "namedRegex": "^(?:/\\(tabs\\))?/community(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./exercises.tsx",
+      "page": "/exercises",
+      "namedRegex": "^/exercises(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./onboarding/plan-ready.tsx",
+      "page": "/onboarding/plan-ready",
+      "namedRegex": "^/onboarding/plan\\-ready(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./onboarding/main-focus.tsx",
+      "page": "/onboarding/main-focus",
+      "namedRegex": "^/onboarding/main\\-focus(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./onboarding/body-focus.tsx",
+      "page": "/onboarding/body-focus",
+      "namedRegex": "^/onboarding/body\\-focus(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./onboarding/limitations.tsx",
+      "page": "/onboarding/limitations",
+      "namedRegex": "^/onboarding/limitations(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./onboarding/fitness-level.tsx",
+      "page": "/onboarding/fitness-level",
+      "namedRegex": "^/onboarding/fitness\\-level(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./admin/reports.tsx",
+      "page": "/admin/reports",
+      "namedRegex": "^/admin/reports(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./community/compose.tsx",
+      "page": "/community/compose",
+      "namedRegex": "^/community/compose(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./admin/edit-poster.tsx",
+      "page": "/admin/edit-poster",
+      "namedRegex": "^/admin/edit\\-poster(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./admin/edit-exercise.tsx",
+      "page": "/admin/edit-exercise",
+      "namedRegex": "^/admin/edit\\-exercise(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./admin/upload-exercise.tsx",
+      "page": "/admin/upload-exercise",
+      "namedRegex": "^/admin/upload\\-exercise(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./admin/blocked-members.tsx",
+      "page": "/admin/blocked-members",
+      "namedRegex": "^/admin/blocked\\-members(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./admin/upload-thank-you.tsx",
+      "page": "/admin/upload-thank-you",
+      "namedRegex": "^/admin/upload\\-thank\\-you(?:/)?$",
+      "routeKeys": {}
+    },
+    {
+      "file": "./community/notifications.tsx",
+      "page": "/community/notifications",
+      "namedRegex": "^/community/notifications(?:/)?$",
+      "routeKeys": {}
+    },
+    {
       "file": "./workout/[id].tsx",
       "page": "/workout/[id]",
       "namedRegex": "^/workout/(?<id>[^/]+?)(?:/)?$",
+      "routeKeys": {
+        "id": "id"
+      }
+    },
+    {
+      "file": "./recipe/[id].tsx",
+      "page": "/recipe/[id]",
+      "namedRegex": "^/recipe/(?<id>[^/]+?)(?:/)?$",
+      "routeKeys": {
+        "id": "id"
+      }
+    },
+    {
+      "file": "./exercise/[id].tsx",
+      "page": "/exercise/[id]",
+      "namedRegex": "^/exercise/(?<id>[^/]+?)(?:/)?$",
+      "routeKeys": {
+        "id": "id"
+      }
+    },
+    {
+      "file": "./community/[id].tsx",
+      "page": "/community/[id]",
+      "namedRegex": "^/community/(?<id>[^/]+?)(?:/)?$",
       "routeKeys": {
         "id": "id"
       }

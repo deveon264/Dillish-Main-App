@@ -1,4 +1,6 @@
 import { Platform } from "react-native";
+import Constants from "expo-constants";
+import { resolveNativeApiOrigin } from "@/lib/apiOrigin";
 
 export function getApiUrl(): string {
   if (Platform.OS === "web") {
@@ -7,9 +9,9 @@ export function getApiUrl(): string {
     }
     return "";
   }
-  const domain = process.env.EXPO_PUBLIC_DOMAIN;
-  if (domain) {
-    return domain.startsWith("http") ? domain : `https://${domain}`;
-  }
-  return "";
+  return resolveNativeApiOrigin({
+    isDevelopment: typeof __DEV__ !== "undefined" && __DEV__,
+    expoHostUri: Constants.expoConfig?.hostUri,
+    configuredDomain: process.env.EXPO_PUBLIC_DOMAIN,
+  });
 }

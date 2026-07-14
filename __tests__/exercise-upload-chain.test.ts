@@ -136,6 +136,71 @@ test(
 );
 
 test(
+  "a move-keyed upload resolves for its own workout, other workouts via moveIds, and stays out of the library",
+  { skip },
+  async () => {
+    const token = await adminToken();
+    const fixture = makeFixture();
+    let exerciseId: string | null = null;
+
+    try {
+      const params = new URLSearchParams({
+        title: "Move Reuse Test",
+        category: "Strength",
+        level: "Beginner",
+        duration: "0:30",
+        workoutId: "full-body-sculpt",
+        exerciseId: "sc1",
+        moveId: "bodyweightSquat",
+      });
+      const uploadRes = await uploadExercise(
+        uploadReq(`http://t/api/exercises?${params}`, fixture, token)
+      );
+      assert.equal(uploadRes.status, 200);
+      const uploaded = await uploadRes.json();
+      exerciseId = uploaded.item.id;
+      assert.equal(uploaded.item.moveId, "bodyweightSquat", "POST should echo the moveId");
+
+      // Visible when fetching its own workout's clips.
+      const ownRes = await listExercises(
+        new Request("http://t/api/exercises?workoutId=full-body-sculpt", { method: "GET" })
+      );
+      const own = await ownRes.json();
+      assert.ok(
+        (own.items as any[]).some((it) => it.id === exerciseId),
+        "clip should be returned for its own workout"
+      );
+
+      // Visible from a DIFFERENT workout that shares the move, via moveIds.
+      const reuseRes = await listExercises(
+        new Request(
+          "http://t/api/exercises?workoutId=beginner-fat-burn&moveIds=marchInPlace,bodyweightSquat",
+          { method: "GET" }
+        )
+      );
+      const reuse = await reuseRes.json();
+      const reused = (reuse.items as any[]).find((it) => it.id === exerciseId);
+      assert.ok(reused, "clip should be returned for another workout sharing the move");
+      assert.equal(reused.moveId, "bodyweightSquat", "GET should carry the moveId through");
+
+      // The generic library (no params) must not show workout-tied uploads.
+      const libRes = await listExercises(new Request("http://t/api/exercises", { method: "GET" }));
+      const lib = await libRes.json();
+      assert.ok(
+        !(lib.items as any[]).some((it) => it.id === exerciseId),
+        "workout-tied clip must stay out of the generic library"
+      );
+    } finally {
+      if (exerciseId) {
+        await deleteExercise(
+          authedReq(`http://t/api/exercises?id=${exerciseId}`, "DELETE", token)
+        ).catch(() => {});
+      }
+    }
+  }
+);
+
+test(
   "an oversized upload is rejected and leaves no DB row",
   { skip },
   async () => {

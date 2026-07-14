@@ -68,6 +68,18 @@ export function ensureSchema(): Promise<void> {
              ADD COLUMN IF NOT EXISTS workout_exercise_id TEXT`
         )
       )
+      // Canonical move id (constants/workouts.ts Exercise.moveId) so one
+      // uploaded clip plays in every workout that uses the same move. Null on
+      // legacy rows until scripts/backfill-move-ids.mts runs; those still
+      // resolve through the exact (workout_id, workout_exercise_id) match.
+      .then(() =>
+        pool.query(`ALTER TABLE exercises ADD COLUMN IF NOT EXISTS move_id TEXT`)
+      )
+      .then(() =>
+        pool.query(
+          `CREATE INDEX IF NOT EXISTS idx_exercises_move_id ON exercises (move_id)`
+        )
+      )
       // Small key/value table for server settings the coach can change in-app,
       // such as a rotated admin passcode that overrides the ADMIN_PASSCODE env.
       .then(() =>
@@ -149,6 +161,15 @@ export function ensureSchema(): Promise<void> {
             photo_object_path TEXT,
             created_at BIGINT NOT NULL
           )`
+        )
+      )
+      // Admin-pinned posts (typically one from the trainer). Added after the
+      // initial release; a pinned post is lifted out of the normal feed and
+      // shown at the top with a distinct treatment. Backfill so existing
+      // environments pick it up without a manual migration.
+      .then(() =>
+        pool.query(
+          `ALTER TABLE community_posts ADD COLUMN IF NOT EXISTS pinned BOOLEAN NOT NULL DEFAULT FALSE`
         )
       )
       .then(() =>

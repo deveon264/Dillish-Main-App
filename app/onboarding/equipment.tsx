@@ -5,12 +5,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Button } from "@/components/Button";
 import { StepHeader } from "@/components/StepHeader";
-import { useData } from "@/contexts/DataContext";
+import { Reveal, Bouncy, OnboardDecor } from "@/components/onboarding/OnboardKit";
+import { useOnboardingAnswers } from "@/hooks/useOnboardingAnswers";
 import { useInsets } from "@/hooks/useInsets";
 import { useOnboardingMode } from "@/hooks/useOnboardingMode";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
 import type { EquipmentId } from "@/lib/profile";
+import { haptics } from "@/lib/haptics";
 
 const OPTIONS: { id: EquipmentId; label: string; desc: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { id: "none", label: "No equipment", desc: "Just me and my bodyweight", icon: "body-outline" },
@@ -24,13 +27,16 @@ const OPTIONS: { id: EquipmentId; label: string; desc: string; icon: keyof typeo
 // Multi-select. "No equipment" is a real answer (stored as ["none"]) and is
 // mutually exclusive with the gear options.
 export default function EquipmentStep() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const insets = useInsets();
   const { total, withMode } = useOnboardingMode();
-  const { profile, updateProfile, ready } = useData();
+  const { answers: profile, save: updateProfile, ready } = useOnboardingAnswers();
   const [selected, setSelected] = useState<EquipmentId[]>(profile.equipment);
 
   const toggle = (id: EquipmentId) => {
+    haptics.selection();
     setSelected((prev) => {
       if (prev.includes(id)) return prev.filter((e) => e !== id);
       if (id === "none") return ["none"];
@@ -39,25 +45,29 @@ export default function EquipmentStep() {
   };
 
   const next = async () => {
+    haptics.selection();
     await updateProfile({ equipment: selected });
     router.push(withMode("/onboarding/schedule") as any);
   };
 
   return (
     <GradientBackground>
+      <OnboardDecor />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
       >
         <StepHeader step={4} total={total} />
+        <Reveal index={0}>
         <Text style={styles.title}>What equipment do you have?</Text>
         <Text style={styles.subtitle}>Select everything available to you. We'll only suggest workouts you can actually do.</Text>
+        </Reveal>
 
         <View style={styles.list}>
-          {OPTIONS.map((o) => {
+          {OPTIONS.map((o, i) => {
             const on = selected.includes(o.id);
             return (
-              <Pressable key={o.id} style={[styles.item, on && styles.itemOn]} onPress={() => toggle(o.id)}>
+              <Bouncy key={o.id} style={[styles.item, on && styles.itemOn]} onPress={() => toggle(o.id)}>
                 <View style={[styles.itemIcon, on && styles.itemIconOn]}>
                   <Ionicons name={o.icon} size={22} color={on ? colors.onPrimary : colors.accent} />
                 </View>
@@ -68,7 +78,7 @@ export default function EquipmentStep() {
                 <View style={[styles.check, on && styles.checkOn]}>
                   {on ? <Ionicons name="checkmark" size={15} color={colors.onPrimary} /> : null}
                 </View>
-              </Pressable>
+              </Bouncy>
             );
           })}
         </View>
@@ -80,7 +90,7 @@ export default function EquipmentStep() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   scroll: { paddingHorizontal: 24 },
   title: { fontFamily: fonts.serif, fontSize: 36, color: colors.foreground, lineHeight: 40 },
   subtitle: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted, marginTop: 10, marginBottom: 24, lineHeight: 22 },

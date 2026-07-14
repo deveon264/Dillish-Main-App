@@ -1,14 +1,22 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, ImageBackground, Image, Modal, useWindowDimensions } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable as StructuralPressable, Image, Modal, useWindowDimensions } from "react-native";
+import { Image as ExpoImage, ImageBackground } from "expo-image";
+import { Asset } from "expo-asset";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
+import Svg, { Path, Circle, Defs, RadialGradient, Stop } from "react-native-svg";
 import { useRouter } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Card } from "@/components/Card";
 import { ProgressRing } from "@/components/ProgressRing";
 import { ProgressBar } from "@/components/ProgressBar";
 import { SectionLabel } from "@/components/PageHeader";
+import { Logo } from "@/components/Logo";
+import { Button } from "@/components/Button";
+import { EmptyState } from "@/components/EmptyState";
+import { Bouncy as Pressable } from "@/components/Bouncy";
+import { AnimatedNumber } from "@/components/AnimatedNumber";
+import { MotionListItem } from "@/components/Motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
 import { useDataRefresh } from "@/hooks/useDataRefresh";
@@ -19,9 +27,12 @@ import { getTodayWorkout } from "@/lib/recommendation";
 import { hasFitnessProfile } from "@/lib/profile";
 import { DEFAULT_REST_GAP, workoutDurationMinutes } from "@/lib/workoutDuration";
 import { todayKey } from "@/lib/storage";
+import { buildWeekHistory, type WeekHistoryRow } from "@/lib/streakHistory";
 import { avatarUri } from "@/lib/avatar";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
+import { haptics, waterAddFeedback } from "@/lib/haptics";
 
 function greeting() {
   const h = new Date().getHours();
@@ -73,50 +84,74 @@ function dailyQuote(): string {
   return quote || "Progress matters more than perfection. Keep going.";
 }
 
-const WEEK_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
-
 const QUICK_ACCESS = [
-  { icon: "stats-chart-outline" as const, title: "My Progress", sub: "Photos & stats", route: "/(tabs)/tracker?mode=progress" as const, tint: colors.track, color: colors.foreground },
+  { icon: "stats-chart-outline" as const, title: "My Progress", sub: "Photos & stats", route: "/(tabs)/tracker?mode=progress" as const },
 ];
 
 const WATER_QUICK = [250, 500, 750];
 
-// Gentle continuous "breathing" pulse for the streak flame icon.
-function PulsingFlame() {
-  const pulse = useSharedValue(0);
+const SPARKLE_PATH = "M12 2l2.2 7.8L22 12l-7.8 2.2L12 22l-2.2-7.8L2 12l7.8-2.2z";
 
-  useEffect(() => {
-    pulse.value = withRepeat(
-      withTiming(1, { duration: 900, easing: Easing.inOut(Easing.quad) }),
-      -1,
-      true
-    );
-  }, [pulse]);
-
-  const style = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 + pulse.value * 0.12 }],
-    opacity: 0.85 + pulse.value * 0.15,
-  }));
-
+// Decorative 4-point star scattered over the streak card. `glow` underlays a soft
+// radial halo (react-native-svg has no drop-shadow filter).
+function Sparkle({ size, fill, glow, style }: { size: number; fill: string; glow?: boolean; style: object }) {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   return (
-    <Animated.View style={style}>
-      <Ionicons name="flame" size={24} color={colors.primary} />
-    </Animated.View>
+    <Svg width={size} height={size} viewBox="0 0 24 24" style={[{ position: "absolute" }, style]}>
+      {glow && (
+        <>
+          <Defs>
+            <RadialGradient id="sparkleGlow" cx="12" cy="12" r="12" gradientUnits="userSpaceOnUse">
+              <Stop offset="0" stopColor="#F08CAD" stopOpacity="0.6" />
+              <Stop offset="1" stopColor="#F08CAD" stopOpacity="0" />
+            </RadialGradient>
+          </Defs>
+          <Circle cx={12} cy={12} r={12} fill="url(#sparkleGlow)" />
+        </>
+      )}
+      <Path d={SPARKLE_PATH} fill={fill} />
+    </Svg>
   );
 }
 
 export default function Dashboard() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const insets = useInsets();
   const { user } = useAuth();
-  const { profile, waterLogs, calorieLogs, completions, addWater, favorites, toggleFavorite, notifications, unreadCount, markNotificationsRead, streak, streakDays } = useData();
+  const { profile, waterLogs, calorieLogs, completions, addWater, favorites, toggleFavorite, notifications, unreadCount, markNotificationsRead, streak, streakBest, streakDays, updateProfile, welcomePending, dismissWelcome } = useData();
   const { refreshControl, scrollRef } = useDataRefresh();
   const [notifOpen, setNotifOpen] = useState(false);
+  const [streakHistoryOpen, setStreakHistoryOpen] = useState(false);
+
+  const openStreakHistory = () => {
+    setStreakHistoryOpen(true);
+  };
 
   const openNotifs = () => {
     setNotifOpen(true);
     if (unreadCount > 0) markNotificationsRead();
   };
+
+  // Warm every workout card image into expo-image's disk cache once at launch,
+  // so the hero, saved cards and the library render instantly afterwards. In
+  // dev the assets cross the network only this once (they are bundled into
+  // production builds anyway).
+  useEffect(() => {
+    const uris = WORKOUTS.map((w) => w.image)
+      .filter((m): m is number => typeof m === "number")
+      .map((m) => {
+        try {
+          return Asset.fromModule(m).uri;
+        } catch {
+          return null;
+        }
+      })
+      .filter((u): u is string => !!u);
+    if (uris.length) void ExpoImage.prefetch(uris, "memory-disk");
+  }, []);
 
   const tk = todayKey();
   const firstName = (user?.name ?? "there").split(" ")[0];
@@ -151,29 +186,29 @@ export default function Dashboard() {
 
   const waterGoalMl = profile.waterGoalMl > 0 ? profile.waterGoalMl : 2500;
   const waterPct = Math.min(1, todayWaterMl / waterGoalMl);
+  const waterTotalRef = useRef(todayWaterMl);
+  useEffect(() => {
+    waterTotalRef.current = todayWaterMl;
+  }, [todayWaterMl]);
 
-  const weekMarks = useMemo(() => {
-    const now = new Date();
-    const monday = new Date(now);
-    const offset = (now.getDay() + 6) % 7;
-    monday.setDate(now.getDate() - offset);
-    return WEEK_LABELS.map((label, i) => {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      return {
-        label,
-        active: streakDays.has(todayKey(d)),
-        isToday: todayKey(d) === tk,
-      };
-    });
-  }, [streakDays, tk]);
+  const logQuickWater = (amountMl: number) => {
+    const currentMl = waterTotalRef.current;
+    waterTotalRef.current = currentMl + amountMl;
+    void addWater(amountMl);
+    haptics[waterAddFeedback(currentMl, amountMl, waterGoalMl)]();
+  };
 
-  const activeThisWeek = weekMarks.filter((d) => d.active).length;
+  // This week plus the last 4 (Mon-start, newest first); week 0 feeds the
+  // card's tracker, the full list feeds the streak history sheet. `tk` is a
+  // dependency so the memo rolls over at midnight.
+  const weekHistory = useMemo(() => buildWeekHistory(streakDays, 5), [streakDays, tk]);
+  const weekMarks = weekHistory[0].days;
+  const activeThisWeek = weekHistory[0].activeCount;
   const todayWorkoutLogged = completions.some((c) => todayKey(new Date(c.ts)) === tk);
   const nudgeEmoji = profile.gender === "female" ? "💗" : "🌸";
   const streakNudge = todayWorkoutLogged
-    ? "Beautiful work, today's session is logged"
-    : `${nudgeEmoji} You got this, work out today to keep it going`;
+    ? "You showed up for yourself today"
+    : "You got this, work out today to keep it up";
 
   // Personalized hero: the next workout from the user's program (or their top
   // recommendation). Accounts without a fitness profile keep the classic
@@ -189,6 +224,12 @@ export default function Dashboard() {
     todayPlan?.source === "program" && todayPlan.program && todayPlan.dayNumber
       ? `DAY ${todayPlan.dayNumber} OF YOUR ${todayPlan.program.title.toUpperCase()}`
       : "TODAY'S WORKOUT WITH DILLISH";
+  const heroCtaText =
+    todayPlan?.source === "program" && todayPlan.dayNumber
+      ? `Start Day ${todayPlan.dayNumber}`
+      : todayPlan?.source === "recommended"
+        ? "Start today's pick"
+        : "Start workout";
   const saved = useMemo(() => WORKOUTS.filter((w) => favorites.includes(w.id)), [favorites]);
   const featuredDuration = workoutDurationMinutes(featured.exercises, DEFAULT_REST_GAP);
 
@@ -254,29 +295,81 @@ export default function Dashboard() {
           </Pressable>
         </View>
 
-        {/* Streak card — the top number is the rolling consecutive-day streak
-            (spans weeks); the pills below are the current Mon→Sun week. */}
+        {/* Streak card ("17c") — the top number is the rolling consecutive-day
+            streak (spans weeks); the pills below are the current Mon→Sun week. */}
         <Card style={styles.streakCard}>
           <LinearGradient
-            colors={["#FDF0F5", "#FBE7EE"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.streakHead}
+            colors={["#FDF1F5", "#FBE7EE"]}
+            start={{ x: 0.2, y: 0 }}
+            end={{ x: 0.8, y: 1 }}
+            style={styles.streakSurface}
           >
-            <View style={styles.streakHeadTop}>
-              <View style={styles.streakFlameChip}>
-                <PulsingFlame />
-              </View>
-              <View style={styles.streakTextRow}>
+            {/* Background décor: white glow wisp + scattered sparkles */}
+            <View style={StyleSheet.absoluteFill} pointerEvents="none" accessible={false} importantForAccessibility="no-hide-descendants">
+              <Svg width={140} height={140} style={styles.streakWisp}>
+                <Defs>
+                  <RadialGradient id="streakWisp" cx="70" cy="70" r="70" gradientUnits="userSpaceOnUse">
+                    <Stop offset="0" stopColor="#FFFFFF" stopOpacity="0.6" />
+                    <Stop offset="0.68" stopColor="#FFFFFF" stopOpacity="0" />
+                  </RadialGradient>
+                </Defs>
+                <Circle cx={70} cy={70} r={70} fill="url(#streakWisp)" />
+              </Svg>
+              <Sparkle size={14} fill="#F2A9C1" glow style={{ top: 14, right: 16 }} />
+              <Sparkle size={8} fill="#F5BCCF" style={{ top: 38, right: 38 }} />
+              <Sparkle size={10} fill="#F5BCCF" style={{ top: 16, left: 150 }} />
+              <Sparkle size={7} fill="#F5BCCF" style={{ top: 58, right: 20 }} />
+              <Sparkle size={6} fill="#F5BCCF" style={{ top: 8, left: 120 }} />
+              <Sparkle size={8} fill="#F2A9C1" style={{ top: 88, right: 44 }} />
+              <Sparkle size={6} fill="#F5BCCF" style={{ top: 100, right: 14 }} />
+            </View>
+
+            {/* Top row: text block left, flame medallion right */}
+            <View style={styles.streakTopRow}>
+              <View style={styles.streakTextCol}>
+                <View style={styles.streakTitleRow}>
+                  <Text style={styles.streakTitle}>Keep It Going</Text>
+                  <Sparkle size={13} fill="#F2A9C1" glow style={{ position: "relative" }} />
+                  <Sparkle size={7} fill="#F5BCCF" style={{ position: "relative", marginBottom: 8 }} />
+                </View>
                 <View style={styles.streakCount}>
                   <Text style={styles.streakNum}>{streak}</Text>
                   <Text style={styles.streakUnit}>day streak</Text>
                 </View>
+                <View style={styles.streakNudgeRow}>
+                  <Text style={styles.streakNudgeEmoji}>{nudgeEmoji}</Text>
+                  <Text style={styles.streakNudge} numberOfLines={2}>{streakNudge}</Text>
+                </View>
               </View>
+              <Pressable
+                style={({ pressed }) => [styles.streakMedallion, pressed && styles.pressed]}
+                hitSlop={6}
+                onPress={openStreakHistory}
+                accessibilityRole="button"
+                accessibilityLabel="View streak history"
+              >
+                <Svg width={58} height={58} style={styles.streakHalo}>
+                  <Defs>
+                    <RadialGradient id="streakHalo" cx="29" cy="29" r="29" gradientUnits="userSpaceOnUse">
+                      <Stop offset="0" stopColor="#F08CAD" stopOpacity="0.45" />
+                      <Stop offset="0.7" stopColor="#F7B7CD" stopOpacity="0" />
+                    </RadialGradient>
+                  </Defs>
+                  <Circle cx={29} cy={29} r={29} fill="url(#streakHalo)" />
+                </Svg>
+                <LinearGradient
+                  colors={colors.gradient}
+                  start={{ x: 0.25, y: 0 }}
+                  end={{ x: 0.75, y: 1 }}
+                  style={styles.streakDisc}
+                >
+                  <Ionicons name="flame" size={20} color="#fff" />
+                </LinearGradient>
+              </Pressable>
             </View>
-            <Text style={styles.streakNudge} numberOfLines={2}>{streakNudge}</Text>
-          </LinearGradient>
-          <View style={styles.streakBody}>
+
+            <View style={styles.streakDivider} />
+
             <View style={styles.streakWeekHead}>
               <Text style={styles.streakWeekLabel}>THIS WEEK</Text>
               <Text style={styles.streakActiveText}>
@@ -288,10 +381,10 @@ export default function Dashboard() {
                 <View key={i} style={styles.streakDayCol}>
                   {d.active ? (
                     <LinearGradient
-                      colors={["#F08CAD", "#E45D87"]}
+                      colors={colors.gradient}
                       start={{ x: 0, y: 0.5 }}
                       end={{ x: 1, y: 0.5 }}
-                      style={styles.streakSeg}
+                      style={[styles.streakSeg, styles.streakSegOn]}
                     />
                   ) : (
                     <View style={[styles.streakSeg, styles.streakSegOff]} />
@@ -302,14 +395,21 @@ export default function Dashboard() {
                 </View>
               ))}
             </View>
-          </View>
+          </LinearGradient>
         </Card>
 
         {/* Today's workout hero */}
         <View style={{ marginTop: 22 }}>
           <SectionLabel style={{ marginBottom: 10 }}>{heroEyebrow}</SectionLabel>
-          <Pressable ref={heroRef} onLayout={measureHero} onPress={() => router.push(`/workout/${featured.id}`)}>
-            <ImageBackground source={featured.image} style={[styles.hero, { height: heroHeight }]} imageStyle={styles.heroImg}>
+          <Pressable pressedScale={0.985} ref={heroRef} onLayout={measureHero} onPress={() => router.push(`/workout/${featured.id}`)}>
+            <ImageBackground
+              source={featured.image}
+              style={[styles.hero, { height: heroHeight }]}
+              imageStyle={styles.heroImg}
+              contentFit="cover"
+              transition={150}
+              cachePolicy="memory-disk"
+            >
               <LinearGradient
                 colors={colors.photoOverlay}
                 locations={[0.48, 1]}
@@ -323,6 +423,7 @@ export default function Dashboard() {
                     <Text style={styles.heroMetaText}>{featured.kcal} kcal</Text>
                     <Text style={styles.heroMetaText}>{featured.level}</Text>
                   </View>
+                  <Text style={styles.heroCtaText}>{heroCtaText}</Text>
                 </View>
                 <View style={styles.heroPlay}>
                   <Ionicons name="chevron-forward" size={24} color={colors.onPrimary} />
@@ -331,15 +432,33 @@ export default function Dashboard() {
             </ImageBackground>
           </Pressable>
           {todayPlan?.programComplete && todayPlan.program ? (
-            <Text style={styles.programDoneNote}>
-              You finished {todayPlan.program.title}, beautiful work. Here's a pick we think you'll love.
-            </Text>
+            todayPlan.nextProgram ? (
+              <View style={styles.programNextCard}>
+                <Text style={styles.programDoneNote}>
+                  You finished {todayPlan.program.title}, beautiful work. Ready for the next phase?
+                </Text>
+                <Pressable
+                  style={styles.programNextBtn}
+                  onPress={() => {
+                    const next = todayPlan.nextProgram;
+                    if (next) void updateProfile({ programId: next.id, programStartedAt: Date.now() });
+                  }}
+                >
+                  <Text style={styles.programNextBtnText}>Start {todayPlan.nextProgram.title}</Text>
+                  <Ionicons name="arrow-forward" size={15} color={colors.onPrimary} />
+                </Pressable>
+              </View>
+            ) : (
+              <Text style={styles.programDoneNote}>
+                You finished {todayPlan.program.title}, beautiful work. Here's a pick we think you'll love.
+              </Text>
+            )
           ) : null}
         </View>
 
         {/* Personalize prompt for accounts that predate the fitness questions */}
         {!hasFitnessProfile(profile) ? (
-          <Pressable onPress={() => router.push("/onboarding/goal?mode=personalize" as any)}>
+          <Pressable pressedScale={0.985} onPress={() => router.push("/onboarding/goal?mode=personalize" as any)}>
             <Card style={styles.personalizeCard}>
               <View style={[styles.chipIcon, { backgroundColor: colors.accentTint, width: 38, height: 38, borderRadius: 12 }]}>
                 <Ionicons name="sparkles-outline" size={18} color={colors.accent} />
@@ -382,22 +501,26 @@ export default function Dashboard() {
       <View style={styles.calBody}>
         <ProgressRing size={116} strokeWidth={10} progress={consumedPct} gradientId="calRing">
           <View style={styles.calRingContent}>
-            <Text style={styles.calRingPct}>{Math.round(consumedPct * 100)}%</Text>
+            <AnimatedNumber
+              value={consumedPct * 100}
+              formatter={(n) => `${Math.round(n)}%`}
+              style={styles.calRingPct}
+            />
             <Text style={styles.calRingGoal} numberOfLines={1}>Goal: {calorieGoal} kcal</Text>
           </View>
         </ProgressRing>
         <View style={styles.calStats}>
               <View style={styles.calStatRow}>
                 <Text style={styles.calStatLabel}>Consumed</Text>
-                <Text style={styles.calStatValue}>{consumed.toLocaleString()} kcal</Text>
+                <AnimatedNumber value={consumed} formatter={(n) => `${Math.round(n).toLocaleString()} kcal`} style={styles.calStatValue} />
               </View>
               <View style={styles.calStatRow}>
                 <Text style={styles.calStatLabel}>Burned</Text>
-                <Text style={[styles.calStatValue, { color: colors.highlight }]}>{burned.toLocaleString()} kcal</Text>
+                <AnimatedNumber value={burned} formatter={(n) => `${Math.round(n).toLocaleString()} kcal`} style={[styles.calStatValue, { color: colors.highlight }]} />
               </View>
               <View style={styles.calStatRow}>
                 <Text style={styles.calStatLabel}>Remaining</Text>
-                <Text style={[styles.calStatValue, { color: colors.accent }]}>{remainingKcal.toLocaleString()} kcal</Text>
+                <AnimatedNumber value={remainingKcal} formatter={(n) => `${Math.round(n).toLocaleString()} kcal`} style={[styles.calStatValue, { color: colors.accent }]} />
               </View>
             </View>
           </View>
@@ -430,7 +553,7 @@ export default function Dashboard() {
           </View>
           <ProgressBar progress={waterPct} height={6} color={colors.water} style={{ marginTop: 14 }} />
           <View style={styles.hydroMetaRow}>
-            <Text style={styles.hydroMeta}>Drank: {(todayWaterMl / 1000).toFixed(2)} L</Text>
+            <Text style={styles.hydroMeta}>Drank: <AnimatedNumber value={todayWaterMl / 1000} formatter={(n) => `${n.toFixed(2)} L`} style={styles.hydroMeta} /></Text>
             <Text style={styles.hydroMeta}>Goal: {(waterGoalMl / 1000).toFixed(2)} L</Text>
           </View>
           <View style={styles.waterBtnRow}>
@@ -438,7 +561,7 @@ export default function Dashboard() {
               <Pressable
                 key={ml}
                 style={({ pressed }) => [styles.waterBtn, pressed && styles.pressed]}
-                onPress={() => addWater(ml)}
+                onPress={() => logQuickWater(ml)}
               >
                 <Text style={styles.waterBtnText}>+ {ml} ml</Text>
               </Pressable>
@@ -453,12 +576,13 @@ export default function Dashboard() {
         <View style={styles.qaGrid}>
           {QUICK_ACCESS.map((q) => (
             <Pressable
+              pressedScale={0.985}
               key={q.title}
               style={({ pressed }) => [styles.qaCard, pressed && styles.pressed]}
               onPress={() => router.navigate(q.route)}
             >
-              <View style={[styles.qaIcon, { backgroundColor: q.tint }]}>
-                <Ionicons name={q.icon} size={18} color={q.color} />
+              <View style={[styles.qaIcon, { backgroundColor: colors.track }]}>
+                <Ionicons name={q.icon} size={18} color={colors.foreground} />
               </View>
               <Text style={styles.qaTitle}>{q.title}</Text>
               <Text style={styles.qaSub}>{q.sub}</Text>
@@ -488,14 +612,23 @@ export default function Dashboard() {
         ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.savedRow}>
             {saved.map((w) => (
-              <Pressable key={w.id} style={styles.savedCard} onPress={() => router.push(`/workout/${w.id}`)}>
-                <ImageBackground source={w.image} style={styles.savedImg} imageStyle={{ borderRadius: colors.radiusLg }}>
+              <MotionListItem key={w.id}>
+              <Pressable pressedScale={0.985} style={styles.savedCard} onPress={() => router.push(`/workout/${w.id}`)}>
+                <ImageBackground
+                  source={w.image}
+                  style={styles.savedImg}
+                  imageStyle={{ borderRadius: colors.radiusLg }}
+                  contentFit="cover"
+                  transition={150}
+                  cachePolicy="memory-disk"
+                >
                   <LinearGradient colors={["transparent", "rgba(51,28,38,0.85)"]} style={styles.savedOverlay} />
                   <Pressable
                     style={styles.savedHeart}
                     hitSlop={8}
                     onPress={(e) => {
                       e.stopPropagation();
+                      haptics.selection();
                       toggleFavorite(w.id);
                     }}
                   >
@@ -509,6 +642,7 @@ export default function Dashboard() {
                   </View>
                 </ImageBackground>
               </Pressable>
+              </MotionListItem>
             ))}
           </ScrollView>
         )}
@@ -520,16 +654,58 @@ export default function Dashboard() {
         onClose={() => setNotifOpen(false)}
         insets={insets}
       />
+      <StreakHistorySheet
+        visible={streakHistoryOpen}
+        history={weekHistory}
+        streak={streak}
+        streakBest={streakBest}
+        onClose={() => setStreakHistoryOpen(false)}
+        insets={insets}
+      />
+      <WelcomeModal visible={welcomePending} name={firstName} onClose={dismissWelcome} />
     </GradientBackground>
   );
 }
 
-const TONE_ICON: Record<string, { color: string; tint: string }> = {
+// One-time greeting shown over the dashboard right after the onboarding
+// thank-you video hands off here. Queued by the thank-you screen via
+// DataContext's welcome_pending slice; dismissing clears it for good.
+function WelcomeModal({
+  visible,
+  name,
+  onClose,
+}: {
+  visible: boolean;
+  name: string;
+  onClose: () => void;
+}) {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <StructuralPressable style={styles.welcomeBackdrop} onPress={onClose}>
+        <StructuralPressable style={styles.welcomeCard} onPress={(e) => e.stopPropagation()}>
+          <View style={styles.welcomeHead}>
+            <Logo showText={false} size="sm" />
+            <Text style={styles.welcomeTitle}>Welcome to Florish 🌸</Text>
+          </View>
+          <Text style={styles.welcomeBody}>
+            We're so glad you're here, {name}. Your plan is ready and your journey starts today,
+            one beautiful session at a time.
+          </Text>
+          <Button label="Let's begin" onPress={onClose} style={styles.welcomeCta} />
+        </StructuralPressable>
+      </StructuralPressable>
+    </Modal>
+  );
+}
+
+const toneIcons = (colors: AppColors): Record<string, { color: string; tint: string }> => ({
   accent: { color: colors.accent, tint: colors.blush },
   highlight: { color: colors.highlight, tint: colors.highlightTint },
   water: { color: colors.water, tint: colors.waterTint },
   coach: { color: colors.highlight, tint: colors.highlightTint },
-};
+});
 
 function timeAgo(ts: number) {
   const diff = Math.max(0, Date.now() - ts);
@@ -553,10 +729,14 @@ function NotificationsSheet({
   onClose: () => void;
   insets: { bottom: number };
 }) {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
+  const router = useRouter();
+  const TONE_ICON = useMemo(() => toneIcons(colors), [colors]);
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.notifBackdrop} onPress={onClose}>
-        <Pressable style={[styles.notifSheet, { paddingBottom: insets.bottom + 16 }]} onPress={(e) => e.stopPropagation()}>
+      <StructuralPressable style={styles.notifBackdrop} onPress={onClose}>
+        <StructuralPressable style={[styles.notifSheet, { paddingBottom: insets.bottom + 16 }]} onPress={(e) => e.stopPropagation()}>
           <View style={styles.notifHandle} />
           <View style={styles.notifHead}>
             <Text style={styles.notifHeadTitle}>Notifications</Text>
@@ -566,15 +746,17 @@ function NotificationsSheet({
           </View>
 
           {notifications.length === 0 ? (
-            <View style={styles.notifEmpty}>
-              <View style={styles.notifEmptyIcon}>
-                <Ionicons name="checkmark-done-outline" size={28} color={colors.accent} />
-              </View>
-              <Text style={styles.notifEmptyTitle}>You're all caught up</Text>
-              <Text style={styles.notifEmptySub}>
-                No reminders right now. We'll nudge you about your streaks, hydration, and meals.
-              </Text>
-            </View>
+            <EmptyState
+              compact
+              icon="checkmark-done-outline"
+              title="You're all caught up"
+              description="No reminders right now. Browse a workout when you're ready to move."
+              actionLabel="Browse workouts"
+              onAction={() => {
+                onClose();
+                router.push("/(tabs)/workouts");
+              }}
+            />
           ) : (
             <ScrollView
               style={{ maxHeight: 440 }}
@@ -585,9 +767,13 @@ function NotificationsSheet({
                 const tone = TONE_ICON[n.tone] ?? TONE_ICON.accent;
                 return (
                   <View key={n.id} style={styles.notifItem}>
-                    <View style={[styles.notifIcon, { backgroundColor: tone.tint }]}>
-                      <Ionicons name={n.icon as React.ComponentProps<typeof Ionicons>["name"]} size={18} color={tone.color} />
-                    </View>
+                    {n.id === "welcome" ? (
+                      <Logo showText={false} size="sm" />
+                    ) : (
+                      <View style={[styles.notifIcon, { backgroundColor: tone.tint }]}>
+                        <Ionicons name={n.icon as React.ComponentProps<typeof Ionicons>["name"]} size={18} color={tone.color} />
+                      </View>
+                    )}
                     <View style={{ flex: 1 }}>
                       <View style={styles.notifItemHead}>
                         <Text style={styles.notifItemTitle}>{n.title}</Text>
@@ -601,23 +787,99 @@ function NotificationsSheet({
               })}
             </ScrollView>
           )}
-        </Pressable>
-      </Pressable>
+        </StructuralPressable>
+      </StructuralPressable>
+    </Modal>
+  );
+}
+
+// Slide-up sheet with the last 8 weeks of day-level streak activity, opened by
+// tapping the streak card's flame medallion.
+function StreakHistorySheet({
+  visible,
+  history,
+  streak,
+  streakBest,
+  onClose,
+  insets,
+}: {
+  visible: boolean;
+  history: WeekHistoryRow[];
+  streak: number;
+  streakBest: number;
+  onClose: () => void;
+  insets: { bottom: number };
+}) {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <StructuralPressable style={styles.notifBackdrop} onPress={onClose}>
+        <StructuralPressable style={[styles.notifSheet, { paddingBottom: insets.bottom + 16 }]} onPress={(e) => e.stopPropagation()}>
+          <View style={styles.notifHandle} />
+          <View style={styles.notifHead}>
+            <Text style={styles.notifHeadTitle}>Streak History</Text>
+            <Pressable style={styles.notifClose} hitSlop={8} onPress={onClose}>
+              <Ionicons name="close" size={18} color={colors.foreground} />
+            </Pressable>
+          </View>
+
+          <View style={styles.streakHxSummary}>
+            <Ionicons name="flame" size={16} color={colors.primary} />
+            <Text style={styles.streakHxSummaryText}>
+              {streak} day streak
+              <Text style={styles.streakHxSummaryBest}>  ·  Best: {streakBest}</Text>
+            </Text>
+          </View>
+
+          <ScrollView style={{ maxHeight: 460 }} contentContainerStyle={styles.streakHxList} showsVerticalScrollIndicator={false}>
+            {history.map((week) => (
+              <View key={week.days[0].key} style={styles.streakHxWeek}>
+                <View style={styles.streakHxWeekHead}>
+                  <Text style={styles.streakHxRange}>{week.rangeLabel}</Text>
+                  <Text style={styles.streakActiveText}>{week.activeCount} / 7</Text>
+                </View>
+                <View style={styles.streakWeek}>
+                  {week.days.map((d) => (
+                    <View key={d.key} style={styles.streakDayCol}>
+                      {d.active ? (
+                        <LinearGradient
+                          colors={colors.gradient}
+                          start={{ x: 0, y: 0.5 }}
+                          end={{ x: 1, y: 0.5 }}
+                          style={[styles.streakSeg, styles.streakSegOn]}
+                        />
+                      ) : (
+                        <View style={[styles.streakSeg, styles.streakHxSegOff]} />
+                      )}
+                      <Text style={[styles.streakDayLabel, d.active && styles.streakDayLabelActive]}>
+                        {d.label}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+        </StructuralPressable>
+      </StructuralPressable>
     </Modal>
   );
 }
 
 function MacroPill({ label, value, goal, color }: { label: string; value: number; goal: number; color: string }) {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.macroPill}>
-      <Text style={styles.macroValue}>{Math.round(value)}<Text style={styles.macroUnit}> g</Text></Text>
+      <Text style={styles.macroValue}><AnimatedNumber value={value} style={styles.macroValue} /><Text style={styles.macroUnit}> g</Text></Text>
       <Text style={styles.macroLabel}>{label}</Text>
       <ProgressBar progress={goal > 0 ? value / goal : 0} height={4} color={color} style={{ marginTop: 6 }} />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   scroll: { paddingHorizontal: 24 },
   pressed: { transform: [{ scale: 0.96 }] },
   sky: {
@@ -628,10 +890,10 @@ const styles = StyleSheet.create({
     height: SKY_BAND + SKY_FILL,
   },
   header: { flexDirection: "row", alignItems: "center", gap: 10 },
-  greet: { fontFamily: fonts.sansBold, fontSize: 12, color: colors.accentDark, letterSpacing: 2.4, marginBottom: 5 },
+  greet: { fontFamily: fonts.sansBold, fontSize: 14, color: colors.accentDark, letterSpacing: 2.4, marginBottom: 5 },
   nameRow: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
-  name: { fontFamily: fonts.serifMedium, fontSize: 32, color: colors.foreground, lineHeight: 36 },
-  nameEmoji: { fontSize: 20, lineHeight: 22, marginBottom: 8 },
+  name: { fontFamily: fonts.serifMedium, fontSize: 28, color: colors.foreground, lineHeight: 32 },
+  nameEmoji: { fontSize: 20, lineHeight: 22, marginBottom: 6 },
   iconBtn: {
     width: 42,
     height: 42,
@@ -677,51 +939,56 @@ const styles = StyleSheet.create({
     padding: 0,
     backgroundColor: colors.card,
     borderRadius: 22,
+    borderColor: "rgba(228, 93, 135, 0.14)",
     overflow: "hidden",
     shadowColor: colors.foreground,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.05,
-    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.07,
+    shadowRadius: 28,
     elevation: 2,
   },
-  streakHead: {
+  streakSurface: {
     paddingHorizontal: 18,
-    paddingVertical: 16,
-    gap: 8,
+    paddingVertical: 13,
   },
-  streakHeadTop: {
+  streakWisp: {
+    position: "absolute",
+    top: -40,
+    right: -30,
+  },
+  streakTopRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
-  },
-  streakFlameChip: {
-    width: 48,
-    height: 48,
-    borderRadius: 15,
-    backgroundColor: colors.card,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 14,
-    elevation: 3,
-  },
-  streakTextRow: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "baseline",
     justifyContent: "space-between",
+  },
+  streakTextCol: {
+    gap: 7,
+    minWidth: 0,
+    flexShrink: 1,
+  },
+  streakTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  streakTitle: {
+    fontFamily: fonts.serifSemibold,
+    fontSize: 19,
+    lineHeight: 20,
+    color: colors.accent,
   },
   streakCount: {
     flexDirection: "row",
     alignItems: "baseline",
     gap: 6,
+    // The 34px serif digit carries ~9px of leading above its cap inside the
+    // line box; pull the row up so the title/count/nudge gaps read evenly.
+    marginTop: -6,
   },
   streakNum: {
     fontFamily: fonts.serifSemibold,
     fontSize: 34,
-    lineHeight: 36,
+    lineHeight: 34,
     color: colors.foreground,
   },
   streakUnit: {
@@ -734,23 +1001,59 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.accentDark,
   },
-  streakBody: {
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-    backgroundColor: colors.card,
+  streakNudgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  streakNudgeEmoji: {
+    fontSize: 13,
+    lineHeight: 16,
   },
   streakNudge: {
     fontFamily: fonts.sansSemibold,
-    fontSize: 11.5,
-    lineHeight: 15,
-    color: "rgba(62, 39, 51, 0.6)",
-    marginLeft: 0,
+    fontSize: 12.5,
+    lineHeight: 16,
+    color: "rgba(62, 39, 51, 0.65)",
+    flexShrink: 1,
+  },
+  streakMedallion: {
+    width: 48,
+    height: 48,
+    marginRight: 4,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  streakHalo: {
+    position: "absolute",
+    top: -5,
+    left: -5,
+  },
+  streakDisc: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 1.5,
+    borderColor: "rgba(255, 255, 255, 0.9)",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#C8446E",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  streakDivider: {
+    height: 1,
+    backgroundColor: "rgba(62, 39, 51, 0.08)",
+    marginTop: 11,
+    marginBottom: 9,
   },
   streakWeekHead: {
     flexDirection: "row",
     alignItems: "baseline",
     justifyContent: "space-between",
-    marginBottom: 10,
+    marginBottom: 8,
   },
   streakWeekLabel: {
     fontFamily: fonts.sansBold,
@@ -773,7 +1076,14 @@ const styles = StyleSheet.create({
     height: 7,
     borderRadius: 99,
   },
-  streakSegOff: { backgroundColor: "rgba(62, 39, 51, 0.08)" },
+  streakSegOn: {
+    shadowColor: "#E45D87",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  streakSegOff: { backgroundColor: "rgba(255, 255, 255, 0.85)" },
   streakDayLabel: {
     fontFamily: fonts.sansSemibold,
     fontSize: 10,
@@ -783,6 +1093,47 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sansBold,
     color: colors.accentDark,
   },
+  streakHxSummary: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 14,
+  },
+  streakHxSummaryText: {
+    fontFamily: fonts.sansBold,
+    fontSize: 13,
+    color: colors.foreground,
+  },
+  streakHxSummaryBest: {
+    fontFamily: fonts.sansSemibold,
+    fontSize: 12,
+    color: colors.muted,
+  },
+  streakHxList: {
+    gap: 10,
+    paddingBottom: 4,
+  },
+  streakHxWeek: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: 16,
+    padding: 12,
+    gap: 10,
+  },
+  streakHxWeekHead: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+  },
+  streakHxRange: {
+    fontFamily: fonts.sansSemibold,
+    fontSize: 12,
+    color: colors.muted,
+  },
+  // On the sheet's white week cards the card's white-on-blush off pill would
+  // vanish, so fall back to the faint ink tint.
+  streakHxSegOff: { backgroundColor: "rgba(62, 39, 51, 0.08)" },
 
   sectionHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 26, marginBottom: 12 },
   seeAll: { fontFamily: fonts.sansSemibold, fontSize: 12, color: colors.accentDark },
@@ -803,6 +1154,7 @@ const styles = StyleSheet.create({
   heroTitle: { fontFamily: fonts.serifMedium, fontSize: 27, lineHeight: 31, color: colors.onPrimary },
   heroMeta: { flexDirection: "row", gap: 14, marginTop: 8, flexWrap: "wrap" },
   heroMetaText: { fontFamily: fonts.sansSemibold, fontSize: 12, color: "rgba(255,255,255,0.85)" },
+  heroCtaText: { fontFamily: fonts.sansBold, fontSize: 12, color: colors.onPrimary, marginTop: 12 },
   heroPlay: {
     width: 56,
     height: 56,
@@ -824,6 +1176,20 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingHorizontal: 4,
   },
+  programNextCard: { paddingHorizontal: 2 },
+  programNextBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: colors.primary,
+    borderRadius: 22,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    marginTop: 10,
+    alignSelf: "flex-start",
+  },
+  programNextBtnText: { fontFamily: fonts.sansSemibold, fontSize: 14, color: colors.onPrimary },
   personalizeCard: {
     marginTop: 14,
     flexDirection: "row",
@@ -1019,6 +1385,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  welcomeBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(16,17,17,0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 28,
+  },
+  welcomeCard: {
+    width: "100%",
+    maxWidth: 380,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: colors.radiusLg,
+    padding: 22,
+  },
+  welcomeHead: { flexDirection: "row", alignItems: "center", gap: 12 },
+  welcomeTitle: { flex: 1, fontFamily: fonts.serif, fontSize: 24, color: colors.foreground },
+  welcomeBody: { fontFamily: fonts.sans, fontSize: 14, lineHeight: 21, color: colors.foreground, marginTop: 14 },
+  welcomeCta: { marginTop: 22 },
   notifItemHead: { flexDirection: "row", alignItems: "center", gap: 8 },
   notifItemTitle: { flex: 1, fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
   notifItemDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },

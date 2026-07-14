@@ -6,6 +6,7 @@ import {
   decideRestTick,
   tickRestRemaining,
   type CompletionSource,
+  type RestKind,
   type WorkoutPhase,
 } from "@/lib/workoutAdvance";
 
@@ -22,10 +23,16 @@ export type WorkoutAdvanceDeps = {
   restGap: number;
   // Whether the player is paused (the rest countdown pauses too).
   paused: boolean;
-  // Duration (seconds) of the exercise at index i.
+  // Duration (seconds) of ONE SET of the exercise at index i.
   durationAt: (i: number) => number;
-  // The first exercise's duration, used to seed `remaining` once on mount.
+  // The first exercise's single-set duration, used to seed `remaining` on mount.
   initialRemaining: number;
+  // Total sets configured for the exercise at index i (>= 1). Optional so
+  // pre-set callers/tests keep the one-completion-per-exercise behavior.
+  setsAt?: (i: number) => number;
+  // Fired when a NEW SET of the same exercise starts (after a set rest, or
+  // immediately when rest is off). The screen replays the exercise's clip here.
+  onSetStart?: (exerciseIndex: number, setIndex: number) => void;
   // Side effects of finishing the workout (persist completion, haptics, clear the
   // countdown interval). The hook flips `phase` to "done" itself.
   onFinish: () => void;
@@ -58,6 +65,10 @@ export type WorkoutAdvanceCore = {
   index: number;
   remaining: number;
   restRemaining: number;
+  // 0-based set currently playing within the current exercise.
+  currentSet: number;
+  // Whether the live rest phase leads into the next set or the next exercise.
+  restKind: RestKind;
   setPhase: React.Dispatch<React.SetStateAction<WorkoutPhase>>;
   setIndex: React.Dispatch<React.SetStateAction<number>>;
   setRemaining: React.Dispatch<React.SetStateAction<number>>;
@@ -72,10 +83,13 @@ export type WorkoutAdvanceCore = {
   jumpTo: (i: number) => void;
   // Finish the workout: run the finish side effects, then flip to the done phase.
   finish: () => void;
-  // Mark the current exercise complete from a countdown ("timer") or a clip end
-  // ("video"). Drops a duplicate (the same exercise completing twice) and a
-  // stale clip end, then finishes, advances immediately, or opens the rest gap.
+  // Mark the current SET complete from a countdown ("timer") or a clip end
+  // ("video"). Drops a duplicate (the same set completing twice) and a stale
+  // clip end, then starts the next set, finishes, advances, or opens rest.
   completeExercise: (source: CompletionSource) => void;
+  // End the live rest early ("Start now"): starts the next set or the next
+  // exercise depending on what the rest was leading into.
+  skipRest: () => void;
 };
 
 // The active/rest/done advance machine for the workout player, extracted from the
@@ -90,6 +104,8 @@ export function useWorkoutAdvanceCore(deps: WorkoutAdvanceDeps): WorkoutAdvanceC
     paused,
     durationAt,
     initialRemaining,
+    setsAt,
+    onSetStart,
     onFinish,
     onReplay,
     onRestTick,
@@ -103,6 +119,8 @@ export function useWorkoutAdvanceCore(deps: WorkoutAdvanceDeps): WorkoutAdvanceC
   const [index, setIndex] = useState(0);
   const [remaining, setRemaining] = useState(() => initialRemaining);
   const [restRemaining, setRestRemaining] = useState(0);
+  const [currentSet, setCurrentSet] = useState(0);
+  const [restKind, setRestKind] = useState<RestKind>("exercise");
 
   const finish = () => {
     onFinish();
@@ -116,10 +134,22 @@ export function useWorkoutAdvanceCore(deps: WorkoutAdvanceDeps): WorkoutAdvanceC
       setRestRemaining(0);
       setPhase("active");
       setIndex(ni);
+      setCurrentSet(0);
       setRemaining(durationAt(ni));
     } else {
       finish();
     }
+  };
+
+  // Start the next set of the SAME exercise: reseed the per-set countdown and
+  // let the screen replay the exercise's clip.
+  const goNextSet = () => {
+    const ns = currentSet + 1;
+    setRestRemaining(0);
+    setPhase("active");
+    setCurrentSet(ns);
+    setRemaining(durationAt(index));
+    onSetStart?.(index, ns);
   };
 
   const jumpTo = (i: number) => {
@@ -127,22 +157,25 @@ export function useWorkoutAdvanceCore(deps: WorkoutAdvanceDeps): WorkoutAdvanceC
     setPhase("active");
     setRestRemaining(0);
     setIndex(i);
+    setCurrentSet(0);
     setRemaining(durationAt(i));
     onReplay?.(i);
   };
 
-  // Guards an exercise from being "completed" twice (e.g. the clip ends at the
-  // same moment the countdown reaches zero). Holds the index already completed;
-  // reset to -1 whenever the exercise changes so the next one can complete.
+  // Guards a set from being "completed" twice (e.g. the clip ends at the same
+  // moment the countdown reaches zero). Holds the (exercise, set) pair already
+  // completed; reset whenever the exercise changes so the next one can complete.
   const completedIndexRef = useRef(-1);
+  const completedSetRef = useRef(-1);
   useEffect(() => {
     completedIndexRef.current = -1;
+    completedSetRef.current = -1;
   }, [index]);
 
-  // Mark the current exercise complete from the countdown reaching zero ("timer")
+  // Mark the current set complete from the countdown reaching zero ("timer")
   // or the clip's "playToEnd" ("video"). Drops a duplicate signal and a stale
-  // clip end via `decideExerciseCompletion`, then finishes, advances immediately
-  // (rest "Off"), or opens the rest countdown.
+  // clip end via `decideExerciseCompletion`, then starts the next set, finishes,
+  // advances immediately (rest "Off"), or opens the rest countdown.
   const completeExercise = (source: CompletionSource) => {
     const decision = decideExerciseCompletion({
       phase,
@@ -154,9 +187,13 @@ export function useWorkoutAdvanceCore(deps: WorkoutAdvanceDeps): WorkoutAdvanceC
       index,
       total,
       restGap,
+      setIndex: currentSet,
+      sets: setsAt?.(index) ?? 1,
+      completedSetIndex: completedSetRef.current,
     });
     if (decision.action === "ignore") return;
     completedIndexRef.current = decision.completedIndex!;
+    completedSetRef.current = decision.completedSetIndex!;
     onComplete?.();
     if (decision.action === "finish") {
       finish();
@@ -166,8 +203,19 @@ export function useWorkoutAdvanceCore(deps: WorkoutAdvanceDeps): WorkoutAdvanceC
       goNext();
       return;
     }
+    if (decision.action === "nextSet") {
+      goNextSet();
+      return;
+    }
+    setRestKind(decision.action === "setRest" ? "set" : "exercise");
     setRestRemaining(restGap);
     setPhase("rest");
+  };
+
+  // End the live rest early, landing wherever it was going to lead anyway.
+  const skipRest = () => {
+    if (restKind === "set") goNextSet();
+    else goNext();
   };
 
   // For an exercise with no playable video, the countdown reaching zero is the
@@ -182,13 +230,13 @@ export function useWorkoutAdvanceCore(deps: WorkoutAdvanceDeps): WorkoutAdvanceC
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remaining, phase, index, videoDuration]);
 
-  // Rest countdown between exercises. Ticks down once per second (pausable), then
-  // auto-advances to the next exercise (or finishes) when it reaches zero.
+  // Rest countdown (between sets or exercises). Ticks down once per second
+  // (pausable), then auto-advances to whatever the rest was leading into.
   useEffect(() => {
     const tick = decideRestTick({ phase, paused, restRemaining });
     if (tick === "idle") return;
     if (tick === "advance") {
-      goNext();
+      skipRest();
       return;
     }
     const t = setTimeout(() => {
@@ -204,6 +252,8 @@ export function useWorkoutAdvanceCore(deps: WorkoutAdvanceDeps): WorkoutAdvanceC
     index,
     remaining,
     restRemaining,
+    currentSet,
+    restKind,
     setPhase,
     setIndex,
     setRemaining,
@@ -212,5 +262,6 @@ export function useWorkoutAdvanceCore(deps: WorkoutAdvanceDeps): WorkoutAdvanceC
     jumpTo,
     finish,
     completeExercise,
+    skipRest,
   };
 }

@@ -4,11 +4,11 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Pressable,
   ActivityIndicator,
   Alert,
   Platform,
 } from "react-native";
+import { Bouncy as Pressable } from "@/components/Bouncy";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -22,8 +22,10 @@ import {
   deleteThankYouVideo,
   thankYouVideoExists,
 } from "@/lib/thankYouVideo";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
+import { haptics } from "@/lib/haptics";
 
 const MAX_MB = 80;
 
@@ -35,6 +37,8 @@ function notify(title: string, message: string) {
 type Asset = { uri: string; fileName?: string | null; mimeType?: string | null; size?: number };
 
 export default function UploadThankYou() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const insets = useInsets();
   const { isAdmin, adminToken } = useAuth();
@@ -72,6 +76,7 @@ export default function UploadThankYou() {
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
+        haptics.warning();
         notify("Permission needed", "Please allow library access to choose a video.");
         return;
       }
@@ -83,17 +88,20 @@ export default function UploadThankYou() {
       if (result.canceled || !result.assets?.length) return;
       const a = result.assets[0];
       if (a.fileSize && a.fileSize > MAX_MB * 1024 * 1024) {
+        haptics.warning();
         notify("Video too large", `Please choose a video under ${MAX_MB}MB.`);
         return;
       }
       setAsset({ uri: a.uri, fileName: a.fileName, mimeType: a.mimeType, size: a.fileSize ?? undefined });
     } catch {
+      haptics.warning();
       notify("Could not open library", "Something went wrong picking a video.");
     }
   };
 
   const submit = async () => {
     if (!asset) {
+      haptics.warning();
       notify("Video required", "Choose a video to upload.");
       return;
     }
@@ -111,6 +119,7 @@ export default function UploadThankYou() {
       }
       router.back();
     } catch (e: any) {
+      haptics.warning();
       const message = e?.message ?? "Please try again.";
       if (Platform.OS === "web") {
         notify("Upload failed", message);
@@ -128,11 +137,13 @@ export default function UploadThankYou() {
 
   const removeExisting = () => {
     const run = async () => {
+      haptics.warning();
       try {
         await deleteThankYouVideo(adminToken ?? "");
         setHasExisting(false);
         if (Platform.OS !== "web") Alert.alert("Removed", "New members will skip straight to the dashboard.");
       } catch {
+        haptics.warning();
         notify("Could not remove", "Something went wrong removing the video.");
       }
     };
@@ -244,7 +255,7 @@ export default function UploadThankYou() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   scroll: { paddingHorizontal: 20 },
   header: { marginBottom: 8 },
   roundBtn: {

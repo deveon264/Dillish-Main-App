@@ -8,23 +8,24 @@ import { Image as ExpoImage } from "expo-image";
 import { Asset } from "expo-asset";
 import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
-  CormorantGaramond_300Light,
-  CormorantGaramond_400Regular,
-  CormorantGaramond_400Regular_Italic,
-  CormorantGaramond_500Medium,
-  CormorantGaramond_500Medium_Italic,
-  CormorantGaramond_600SemiBold,
-} from "@expo-google-fonts/cormorant-garamond";
+  PlayfairDisplay_400Regular,
+  PlayfairDisplay_400Regular_Italic,
+  PlayfairDisplay_500Medium,
+  PlayfairDisplay_500Medium_Italic,
+  PlayfairDisplay_600SemiBold,
+} from "@expo-google-fonts/playfair-display";
 import {
-  DMSans_400Regular,
-  DMSans_500Medium,
-  DMSans_600SemiBold,
-  DMSans_700Bold,
-} from "@expo-google-fonts/dm-sans";
+  Figtree_400Regular,
+  Figtree_500Medium,
+  Figtree_600SemiBold,
+  Figtree_700Bold,
+} from "@expo-google-fonts/figtree";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { OnboardingDraftProvider } from "@/contexts/OnboardingDraftContext";
 import { DataProvider } from "@/contexts/DataContext";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { NoticesProvider } from "@/contexts/NoticesContext";
@@ -37,16 +38,15 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 const queryClient = new QueryClient();
 
 const fontMap: Record<string, number> = {
-  CormorantGaramond_300Light,
-  CormorantGaramond_400Regular,
-  CormorantGaramond_400Regular_Italic,
-  CormorantGaramond_500Medium,
-  CormorantGaramond_500Medium_Italic,
-  CormorantGaramond_600SemiBold,
-  DMSans_400Regular,
-  DMSans_500Medium,
-  DMSans_600SemiBold,
-  DMSans_700Bold,
+  PlayfairDisplay_400Regular,
+  PlayfairDisplay_400Regular_Italic,
+  PlayfairDisplay_500Medium,
+  PlayfairDisplay_500Medium_Italic,
+  PlayfairDisplay_600SemiBold,
+  Figtree_400Regular,
+  Figtree_500Medium,
+  Figtree_600SemiBold,
+  Figtree_700Bold,
 };
 
 // Warmed into the image cache while the splash screen is up (alongside fonts),
@@ -107,40 +107,44 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
-          <ErrorBoundary>
-            <AuthProvider>
-              <NotificationsProvider>
-              <DataProvider>
-                <SubscriptionProvider>
-                <NoticesProvider>
-                <StatusBar style="dark" />
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    contentStyle: { backgroundColor: colors.background },
-                  }}
-                >
-                  <Stack.Screen
-                    name="workout/[id]"
-                    options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }}
-                  />
-                  <Stack.Screen
-                    name="community/compose"
-                    options={{ presentation: "modal", animation: "slide_from_bottom" }}
-                  />
-                  <Stack.Screen name="community/[id]" />
-                  <Stack.Screen name="community/notifications" />
-                </Stack>
-                </NoticesProvider>
-                </SubscriptionProvider>
-              </DataProvider>
-              </NotificationsProvider>
-            </AuthProvider>
-          </ErrorBoundary>
-        </QueryClientProvider>
-      </SafeAreaProvider>
+      <KeyboardProvider>
+        <SafeAreaProvider>
+          <QueryClientProvider client={queryClient}>
+            <ErrorBoundary>
+              <OnboardingDraftProvider>
+              <AuthProvider>
+                <NotificationsProvider>
+                <DataProvider>
+                  <SubscriptionProvider>
+                  <NoticesProvider>
+                  <StatusBar style="dark" />
+                  <Stack
+                    screenOptions={{
+                      headerShown: false,
+                      contentStyle: { backgroundColor: colors.background },
+                    }}
+                  >
+                    <Stack.Screen
+                      name="workout/[id]"
+                      options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }}
+                    />
+                    <Stack.Screen
+                      name="community/compose"
+                      options={{ presentation: "modal", animation: "slide_from_bottom" }}
+                    />
+                    <Stack.Screen name="community/[id]" />
+                    <Stack.Screen name="community/notifications" />
+                  </Stack>
+                  </NoticesProvider>
+                  </SubscriptionProvider>
+                </DataProvider>
+                </NotificationsProvider>
+              </AuthProvider>
+              </OnboardingDraftProvider>
+            </ErrorBoundary>
+          </QueryClientProvider>
+        </SafeAreaProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }

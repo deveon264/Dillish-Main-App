@@ -1,6 +1,6 @@
 import { getPool, ensureSchema } from "@/lib/db";
 import { requireAdmin } from "@/lib/adminAuth";
-import { getVideoSignedUrl, uploadExercisePosterStream, deleteObject } from "@/lib/objectStorageServer";
+import { getVideoSignedUrl, signedObjectResponse, uploadExercisePosterStream, deleteObject } from "@/lib/objectStorageServer";
 
 const MAX_POSTER_BYTES = 8 * 1024 * 1024; // 8MB
 
@@ -23,14 +23,8 @@ export async function GET(request: Request): Promise<Response> {
     }
 
     const url = await getVideoSignedUrl(rows[0].poster_object_path, 3600);
-    return new Response(null, {
-      status: 302,
-      headers: {
-        Location: url,
-        // Posters are static once uploaded; let clients cache the redirect.
-        "Cache-Control": "private, max-age=600",
-      },
-    });
+    // Posters are static once uploaded; let clients cache the response.
+    return signedObjectResponse(url, request, "private, max-age=600");
   } catch (e: any) {
     console.error("exercise-poster error:", e?.message ?? e);
     return new Response("Failed to load poster", { status: 500 });

@@ -1,18 +1,17 @@
 import React from "react";
 import {
-  Pressable,
   Text,
   StyleSheet,
   ActivityIndicator,
   View,
-  Platform,
   StyleProp,
   ViewStyle,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "@/constants/colors";
+import { Bouncy } from "@/components/Bouncy";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -40,11 +39,10 @@ export function Button({
   style,
   testID,
 }: Props) {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const handle = () => {
     if (disabled || loading) return;
-    if (Platform.OS !== "web") {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    }
     onPress?.();
   };
 
@@ -61,11 +59,11 @@ export function Button({
 
   if (variant === "primary") {
     return (
-      <Pressable
+      <Bouncy
         testID={testID}
         onPress={handle}
         disabled={disabled || loading}
-        style={({ pressed }) => [{ opacity: pressed ? 0.92 : 1 }, styles.wrap, style]}
+        style={[styles.wrap, style]}
       >
         <LinearGradient
           colors={colors.gradient}
@@ -75,30 +73,30 @@ export function Button({
         >
           {loading ? <ActivityIndicator color={colors.onPrimaryStrong} /> : Inner}
         </LinearGradient>
-      </Pressable>
+      </Bouncy>
     );
   }
 
   return (
-    <Pressable
+    <Bouncy
       testID={testID}
       onPress={handle}
       disabled={disabled || loading}
-      style={({ pressed }) => [
+      style={[
         styles.base,
         styles.wrap,
         variant === "outline" && styles.outline,
         variant === "ghost" && styles.ghost,
-        { opacity: pressed ? 0.85 : disabled ? 0.5 : 1 },
+        (disabled || loading) && { opacity: 0.5 },
         style,
       ]}
     >
       {loading ? <ActivityIndicator color={textColor} /> : Inner}
-    </Pressable>
+    </Bouncy>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   wrap: { width: "100%", borderRadius: colors.radiusLg },
   base: {
     minHeight: 54,

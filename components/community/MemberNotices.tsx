@@ -1,10 +1,13 @@
 import React, { useCallback, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import { Bouncy as Pressable } from "@/components/Bouncy";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
 import { useNotices } from "@/contexts/NoticesContext";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
+import { MotionListItem } from "@/components/Motion";
 
 // Shows the signed-in member their moderation notices at the top of the feed: a
 // block notice (an admin hid their posts) and any warnings an admin sent. The
@@ -13,6 +16,8 @@ import { fonts } from "@/constants/fonts";
 // from the app-wide NoticesContext, so dismissing one here also clears the
 // community tab badge everywhere.
 export function MemberNotices() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const { notices, refresh, dismiss } = useNotices();
   const [dismissingId, setDismissingId] = useState<string | null>(null);
 
@@ -45,7 +50,7 @@ export function MemberNotices() {
       {notices.map((n) => {
         const isBlock = n.kind === "block";
         return (
-          <View
+          <MotionListItem
             key={n.id}
             style={[styles.card, isBlock ? styles.blockCard : styles.warnCard]}
           >
@@ -83,14 +88,14 @@ export function MemberNotices() {
                 <Text style={styles.ackText}>Got it</Text>
               </Pressable>
             ) : null}
-          </View>
+          </MotionListItem>
         );
       })}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   wrap: { gap: 12, marginTop: 16 },
   card: {
     borderWidth: 1,

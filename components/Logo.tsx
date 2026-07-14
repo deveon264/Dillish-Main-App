@@ -2,7 +2,8 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
 
 export function Logo({
@@ -14,6 +15,8 @@ export function Logo({
   showText?: boolean;
   tagline?: string;
 }) {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const mark = size === "lg" ? 64 : size === "sm" ? 40 : 52;
   const icon = size === "lg" ? 34 : size === "sm" ? 21 : 28;
   const fontSize = size === "lg" ? 40 : size === "sm" ? 20 : 24;
@@ -65,7 +68,7 @@ export function Logo({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   row: { flexDirection: "row", alignItems: "flex-start" },
   mark: { alignItems: "center", justifyContent: "center" },
   text: {

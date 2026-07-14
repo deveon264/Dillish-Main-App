@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 
 import {
   computeWorkoutProgress,
+  estimateKcalBurned,
   formatClock,
+  REFERENCE_WEIGHT_KG,
   type WorkoutProgressInput,
 } from "@/lib/workoutProgress";
 
@@ -105,6 +107,15 @@ test("whole-workout stats use cumulative time regardless of the video branch", (
   assert.equal(withVideo.overall, noVideo.overall);
 });
 
+test("whole-workout stats can include rest gaps in session totals", () => {
+  // 2nd exercise (prior 30s + one 15s rest), 45s remaining of its 60s => 15s
+  // into it. Cumulative elapsed = 30 + 15 rest + 15 = 60 of 150 total.
+  const p = computeWorkoutProgress(input({ index: 1, remaining: 45, restGap: 15 }));
+  assert.equal(p.totalSeconds, 150);
+  assert.equal(p.elapsed, 60);
+  assert.equal(p.overallPct, "40%");
+});
+
 test("kcal and bpm/zone scale off cumulative overall, not the bar", () => {
   // Halfway through the workout: 1st (30) done + 30s of the 60s 2nd = 60/120.
   const p = computeWorkoutProgress(
@@ -145,6 +156,75 @@ test("empty workout (no exercises) never divides by zero", () => {
   assert.equal(p.overallPct, "0%");
   assert.equal(p.barPct, "0%");
   assert.equal(p.kcalBurned, 0);
+});
+
+// --- (3b) real active-time elapsed (activeElapsedSeconds) ------------------
+
+test("real elapsed: whole-workout elapsed/overall follow activeElapsedSeconds when given", () => {
+  // The countdown would put legacy elapsed at 45 (30 prior + 15 into ex 2), but
+  // the real wall-clock accumulator says only 20s of active time has passed.
+  const p = computeWorkoutProgress(input({ index: 1, remaining: 45, activeElapsedSeconds: 20 }));
+  assert.equal(p.elapsed, 20);
+  assert.equal(p.totalSeconds, 120);
+  assert.equal(p.overallPct, "17%"); // round(20/120)
+});
+
+test("real elapsed: overall clamps at 1 when active time overruns the configured total", () => {
+  // A session that runs long (e.g. video clips longer than configured seconds)
+  // must not report >100% or overshoot the kcal estimate.
+  const p = computeWorkoutProgress(input({ activeElapsedSeconds: 200 }));
+  assert.equal(p.elapsed, 200);
+  assert.equal(p.overall, 1);
+  assert.equal(p.overallPct, "100%");
+  assert.equal(p.kcalBurned, 300); // 300 * 1
+});
+
+test("real elapsed: decoupled from the countdown and the video clip", () => {
+  // Neither a stalled countdown (remaining clamped at 0, the video-tail case)
+  // nor the clip time changes the real elapsed once the accumulator drives it.
+  const p = computeWorkoutProgress(
+    input({ index: 2, remaining: 0, hasVideo: true, videoTime: 5, videoDuration: 99, activeElapsedSeconds: 75 }),
+  );
+  assert.equal(p.elapsed, 75);
+  assert.equal(p.overall, 0.625); // 75/120
+  // The bar still honestly reflects the clip, independent of the stat.
+  assert.equal(p.barTotal, 99);
+});
+
+test("real elapsed: omitting activeElapsedSeconds reproduces the legacy countdown numbers", () => {
+  // Regression guard: existing callers that don't pass the accumulator keep the
+  // old configured-duration behavior.
+  const legacy = computeWorkoutProgress(input({ index: 1, remaining: 45 }));
+  assert.equal(legacy.elapsed, 45);
+  assert.equal(legacy.overallPct, "38%");
+});
+
+// --- (3c) weight-personalized kcal (estimateKcalBurned) --------------------
+
+test("estimateKcalBurned: scales linearly around the reference weight", () => {
+  // At the reference weight the authored figure is used unscaled.
+  assert.equal(estimateKcalBurned({ workoutKcal: 300, overall: 1, weightKg: REFERENCE_WEIGHT_KG }), 300);
+  // Heavier burns proportionally more, lighter proportionally less.
+  assert.equal(estimateKcalBurned({ workoutKcal: 300, overall: 1, weightKg: REFERENCE_WEIGHT_KG * 1.5 }), 450);
+  assert.equal(estimateKcalBurned({ workoutKcal: 300, overall: 1, weightKg: REFERENCE_WEIGHT_KG * 0.5 }), 150);
+  // Also scales by progress.
+  assert.equal(estimateKcalBurned({ workoutKcal: 300, overall: 0.5, weightKg: REFERENCE_WEIGHT_KG }), 150);
+});
+
+test("estimateKcalBurned: falls back to the authored figure when weight is unknown or invalid", () => {
+  assert.equal(estimateKcalBurned({ workoutKcal: 300, overall: 1 }), 300);
+  assert.equal(estimateKcalBurned({ workoutKcal: 300, overall: 1, weightKg: 0 }), 300);
+  assert.equal(estimateKcalBurned({ workoutKcal: 300, overall: 1, weightKg: -5 }), 300);
+  assert.equal(estimateKcalBurned({ workoutKcal: 300, overall: 1, weightKg: NaN }), 300);
+});
+
+test("computeWorkoutProgress applies the member's weight to kcalBurned", () => {
+  // 60s of real active time = 0.5 of the 120s total; a 2x-reference member.
+  const p = computeWorkoutProgress(
+    input({ activeElapsedSeconds: 60, weightKg: REFERENCE_WEIGHT_KG * 2 }),
+  );
+  assert.equal(p.overall, 0.5);
+  assert.equal(p.kcalBurned, 300); // 300 * 0.5 * 2
 });
 
 // --- (4) formatClock: the "m:ss" clock on the bar and session stats --------

@@ -36,6 +36,8 @@ export type CommunityPost = {
   likeCount: number;
   commentCount: number;
   likedByMe: boolean;
+  // Admin-pinned to the top of the feed (the trainer's highlighted post).
+  pinned: boolean;
 };
 
 export type CommunityComment = {
@@ -93,6 +95,7 @@ function mapPost(r: any): CommunityPost {
     likeCount: Number(r.like_count),
     commentCount: Number(r.comment_count),
     likedByMe: !!r.liked_by_me,
+    pinned: !!r.pinned,
   };
 }
 
@@ -113,7 +116,7 @@ function mapComment(r: any): CommunityComment {
 // what that viewer actually sees (the comment list and feed apply the same
 // filters).
 const POST_SELECT = `
-  SELECT p.id, p.type, p.body, p.photo_object_path, p.created_at,
+  SELECT p.id, p.type, p.body, p.photo_object_path, p.created_at, p.pinned,
     ${AUTHOR_SELECT},
     (SELECT COUNT(*) FROM community_likes l
        WHERE l.post_id = p.id
@@ -149,6 +152,9 @@ export async function listPosts(opts: {
   await ensureSchema();
   const vals: any[] = [opts.viewerId];
   const where: string[] = [
+    // Pinned posts are lifted out of the normal feed and shown separately at
+    // the top (see listPinned), so they never appear twice.
+    `NOT p.pinned`,
     `NOT EXISTS (SELECT 1 FROM community_blocks b WHERE b.blocker_id = $1 AND b.blocked_id = p.author_id)`,
     // Members an admin has globally blocked are hidden from everyone's feed.
     `NOT EXISTS (SELECT 1 FROM community_admin_blocks ab WHERE ab.user_id = p.author_id)`,
@@ -179,6 +185,93 @@ export async function getPost(id: string, viewerId: string): Promise<CommunityPo
   await ensureSchema();
   const { rows } = await getPool().query(`${POST_SELECT} WHERE p.id = $2`, [viewerId, id]);
   return rows[0] ? mapPost(rows[0]) : null;
+}
+
+// Members who did anything in the community today (posted, liked, or
+// commented). Powers the "N members were active today" strip above the feed.
+// Returns the total distinct count plus up to `avatarLimit` of the most
+// recently-active members for the overlapping avatar row. Excludes the viewer,
+// members the viewer blocked, and admin-blocked members.
+export async function listActiveToday(opts: {
+  viewerId: string;
+  sinceMs: number;
+  avatarLimit: number;
+}): Promise<{ count: number; members: CommunityAuthor[] }> {
+  await ensureSchema();
+  const avatarLimit = Math.max(1, Math.min(12, opts.avatarLimit));
+  // One row per active member with their latest activity time, unioned across
+  // posts/likes/comments. Filters mirror the feed's visibility rules.
+  const sql = `
+    WITH activity AS (
+      SELECT author_id AS uid, MAX(created_at) AS last_at FROM community_posts
+        WHERE created_at >= $2 GROUP BY author_id
+      UNION ALL
+      SELECT user_id AS uid, MAX(created_at) AS last_at FROM community_likes
+        WHERE created_at >= $2 GROUP BY user_id
+      UNION ALL
+      SELECT author_id AS uid, MAX(created_at) AS last_at FROM community_comments
+        WHERE created_at >= $2 GROUP BY author_id
+    ),
+    active AS (
+      SELECT uid, MAX(last_at) AS last_at
+      FROM activity
+      WHERE uid <> $1
+        AND NOT EXISTS (SELECT 1 FROM community_blocks b WHERE b.blocker_id = $1 AND b.blocked_id = uid)
+        AND NOT EXISTS (SELECT 1 FROM community_admin_blocks ab WHERE ab.user_id = uid)
+      GROUP BY uid
+    )
+    SELECT u.id AS author_id, u.name AS author_name,
+      CASE WHEN u.avatar_object_path IS NULL THEN u.avatar ELSE NULL END AS author_avatar,
+      u.avatar_object_path AS author_avatar_path,
+      a.last_at,
+      (SELECT COUNT(*) FROM active) AS total
+    FROM active a
+    JOIN users u ON u.id = a.uid
+    ORDER BY a.last_at DESC
+    LIMIT $3`;
+  const { rows } = await getPool().query(sql, [opts.viewerId, opts.sinceMs, avatarLimit]);
+  const count = rows[0] ? Number(rows[0].total) : 0;
+  return { count, members: rows.map(mapAuthor) };
+}
+
+// The pinned posts shown above the feed (usually one, from the trainer),
+// newest first. Applies the same block filters as the feed so a viewer never
+// sees a pinned post from someone they blocked or an admin-blocked member.
+export async function listPinned(viewerId: string): Promise<CommunityPost[]> {
+  await ensureSchema();
+  const { rows } = await getPool().query(
+    `${POST_SELECT}
+      WHERE p.pinned
+        AND NOT EXISTS (SELECT 1 FROM community_blocks b WHERE b.blocker_id = $1 AND b.blocked_id = p.author_id)
+        AND NOT EXISTS (SELECT 1 FROM community_admin_blocks ab WHERE ab.user_id = p.author_id)
+      ORDER BY p.created_at DESC, p.id DESC`,
+    [viewerId]
+  );
+  return rows.map(mapPost);
+}
+
+// Admin-only: pin or unpin a post. Returns false when the post no longer
+// exists. Authorization (admin role) is enforced by the route.
+export async function setPinned(input: { id: string; pinned: boolean }): Promise<boolean> {
+  await ensureSchema();
+  const pool = getPool();
+  if (!input.pinned) {
+    const { rowCount } = await pool.query(
+      `UPDATE community_posts SET pinned = FALSE WHERE id = $1`,
+      [input.id]
+    );
+    return (rowCount ?? 0) > 0;
+  }
+
+  const { rows } = await pool.query(`SELECT 1 FROM community_posts WHERE id = $1`, [input.id]);
+  if (!rows[0]) return false;
+
+  await pool.query(`UPDATE community_posts SET pinned = FALSE WHERE pinned = TRUE`);
+  const { rowCount } = await pool.query(
+    `UPDATE community_posts SET pinned = TRUE WHERE id = $1`,
+    [input.id]
+  );
+  return (rowCount ?? 0) > 0;
 }
 
 export async function createPost(input: {

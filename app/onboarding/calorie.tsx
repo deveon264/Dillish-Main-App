@@ -1,15 +1,18 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Button } from "@/components/Button";
 import { StepHeader } from "@/components/StepHeader";
+import { Reveal, Bouncy, OnboardDecor } from "@/components/onboarding/OnboardKit";
 import { ProgressRing } from "@/components/ProgressRing";
-import { useData } from "@/contexts/DataContext";
+import { useOnboardingAnswers } from "@/hooks/useOnboardingAnswers";
 import { useInsets } from "@/hooks/useInsets";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
+import { haptics } from "@/lib/haptics";
 
 const PRESETS: { value: number; label: string }[] = [
   { value: 1500, label: "Lose" },
@@ -21,13 +24,16 @@ const MAX = 3500;
 const STEP = 50;
 
 export default function CalorieStep() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const insets = useInsets();
-  const { profile, updateProfile, ready } = useData();
+  const { answers: profile, save: updateProfile, ready } = useOnboardingAnswers();
   const [goal, setGoal] = useState(profile.calorieGoal || 2000);
   const [saving, setSaving] = useState(false);
 
   const next = async () => {
+    haptics.selection();
     setSaving(true);
     await updateProfile({ calorieGoal: goal });
     router.push("/onboarding/water");
@@ -35,13 +41,16 @@ export default function CalorieStep() {
 
   return (
     <GradientBackground>
+      <OnboardDecor />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 110 }]}
         showsVerticalScrollIndicator={false}
       >
         <StepHeader step={9} total={10} />
+        <Reveal index={0}>
         <Text style={styles.title}>Daily calories</Text>
         <Text style={styles.subtitle}>Set a daily calorie goal that works for you. You can always change it later in the app.</Text>
+        </Reveal>
 
         <View style={styles.ringWrap}>
           <ProgressRing
@@ -59,31 +68,39 @@ export default function CalorieStep() {
         </View>
 
         <View style={styles.stepper}>
-          <Pressable
+          <Bouncy
             style={styles.stepBtn}
             onPress={() => setGoal((g) => Math.max(MIN, g - STEP))}
             hitSlop={8}
           >
             <Ionicons name="remove" size={22} color={colors.foreground} />
-          </Pressable>
+          </Bouncy>
           <Text style={styles.stepValue}>{goal} kcal</Text>
-          <Pressable
+          <Bouncy
             style={styles.stepBtn}
             onPress={() => setGoal((g) => Math.min(MAX, g + STEP))}
             hitSlop={8}
           >
             <Ionicons name="add" size={22} color={colors.foreground} />
-          </Pressable>
+          </Bouncy>
         </View>
 
         <View style={styles.presets}>
-          {PRESETS.map((p) => {
+          {PRESETS.map((p, i) => {
             const on = goal === p.value;
             return (
-              <Pressable key={p.value} style={[styles.preset, on && styles.presetOn]} onPress={() => setGoal(p.value)}>
+              <Bouncy
+                key={p.value}
+                style={[styles.preset, on && styles.presetOn]}
+                onPress={() => {
+                  if (on) return;
+                  haptics.selection();
+                  setGoal(p.value);
+                }}
+              >
                 <Text style={[styles.presetVal, on && styles.presetValOn]}>{p.value.toLocaleString()}</Text>
                 <Text style={[styles.presetLabel, on && styles.presetLabelOn]}>{p.label}</Text>
-              </Pressable>
+              </Bouncy>
             );
           })}
         </View>
@@ -95,7 +112,7 @@ export default function CalorieStep() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   scroll: { paddingHorizontal: 24 },
   title: { fontFamily: fonts.serif, fontSize: 36, color: colors.foreground, lineHeight: 40 },
   subtitle: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted, marginTop: 10, lineHeight: 22 },

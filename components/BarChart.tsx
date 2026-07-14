@@ -1,7 +1,8 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
 
 export type BarDatum = { label: string; value: number };
@@ -15,12 +16,20 @@ export function BarChart({
   goal,
   unit = "",
   height = 160,
+  fillColors,
+  trackColors,
 }: {
   data: BarDatum[];
   goal?: number;
   unit?: string;
   height?: number;
+  fillColors?: readonly [string, string];
+  trackColors?: readonly [string, string];
 }) {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
+  const fill = fillColors ?? colors.gradient;
+  const track = trackColors ?? colors.barTrackGradient;
   const maxVal = Math.max(goal ?? 0, ...data.map((d) => d.value), 1);
   const chartH = height;
   const barW = 22;
@@ -47,7 +56,7 @@ export function BarChart({
                 <View key={d.label + i} style={styles.barCol}>
                   {h > 0 ? (
                     <LinearGradient
-                      colors={reached ? colors.gradient : colors.barTrackGradient}
+                      colors={reached ? fill : track}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 0, y: 1 }}
                       style={{ width: barW, height: h, borderTopLeftRadius: 6, borderTopRightRadius: 6 }}
@@ -71,7 +80,7 @@ export function BarChart({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   row: { flexDirection: "row", alignItems: "flex-start" },
   yAxis: {
     width: Y_AXIS_W,

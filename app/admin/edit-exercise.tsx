@@ -1,25 +1,29 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
-  Pressable,
   TextInput,
   ActivityIndicator,
   Alert,
   Platform,
+  Keyboard,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
+import { Bouncy as Pressable } from "@/components/Bouncy";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/Button";
+import { KeyboardFormToolbar } from "@/components/KeyboardFormToolbar";
 import { useInsets } from "@/hooks/useInsets";
 import { useAuth } from "@/contexts/AuthContext";
 import { updateExercise } from "@/lib/exercises";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
+import { haptics } from "@/lib/haptics";
 
 const CATEGORIES = ["Pilates", "Yoga", "Strength", "HIIT", "Mobility", "Cardio"];
 const LEVELS = ["Beginner", "Intermediate", "Advanced"];
@@ -30,6 +34,9 @@ function notify(title: string, message: string) {
 }
 
 export default function EditExercise() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
+  const descriptionRef = useRef<TextInput>(null);
   const router = useRouter();
   const insets = useInsets();
   const { isAdmin, adminToken } = useAuth();
@@ -71,6 +78,7 @@ export default function EditExercise() {
   const save = async () => {
     if (!params.id) return;
     if (!title.trim()) {
+      haptics.warning();
       notify("Title required", "Give this exercise a title.");
       return;
     }
@@ -89,6 +97,7 @@ export default function EditExercise() {
       if (Platform.OS !== "web") Alert.alert("Saved", "Members will see the updated details.");
       router.back();
     } catch (e: any) {
+      haptics.warning();
       notify("Save failed", e?.message ?? "Please try again.");
     } finally {
       setBusy(false);
@@ -97,10 +106,12 @@ export default function EditExercise() {
 
   return (
     <GradientBackground>
-      <ScrollView
+      <KeyboardAwareScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        bottomOffset={96}
       >
         <Header onBack={() => router.back()} />
 
@@ -111,10 +122,13 @@ export default function EditExercise() {
           placeholderTextColor={colors.mutedForeground}
           value={title}
           onChangeText={setTitle}
+          returnKeyType="next"
+          onSubmitEditing={() => descriptionRef.current?.focus()}
         />
 
         <Text style={styles.label}>Description</Text>
         <TextInput
+          ref={descriptionRef}
           style={[styles.input, styles.textArea]}
           placeholder="Cues, form tips, what members should focus on…"
           placeholderTextColor={colors.mutedForeground}
@@ -140,12 +154,22 @@ export default function EditExercise() {
           placeholderTextColor={colors.mutedForeground}
           value={duration}
           onChangeText={setDuration}
+          returnKeyType="done"
+          onSubmitEditing={Keyboard.dismiss}
         />
 
         <Text style={styles.label}>Category</Text>
         <View style={styles.chips}>
           {CATEGORIES.map((c) => (
-            <Pressable key={c} style={[styles.chip, category === c && styles.chipOn]} onPress={() => setCategory(c)}>
+            <Pressable
+              key={c}
+              style={[styles.chip, category === c && styles.chipOn]}
+              onPress={() => {
+                if (category === c) return;
+                haptics.selection();
+                setCategory(c);
+              }}
+            >
               <Text style={[styles.chipText, category === c && styles.chipTextOn]}>{c}</Text>
             </Pressable>
           ))}
@@ -154,7 +178,15 @@ export default function EditExercise() {
         <Text style={styles.label}>Level</Text>
         <View style={styles.chips}>
           {LEVELS.map((l) => (
-            <Pressable key={l} style={[styles.chip, level === l && styles.chipOn]} onPress={() => setLevel(l)}>
+            <Pressable
+              key={l}
+              style={[styles.chip, level === l && styles.chipOn]}
+              onPress={() => {
+                if (level === l) return;
+                haptics.selection();
+                setLevel(l);
+              }}
+            >
               <Text style={[styles.chipText, level === l && styles.chipTextOn]}>{l}</Text>
             </Pressable>
           ))}
@@ -174,12 +206,15 @@ export default function EditExercise() {
             </>
           )}
         </Pressable>
-      </ScrollView>
+      </KeyboardAwareScrollView>
+      <KeyboardFormToolbar />
     </GradientBackground>
   );
 }
 
 function Header({ onBack }: { onBack: () => void }) {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   return (
     <PageHeader
       variant="compact"
@@ -196,7 +231,7 @@ function Header({ onBack }: { onBack: () => void }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   scroll: { paddingHorizontal: 20 },
   header: { marginBottom: 8 },
   roundBtn: {

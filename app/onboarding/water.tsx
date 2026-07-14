@@ -1,15 +1,18 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Button } from "@/components/Button";
 import { StepHeader } from "@/components/StepHeader";
+import { Reveal, Bouncy, OnboardDecor } from "@/components/onboarding/OnboardKit";
 import { WaterDroplet } from "@/components/WaterDroplet";
-import { useData } from "@/contexts/DataContext";
+import { useOnboardingAnswers } from "@/hooks/useOnboardingAnswers";
 import { useInsets } from "@/hooks/useInsets";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
+import { haptics } from "@/lib/haptics";
 
 const PRESETS = [2000, 2500, 3000];
 const MIN = 1000;
@@ -17,15 +20,18 @@ const MAX = 5000;
 const STEP = 250;
 
 export default function WaterStep() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const insets = useInsets();
-  const { profile, updateProfile, ready } = useData();
+  const { answers: profile, save: updateProfile, ready } = useOnboardingAnswers();
   const [goal, setGoal] = useState(profile.waterGoalMl || 2500);
   const [saving, setSaving] = useState(false);
 
   // Onboarding completes on the plan-ready screen, so a user who quits here
   // resumes onboarding instead of landing on Home without a program.
   const finish = async () => {
+    haptics.selection();
     setSaving(true);
     try {
       await updateProfile({ waterGoalMl: goal });
@@ -37,50 +43,63 @@ export default function WaterStep() {
 
   return (
     <GradientBackground>
+      <OnboardDecor />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 110 }]}
         showsVerticalScrollIndicator={false}
       >
         <StepHeader step={10} total={10} />
-        <Text style={styles.title}>Daily hydration</Text>
-        <Text style={styles.subtitle}>Set a water goal that feels right. You can always adjust it later.</Text>
+        <Reveal index={0}>
+          <Text style={styles.title}>Daily hydration</Text>
+          <Text style={styles.subtitle}>Set a water goal that feels right. You can always adjust it later.</Text>
+        </Reveal>
 
-        <View style={styles.dropWrap}>
-          <WaterDroplet size={170} progress={(goal - MIN) / (MAX - MIN)} />
-          <View style={styles.dropCenter} pointerEvents="none">
-            <Text style={styles.dropValue}>{(goal / 1000).toFixed(goal % 1000 === 0 ? 0 : 1)}</Text>
-            <Text style={styles.dropUnit}>liters</Text>
+        <Reveal index={1}>
+          <View style={styles.dropWrap}>
+            <WaterDroplet size={170} progress={(goal - MIN) / (MAX - MIN)} />
+            <View style={styles.dropCenter} pointerEvents="none">
+              <Text style={styles.dropValue}>{(goal / 1000).toFixed(goal % 1000 === 0 ? 0 : 1)}</Text>
+              <Text style={styles.dropUnit}>liters</Text>
+            </View>
           </View>
-        </View>
+        </Reveal>
 
         <View style={styles.stepper}>
-          <Pressable
+          <Bouncy
             style={styles.stepBtn}
             onPress={() => setGoal((g) => Math.max(MIN, g - STEP))}
             hitSlop={8}
           >
             <Ionicons name="remove" size={22} color={colors.foreground} />
-          </Pressable>
+          </Bouncy>
           <Text style={styles.stepValue}>{goal} ml</Text>
-          <Pressable
+          <Bouncy
             style={styles.stepBtn}
             onPress={() => setGoal((g) => Math.min(MAX, g + STEP))}
             hitSlop={8}
           >
             <Ionicons name="add" size={22} color={colors.foreground} />
-          </Pressable>
+          </Bouncy>
         </View>
 
         <View style={styles.presets}>
-          {PRESETS.map((p) => {
+          {PRESETS.map((p, i) => {
             const on = goal === p;
             return (
-              <Pressable key={p} style={[styles.preset, on && styles.presetOn]} onPress={() => setGoal(p)}>
+              <Bouncy
+                key={p}
+                style={[styles.preset, on && styles.presetOn]}
+                onPress={() => {
+                  if (on) return;
+                  haptics.selection();
+                  setGoal(p);
+                }}
+              >
                 <Text style={[styles.presetVal, on && styles.presetValOn]}>{(p / 1000).toFixed(1)}L</Text>
                 <Text style={[styles.presetLabel, on && styles.presetLabelOn]}>
                   {p === 2000 ? "Light" : p === 2500 ? "Balanced" : "Active"}
                 </Text>
-              </Pressable>
+              </Bouncy>
             );
           })}
         </View>
@@ -92,7 +111,7 @@ export default function WaterStep() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   scroll: { paddingHorizontal: 24 },
   title: { fontFamily: fonts.serif, fontSize: 36, color: colors.foreground, lineHeight: 40 },
   subtitle: { fontFamily: fonts.sans, fontSize: 15, color: colors.muted, marginTop: 10, lineHeight: 22 },

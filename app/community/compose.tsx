@@ -3,21 +3,20 @@ import {
   View,
   Text,
   StyleSheet,
-  Pressable,
   TextInput,
-  ScrollView,
-  KeyboardAvoidingView,
   Platform,
   ActionSheetIOS,
   Alert,
-  ActivityIndicator,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
+import { Bouncy as Pressable } from "@/components/Bouncy";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Button } from "@/components/Button";
+import { FormSkeleton } from "@/components/LoadingSkeletons";
 import { POST_TYPE_META } from "@/components/community/postTypes";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInsets } from "@/hooks/useInsets";
@@ -31,12 +30,16 @@ import {
   POST_TYPES,
   type PostType,
 } from "@/lib/community";
-import { colors } from "@/constants/colors";
+import type { AppColors } from "@/constants/colors";
+import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
+import { haptics } from "@/lib/haptics";
 
 const MAX_CHARS = 2000;
 
 export default function Compose() {
+  const colors = useColors();
+  const styles = useThemedStyles(createStyles);
   const insets = useInsets();
   const router = useRouter();
   const { token } = useAuth();
@@ -93,6 +96,7 @@ export default function Compose() {
         ? await ImagePicker.requestCameraPermissionsAsync()
         : await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
+        haptics.warning();
         setError("Permission is required to add a photo.");
         return;
       }
@@ -110,6 +114,7 @@ export default function Compose() {
       setPhotoMime(asset.mimeType ?? null);
       setIsNewPhoto(true);
     } catch {
+      haptics.warning();
       setError("Unable to open the camera or library on this device.");
     }
   };
@@ -138,6 +143,7 @@ export default function Compose() {
   };
 
   const removePhoto = () => {
+    haptics.warning();
     setPhotoUri(null);
     setPhotoMime(null);
     setIsNewPhoto(false);
@@ -145,11 +151,13 @@ export default function Compose() {
 
   const submit = async () => {
     if (!token) {
+      haptics.warning();
       setError("Please sign in again.");
       return;
     }
     const body = text.trim();
     if (!body) {
+      haptics.warning();
       setError("Write something to share.");
       return;
     }
@@ -174,6 +182,7 @@ export default function Compose() {
       }
       router.back();
     } catch (e: any) {
+      haptics.warning();
       setError(e?.message ?? (isEdit ? "Could not save your changes." : "Could not share your post."));
       setSubmitting(false);
     }
@@ -190,20 +199,16 @@ export default function Compose() {
       </View>
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.accent} />
-        </View>
+        <FormSkeleton />
       ) : (
-        <KeyboardAvoidingView
+        <KeyboardAwareScrollView
           style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          keyboardVerticalOffset={insets.top + 50}
+          contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 30 }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          bottomOffset={96}
+          showsVerticalScrollIndicator={false}
         >
-          <ScrollView
-            contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 30 }}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
             <Text style={styles.label}>WHAT ARE YOU SHARING?</Text>
             <View style={styles.types}>
               {POST_TYPES.map((t) => {
@@ -212,7 +217,11 @@ export default function Compose() {
                 return (
                   <Pressable
                     key={t}
-                    onPress={() => setType(t)}
+                    onPress={() => {
+                      if (active) return;
+                      haptics.selection();
+                      setType(t);
+                    }}
                     style={[styles.typeChip, active && styles.typeChipActive]}
                   >
                     <Ionicons
@@ -270,14 +279,13 @@ export default function Compose() {
               disabled={!text.trim()}
               style={{ marginTop: 22 }}
             />
-          </ScrollView>
-        </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
       )}
     </GradientBackground>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   topBar: {
     flexDirection: "row",
     alignItems: "center",

@@ -233,3 +233,51 @@ test("the native probe's redirected final URL is the one swapped into the player
   assert.deepEqual(replaced, ["https://signed.cdn/v1?token=abc"]);
   assert.equal(refs.loadedVideoId.current, "v1");
 });
+
+// --- toPlayableSource (phone-side clip cache) -------------------------------
+
+test("toPlayableSource's result is what reaches replaceAsync", async () => {
+  const refs = freshRefs();
+  const replaced: (string | null)[] = [];
+  await loadExerciseClip(refs, baseDeps({
+    currentVideo: { id: "v1" },
+    toPlayableSource: async (videoId, remoteUrl) => {
+      assert.equal(videoId, "v1");
+      assert.equal(remoteUrl, "https://cdn/v1.mp4");
+      return "file:///cache/exercise-videos/v1-100.mp4";
+    },
+    replaceAsync: async (src) => {
+      replaced.push(src);
+    },
+  }));
+  assert.deepEqual(replaced, ["file:///cache/exercise-videos/v1-100.mp4"]);
+  assert.equal(refs.loadedVideoId.current, "v1");
+});
+
+test("a load whose cache resolution finishes AFTER a newer load started is dropped", async () => {
+  const refs = freshRefs();
+  const replaced: (string | null)[] = [];
+  const slowCache = deferred<string>();
+
+  const first = loadExerciseClip(refs, baseDeps({
+    currentVideo: { id: "v1" },
+    toPlayableSource: () => slowCache.promise,
+    replaceAsync: async (src) => {
+      replaced.push(src);
+    },
+  }));
+
+  // A newer load for the next exercise starts (and completes) meanwhile.
+  await loadExerciseClip(refs, baseDeps({
+    currentVideo: { id: "v2" },
+    replaceAsync: async (src) => {
+      replaced.push(src);
+    },
+  }));
+
+  // The old load's cache resolution finally lands: it must NOT swap the source.
+  slowCache.resolve("file:///cache/exercise-videos/v1-100.mp4");
+  await first;
+  assert.deepEqual(replaced, ["https://cdn/v2.mp4"]);
+  assert.equal(refs.loadedVideoId.current, "v2");
+});
