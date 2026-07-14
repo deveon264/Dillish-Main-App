@@ -24,8 +24,16 @@ start "Florish Sidecar" cmd /k node scripts\local-object-storage-sidecar.mjs
 echo Starting local Whisper transcribe sidecar (port 1107)...
 start "Florish Transcribe" cmd /k node scripts\local-transcribe-sidecar.mjs
 
-echo Starting guarded Expo dev server (port 8081)...
-start "Florish Expo" cmd /k npm start
+REM Pass "tunnel" as the first argument (dev-up.cmd tunnel) to publish the
+REM dev server at a public https://...exp.direct URL so phones outside this
+REM network (other countries, mobile data) can open it in Expo Go.
+if /i "%~1"=="tunnel" (
+  echo Starting guarded Expo dev server in TUNNEL mode (public exp.direct URL)...
+  start "Florish Expo (tunnel)" cmd /k node scripts\safe-expo-start.mjs -- --tunnel --port 8081
+) else (
+  echo Starting guarded Expo dev server (port 8081, LAN mode)...
+  start "Florish Expo" cmd /k npm start
+)
 
 echo.
 echo All services launching. This PC's current LAN IP(s):
