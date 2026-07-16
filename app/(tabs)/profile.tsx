@@ -1119,7 +1119,7 @@ export default function Profile() {
                 <Text style={styles.historyStatLabel}>MINUTES</Text>
               </View>
               <View style={[styles.historyStat, styles.historyStatLast]}>
-                <Text style={[styles.historyStatNum, styles.historyStatAccent]}>{history.kcal.toLocaleString()}</Text>
+                <Text style={[styles.historyStatNum, styles.historyStatAccent]}>~{history.kcal.toLocaleString()}</Text>
                 <Text style={styles.historyStatLabel}>KCAL</Text>
               </View>
             </View>
@@ -1209,7 +1209,7 @@ export default function Profile() {
                           {workout?.title ?? "Dillish Workout"}
                         </Text>
                         <Text style={styles.historyWorkoutSub}>
-                          with Dillish - {completion.durationMin} min - {completion.kcal} kcal
+                          with Dillish - {completion.durationMin} min - ~{completion.kcal} kcal
                         </Text>
                       </View>
                       <Text style={styles.historyWorkoutDay}>

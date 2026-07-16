@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, Pressable as StructuralPressable, Image, Platform, ActivityIndicator, Animated, Easing, TextInput, Modal, ActionSheetIOS, Alert } from "react-native";
+import { View, Text, StyleSheet, Pressable as StructuralPressable, Image, KeyboardAvoidingView, Platform, ActivityIndicator, Animated, Easing, TextInput, Modal, ActionSheetIOS, Alert } from "react-native";
 import { KeyboardAwareScrollView, KeyboardGestureArea } from "react-native-keyboard-controller";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
@@ -10,6 +10,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
 import { Bouncy as Pressable } from "@/components/Bouncy";
 import { GradientBackground } from "@/components/GradientBackground";
+import { AnalyzingCard } from "@/components/trackers/AnalyzingCard";
 import { MotionListItem } from "@/components/Motion";
 import { useDataRefresh } from "@/hooks/useDataRefresh";
 import { Card } from "@/components/Card";
@@ -36,6 +37,7 @@ type AnalysisResult = {
   protein: number;
   carbs: number;
   fats: number;
+  portion?: string;
   photoUrl?: string;
 };
 
@@ -134,12 +136,19 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
   const [imgError, setImgError] = useState(false);
   const [base64, setBase64] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
+  // True once the AI response has landed; lets the analyzing card show 100%
+  // and the final stage tick before the result card swaps in.
+  const [analyzeDone, setAnalyzeDone] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<LogTab>("photo");
   const [qty, setQty] = useState(1);
   const [mealType, setMealType] = useState("Lunch");
   const [mealMenu, setMealMenu] = useState(false);
+  // "Not quite right?" correction on photo results: re-analyzes the same
+  // photo with the user's typed identity (e.g. "droewors").
+  const [correctionOpen, setCorrectionOpen] = useState(false);
+  const [correctionText, setCorrectionText] = useState("");
   const [mealText, setMealText] = useState("");
   const mealTextInputRef = useRef<TextInput>(null);
   // Voice logging: idle -> recording -> transcribing, then the transcript is
@@ -301,7 +310,12 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
     ]);
   };
 
-  const analyze = async (b64: string) => {
+  // Brief hold at 100% so the analyzing card's final tick is visible before
+  // the result card replaces it.
+  const ANALYZE_DONE_HOLD_MS = 450;
+  const holdAtComplete = () => new Promise((r) => setTimeout(r, ANALYZE_DONE_HOLD_MS));
+
+  const analyze = async (b64: string, hint?: string) => {
     setAnalyzing(true);
     setError(null);
     try {
@@ -309,19 +323,32 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
       const resp = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: b64 }),
+        body: JSON.stringify(hint ? { image: b64, text: hint } : { image: b64 }),
       });
       if (!resp.ok) {
         throw new Error(await extractAnalyzeError(resp, "Could not analyze the image. Please try again."));
       }
       const data = (await resp.json()) as AnalysisResult;
+      setAnalyzeDone(true);
+      await holdAtComplete();
       setResult(data);
     } catch (e: any) {
       setError(toAnalyzeMessage(e, "Could not analyze the image. Please try again."));
       haptics.warning();
     } finally {
       setAnalyzing(false);
+      setAnalyzeDone(false);
     }
+  };
+
+  const submitCorrection = () => {
+    const hint = correctionText.trim();
+    if (!hint || !base64) return;
+    setCorrectionOpen(false);
+    haptics.selection();
+    // Clear the result so the staged analyzing card shows during the re-run.
+    setResult(null);
+    analyze(base64, hint);
   };
 
   const fetchFoodPhoto = async (name: string, text?: string) => {
@@ -391,6 +418,8 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
     setError(null);
     setQty(1);
     setMealMenu(false);
+    setCorrectionOpen(false);
+    setCorrectionText("");
     // Abandon any in-flight recording (e.g. the member switched tabs mid-take).
     if (voiceState === "recording") {
       recorder.stop().catch(() => {});
@@ -463,6 +492,8 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
         throw new Error(await extractAnalyzeError(resp, "Could not analyze that meal. Please try again."));
       }
       const data = (await resp.json()) as AnalysisResult;
+      setAnalyzeDone(true);
+      await holdAtComplete();
       setResult(data);
       // Fetch a matching stock photo in the background so it never blocks the
       // nutrition result. On no result or any error the hero falls back to the
@@ -473,6 +504,7 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
       haptics.warning();
     } finally {
       setAnalyzing(false);
+      setAnalyzeDone(false);
     }
   };
 
@@ -562,11 +594,19 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
 
           <View style={styles.goalRingWrap}>
             <ProgressRing size={170} strokeWidth={12} progress={kcalPct} gradientId="calorieGoalRing">
-              <AnimatedNumber value={remaining} style={styles.remainingNum} />
+              <AnimatedNumber
+                value={remaining}
+                formatter={(n) => `~${Math.round(n).toLocaleString()}`}
+                style={styles.remainingNum}
+              />
               <Text style={styles.remainingLabel}>KCAL REMAINING</Text>
             </ProgressRing>
             <Text style={styles.eatenLine}>
-              <AnimatedNumber value={totals.kcal} style={styles.eatenStrong} /> eaten · goal {profile.calorieGoal.toLocaleString()}
+              <AnimatedNumber
+                value={totals.kcal}
+                formatter={(n) => `~${Math.round(n).toLocaleString()}`}
+                style={styles.eatenStrong}
+              /> eaten · goal {profile.calorieGoal.toLocaleString()}
             </Text>
           </View>
 
@@ -638,7 +678,7 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
                   <Text style={styles.heroTitle} numberOfLines={2}>{result.name}</Text>
                   <View style={styles.heroKcalRow}>
                     <Ionicons name="flame" size={15} color={colors.accent} />
-                    <Text style={styles.heroKcal}>{result.kcal * qty} kcal</Text>
+                    <Text style={styles.heroKcal}>~{result.kcal * qty} kcal</Text>
                   </View>
                 </View>
               </View>
@@ -648,20 +688,46 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
                 <ResultMacro label="Carbs" value={result.carbs * qty} />
                 <ResultMacro label="Fats" value={result.fats * qty} />
               </View>
+              <Text style={styles.resultEstimateNote}>
+                {result.portion
+                  ? `AI estimate · 1 serving = ${result.portion}`
+                  : "Values are AI estimates"}
+              </Text>
 
               <View style={styles.ctrlRow}>
-                <Pressable style={styles.mealSelect} onPress={() => setMealMenu(true)}>
-                  <Text style={styles.mealSelectText}>{mealType}</Text>
-                  <Ionicons name="chevron-down" size={16} color={colors.muted} />
-                </Pressable>
-                <View style={styles.qtyBox}>
-                  <Pressable hitSlop={8} onPress={() => setQty((q) => Math.max(1, q - 1))}>
-                    <Ionicons name="remove" size={18} color={colors.muted} />
+                <View style={styles.ctrlCol}>
+                  <Text style={styles.ctrlLabel}>MEAL TYPE</Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Change meal type"
+                    style={styles.mealSelect}
+                    onPress={() => setMealMenu(true)}
+                  >
+                    <Text style={styles.mealSelectText}>{mealType}</Text>
+                    <Ionicons name="chevron-down" size={16} color={colors.muted} />
                   </Pressable>
-                  <Text style={styles.qtyText}>{qty}</Text>
-                  <Pressable hitSlop={8} onPress={() => setQty((q) => Math.min(20, q + 1))}>
-                    <Ionicons name="add" size={18} color={colors.accent} />
-                  </Pressable>
+                </View>
+                <View>
+                  <Text style={styles.ctrlLabel}>SERVINGS</Text>
+                  <View style={styles.qtyBox}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Decrease servings"
+                      hitSlop={8}
+                      onPress={() => setQty((q) => Math.max(1, q - 1))}
+                    >
+                      <Ionicons name="remove" size={18} color={colors.muted} />
+                    </Pressable>
+                    <Text style={styles.qtyText}>{qty}</Text>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Increase servings"
+                      hitSlop={8}
+                      onPress={() => setQty((q) => Math.min(20, q + 1))}
+                    >
+                      <Ionicons name="add" size={18} color={colors.accent} />
+                    </Pressable>
+                  </View>
                 </View>
               </View>
 
@@ -686,15 +752,33 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
                   </LinearGradient>
                 </Pressable>
               </View>
+              {base64 ? (
+                <Pressable
+                  accessibilityRole="button"
+                  style={styles.correctLink}
+                  disabled={saving}
+                  onPress={() => {
+                    setCorrectionText("");
+                    setCorrectionOpen(true);
+                  }}
+                >
+                  <Text style={styles.correctLinkText}>Not quite right? Correct it</Text>
+                </Pressable>
+              ) : null}
             </View>
           </Card>
         ) : analyzing ? (
           <Card style={{ marginTop: 14 }}>
-            {image ? <Image source={{ uri: image }} style={styles.preview} /> : null}
-            <View style={styles.analyzing}>
-              <ActivityIndicator color={colors.accent} />
-              <Text style={styles.analyzingText}>Analyzing your meal...</Text>
-            </View>
+            <AnalyzingCard
+              imageUri={image}
+              done={analyzeDone}
+              labels={[
+                image ? "Analyzing photo" : "Reading your meal",
+                "Identifying food",
+                "Estimating nutrition",
+                "Finalizing results",
+              ]}
+            />
           </Card>
         ) : tab === "voice" ? (
           <Card style={styles.textCard}>
@@ -878,7 +962,7 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
                   <Text style={styles.logMacro}>P: {l.protein}g · C: {l.carbs}g · F: {l.fats}g</Text>
                 </View>
                 <View style={styles.logRight}>
-                  <Text style={styles.logKcal}>{l.kcal}</Text>
+                  <Text style={styles.logKcal}>~{l.kcal}</Text>
                   <Text style={styles.logKcalUnit}>kcal</Text>
                   <Pressable
                     accessibilityRole="button"
@@ -987,6 +1071,42 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
         </StructuralPressable>
       </Modal>
 
+      <Modal visible={correctionOpen} transparent animationType="fade" onRequestClose={() => setCorrectionOpen(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+          <StructuralPressable style={styles.modalBackdrop} onPress={() => setCorrectionOpen(false)}>
+            <StructuralPressable style={styles.modalSheet} onPress={(event) => event.stopPropagation()}>
+              <Text style={styles.modalTitle}>What is this food really?</Text>
+              <TextInput
+                value={correctionText}
+                onChangeText={setCorrectionText}
+                placeholder="e.g. droewors"
+                placeholderTextColor={colors.mutedForeground}
+                style={styles.correctionInput}
+                autoFocus
+                autoCapitalize="none"
+                returnKeyType="send"
+                onSubmitEditing={submitCorrection}
+              />
+              <Pressable
+                style={[styles.analyzeBtn, { marginTop: 12, marginHorizontal: 8, marginBottom: 4 }, !correctionText.trim() && { opacity: 0.5 }]}
+                disabled={!correctionText.trim()}
+                onPress={submitCorrection}
+              >
+                <LinearGradient
+                  colors={colors.gradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={[styles.analyzeBtnGrad, { justifyContent: "center" }]}
+                >
+                  <Ionicons name="sparkles" size={15} color={colors.onPrimaryStrong} />
+                  <Text style={styles.analyzeBtnText}>Re-analyze</Text>
+                </LinearGradient>
+              </Pressable>
+            </StructuralPressable>
+          </StructuralPressable>
+        </KeyboardAvoidingView>
+      </Modal>
+
       <Modal visible={!!selectedMeal} transparent animationType="fade" onRequestClose={() => setSelectedMeal(null)}>
         <StructuralPressable style={styles.mealDetailBackdrop} onPress={() => setSelectedMeal(null)}>
           {selectedMeal ? (
@@ -1020,7 +1140,7 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
                 <Text style={styles.mealDetailTitle}>{selectedMeal.name}</Text>
                 <View style={styles.mealDetailKcalRow}>
                   <Ionicons name="flame" size={18} color={colors.accent} />
-                  <Text style={styles.mealDetailKcal}>{selectedMeal.kcal.toLocaleString()} kcal</Text>
+                  <Text style={styles.mealDetailKcal}>~{selectedMeal.kcal.toLocaleString()} kcal</Text>
                 </View>
                 <View style={styles.mealDetailMacros}>
                   <DetailMacro label="Protein" value={selectedMeal.protein} />
@@ -1067,7 +1187,7 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
                 <View style={styles.mealDetailKcalRow}>
                   <Ionicons name="flame" size={18} color={colors.accent} />
                   <Text style={styles.mealDetailKcal}>
-                    {Math.round(foodDetail.protein * 4 + foodDetail.carbs * 4 + foodDetail.fats * 9).toLocaleString()} kcal
+                    ~{Math.round(foodDetail.protein * 4 + foodDetail.carbs * 4 + foodDetail.fats * 9).toLocaleString()} kcal
                   </Text>
                 </View>
                 <View style={styles.mealDetailMacros}>
@@ -1271,6 +1391,13 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
   heroKcalRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 6 },
   heroKcal: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.accent },
   resultMacros: { flexDirection: "row", gap: 12, marginTop: 14 },
+  resultEstimateNote: {
+    fontFamily: fonts.sans,
+    fontSize: 12,
+    color: colors.muted,
+    marginTop: 10,
+    textAlign: "center",
+  },
   rMacro: {
     flex: 1,
     alignItems: "center",
@@ -1283,8 +1410,16 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
   rMacroVal: { fontFamily: fonts.sansSemibold, fontSize: 20, color: colors.foreground },
   rMacroLabel: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, marginTop: 3 },
   ctrlRow: { flexDirection: "row", gap: 12, marginTop: 14 },
+  ctrlCol: { flex: 1 },
+  ctrlLabel: {
+    fontFamily: fonts.sansSemibold,
+    fontSize: 11,
+    letterSpacing: 1.1,
+    color: colors.muted,
+    marginBottom: 6,
+    marginLeft: 2,
+  },
   mealSelect: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -1305,6 +1440,7 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     borderColor: colors.cardBorder,
     borderRadius: 14,
     paddingHorizontal: 14,
+    paddingVertical: 14,
   },
   qtyText: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.foreground, minWidth: 16, textAlign: "center" },
   btnRow: { flexDirection: "row", gap: 12, marginTop: 16 },
@@ -1330,6 +1466,20 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
   },
   logBtnText: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.onPrimaryStrong },
   modalBackdrop: { flex: 1, backgroundColor: "rgba(16,17,17,0.45)", justifyContent: "center", paddingHorizontal: 40 },
+  correctLink: { alignItems: "center", marginTop: 14 },
+  correctLinkText: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.accentDark },
+  correctionInput: {
+    fontFamily: fonts.sans,
+    fontSize: 15,
+    color: colors.foreground,
+    backgroundColor: colors.cardElevated,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: Platform.OS === "ios" ? 12 : 8,
+    marginHorizontal: 8,
+  },
   modalSheet: {
     backgroundColor: colors.card,
     borderWidth: 1,

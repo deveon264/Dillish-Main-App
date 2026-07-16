@@ -1,6 +1,7 @@
 import React from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { StyleSheet, ViewStyle, StyleProp } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { AppColors } from "@/constants/colors";
 import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { ScreenEntrance } from "@/components/Motion";
@@ -14,6 +15,7 @@ export function GradientBackground({
 }) {
   const colors = useColors();
   const styles = useThemedStyles(createStyles);
+  const insets = useSafeAreaInsets();
   return (
     <LinearGradient
       colors={colors.bgGradient}
@@ -23,6 +25,13 @@ export function GradientBackground({
       style={[styles.fill, style]}
     >
       <ScreenEntrance style={styles.motion}>{children}</ScreenEntrance>
+      {insets.top > 0 ? (
+        <LinearGradient
+          pointerEvents="none"
+          colors={[colors.bgGradient[0], `${colors.bgGradient[0]}00`]}
+          style={[styles.statusBarFade, { height: insets.top + 16 }]}
+        />
+      ) : null}
     </LinearGradient>
   );
 }
@@ -30,4 +39,13 @@ export function GradientBackground({
 const createStyles = (colors: AppColors) => StyleSheet.create({
   fill: { flex: 1 },
   motion: { flex: 1 },
+  // Scrolled content slides under the translucent status bar; this fade keeps
+  // it from colliding with the clock. Sits above content, never catches taps.
+  statusBarFade: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
 });

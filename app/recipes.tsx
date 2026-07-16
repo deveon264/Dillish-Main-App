@@ -62,7 +62,7 @@ function RecipeCard({ recipe }: { recipe: Recipe }) {
         {recipe.title}
       </Text>
       <View style={styles.cardFoot}>
-        <Text style={styles.cardKcal}>{recipe.kcal} kcal</Text>
+        <Text style={styles.cardKcal}>~{recipe.kcal} kcal</Text>
         <Pressable
           hitSlop={10}
           onPress={() => {

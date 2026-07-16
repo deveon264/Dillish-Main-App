@@ -33,6 +33,7 @@ test("analyze handles text meals with a mocked OpenAI completion", async () => {
                 protein: 20,
                 carbs: 28,
                 fats: 16,
+                portion: "1 plate (2 eggs, 1 slice)",
               }),
             },
           },
@@ -51,6 +52,34 @@ test("analyze handles text meals with a mocked OpenAI completion", async () => {
     protein: 20,
     carbs: 28,
     fats: 16,
+    portion: "1 plate (2 eggs, 1 slice)",
+  });
+});
+
+test("analyze tolerates a missing portion by returning an empty string", async () => {
+  const res = await analyzeMealPost(postReq({ text: "an apple" }), {
+    env: { OPENAI_API_KEY: "test-key" },
+    async createCompletion() {
+      return {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({ name: "Apple", kcal: 95, protein: 0, carbs: 25, fats: 0 }),
+            },
+          },
+        ],
+      };
+    },
+  });
+
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), {
+    name: "Apple",
+    kcal: 95,
+    protein: 0,
+    carbs: 25,
+    fats: 0,
+    portion: "",
   });
 });
 
@@ -79,6 +108,54 @@ test("analyze sends image input for photo meals", async () => {
   });
 
   assert.equal(res.status, 200);
+  assert.equal(userContent[1].type, "image_url");
+  assert.equal(userContent[1].image_url.url, "data:image/jpeg;base64,abc123");
+});
+
+test("analyze teaches the model regional foods in the system prompt", async () => {
+  let systemPrompt = "";
+  await analyzeMealPost(postReq({ text: "dried meat snack" }), {
+    env: { OPENAI_API_KEY: "test-key" },
+    async createCompletion(input) {
+      systemPrompt = input.messages[0].content;
+      return {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({ name: "Biltong", kcal: 250, protein: 40, carbs: 1, fats: 10, portion: "100g" }),
+            },
+          },
+        ],
+      };
+    },
+  });
+
+  assert.match(systemPrompt, /biltong/i);
+  assert.match(systemPrompt, /droewors/i);
+  assert.match(systemPrompt, /not beef jerky/i);
+});
+
+test("a user correction rides along with the photo and is framed as the food's identity", async () => {
+  let userContent: any;
+  const res = await analyzeMealPost(postReq({ image: "abc123", text: "droewors" }), {
+    env: { OPENAI_API_KEY: "test-key" },
+    async createCompletion(input) {
+      userContent = input.messages[1].content;
+      return {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({ name: "Droewors", kcal: 180, protein: 16, carbs: 1, fats: 12, portion: "50g" }),
+            },
+          },
+        ],
+      };
+    },
+  });
+
+  assert.equal(res.status, 200);
+  assert.match(userContent[0].text, /identifies this food as: "droewors"/);
+  assert.match(userContent[0].text, /Trust that identity/);
   assert.equal(userContent[1].type, "image_url");
   assert.equal(userContent[1].image_url.url, "data:image/jpeg;base64,abc123");
 });

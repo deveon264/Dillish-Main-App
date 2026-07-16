@@ -6,6 +6,7 @@ type Nutrition = {
   protein: number;
   carbs: number;
   fats: number;
+  portion: string;
 };
 
 type Env = Record<string, string | undefined>;
@@ -23,8 +24,13 @@ const NUTRITION_SCHEMA = {
     protein: { type: "number", description: "Estimated protein grams for the portion." },
     carbs: { type: "number", description: "Estimated carbohydrate grams for the portion." },
     fats: { type: "number", description: "Estimated fat grams for the portion." },
+    portion: {
+      type: "string",
+      description:
+        'Short description of the single portion the estimate covers, e.g. "1 tbsp (15g)" or "1 plate (350g)". Empty string if not applicable.',
+    },
   },
-  required: ["name", "kcal", "protein", "carbs", "fats"],
+  required: ["name", "kcal", "protein", "carbs", "fats", "portion"],
   additionalProperties: false,
 } as const;
 
@@ -60,11 +66,20 @@ export async function analyzeMealPost(request: Request, deps: AnalyzeDeps = {}):
     ((input: any) => openai!.chat.completions.create(input));
 
   const systemPrompt =
-    'You are a precise nutrition estimator. Identify the food and estimate its nutritional content for the portion described or shown. Respond ONLY with JSON in this exact shape: {"name": string, "kcal": number, "protein": number, "carbs": number, "fats": number}. Macros are in grams, rounded to whole numbers. If the input is not food, return name \'Not a meal\' with zeros.';
+    'You are a precise nutrition estimator. Identify the food and estimate its nutritional content for the portion described or shown. Respond ONLY with JSON in this exact shape: {"name": string, "kcal": number, "protein": number, "carbs": number, "fats": number, "portion": string}. Macros are in grams, rounded to whole numbers. "portion" is a short human description of the single portion your numbers cover, like "1 tbsp (15g)" or "1 plate (350g)"; for packaged products use the product\'s typical labeled serving. ' +
+    "Recognize regional foods by their proper names, including Southern African foods such as biltong, droewors, boerewors, pap (mieliepap), chakalaka, bobotie, vetkoek, potjiekos, samp and beans, morogo, bunny chow, sosaties, koeksisters, melktert, and rusks. Never rename a regional food to a Western lookalike (biltong is not beef jerky) and estimate its macros authentically (biltong is an air-dried cured meat, higher in fat and not sweetened like jerky). " +
+    "When a description accompanies a photo, treat the description as the food's identity and the photo as evidence of the portion size. " +
+    "If the input is not food, return name 'Not a meal' with zeros and an empty portion.";
 
+  const hint = body.text?.trim();
   const userContent = body.image
     ? [
-        { type: "text" as const, text: "Analyze this meal and estimate its nutrition." },
+        {
+          type: "text" as const,
+          text: hint
+            ? `Analyze this meal and estimate its nutrition. The user identifies this food as: "${hint}". Trust that identity; use the photo to judge the portion.`
+            : "Analyze this meal and estimate its nutrition.",
+        },
         { type: "image_url" as const, image_url: { url: `data:image/jpeg;base64,${body.image}` } },
       ]
     : `Analyze this meal description and estimate its nutrition: ${body.text}`;
@@ -134,6 +149,7 @@ export async function analyzeMealPost(request: Request, deps: AnalyzeDeps = {}):
     protein: Math.max(0, Math.round(Number(parsed.protein) || 0)),
     carbs: Math.max(0, Math.round(Number(parsed.carbs) || 0)),
     fats: Math.max(0, Math.round(Number(parsed.fats) || 0)),
+    portion: typeof parsed.portion === "string" ? parsed.portion.trim().slice(0, 60) : "",
   };
 
   return Response.json(result);

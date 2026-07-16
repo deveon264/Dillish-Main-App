@@ -27,18 +27,27 @@ start "Florish Transcribe" cmd /k node scripts\local-transcribe-sidecar.mjs
 REM Pass "tunnel" as the first argument (dev-up.cmd tunnel) to publish the
 REM dev server at a public https://...exp.direct URL so phones outside this
 REM network (other countries, mobile data) can open it in Expo Go.
+REM NOTE: no unescaped ( ) in echo text inside these blocks - cmd treats a
+REM bare ) as the end of the block and aborts with "... was unexpected".
 if /i "%~1"=="tunnel" (
-  echo Starting guarded Expo dev server in TUNNEL mode (public exp.direct URL)...
+  echo Starting guarded Expo dev server in TUNNEL mode - public exp.direct URL...
   start "Florish Expo (tunnel)" cmd /k node scripts\safe-expo-start.mjs -- --tunnel --port 8081
 ) else (
-  echo Starting guarded Expo dev server (port 8081, LAN mode)...
+  echo Starting guarded Expo dev server on port 8081, LAN mode...
   start "Florish Expo" cmd /k npm start
+  echo Refreshing the Expo Go QR code on the desktop - florish-dev-qr.png...
+  node scripts\write-dev-qr.mjs
 )
 
 echo.
 echo All services launching. This PC's current LAN IP(s):
 ipconfig | findstr /C:"IPv4"
 echo.
+if /i not "%~1"=="tunnel" (
+  echo If the phone's saved entry in Expo Go times out, the PC's IP changed:
+  echo scan the fresh QR code saved on the desktop as florish-dev-qr.png.
+  echo.
+)
 echo The Expo window will create a database backup and object-storage backup
 echo before showing the QR code. If it refuses to start, read the safe-start
 echo error in that window instead of continuing with an empty database.

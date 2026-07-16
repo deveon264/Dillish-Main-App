@@ -112,6 +112,12 @@ Module._load = function patchedLoad(request: string, parent: unknown, isMain: bo
     return { Ionicons: ({ children, ...props }: any) => createElement("Ionicons", props, children) };
   }
   if (request === "expo-linear-gradient") return { LinearGradient: host("LinearGradient") };
+  if (request === "react-native-safe-area-context") {
+    return { useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) };
+  }
+  if (request === "@/components/trackers/AnalyzingCard") {
+    return { AnalyzingCard: host("AnalyzingCard") };
+  }
   if (request === "@/components/ProgressRing") {
     return { ProgressRing: ({ children, ...props }: any) => createElement("ProgressRing", props, children) };
   }

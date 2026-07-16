@@ -420,7 +420,7 @@ export default function Dashboard() {
                   <Text style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{featured.title}</Text>
                   <View style={styles.heroMeta}>
                     <Text style={styles.heroMetaText}>{featuredDuration} min</Text>
-                    <Text style={styles.heroMetaText}>{featured.kcal} kcal</Text>
+                    <Text style={styles.heroMetaText}>~{featured.kcal} kcal</Text>
                     <Text style={styles.heroMetaText}>{featured.level}</Text>
                   </View>
                   <Text style={styles.heroCtaText}>{heroCtaText}</Text>
@@ -512,15 +512,15 @@ export default function Dashboard() {
         <View style={styles.calStats}>
               <View style={styles.calStatRow}>
                 <Text style={styles.calStatLabel}>Consumed</Text>
-                <AnimatedNumber value={consumed} formatter={(n) => `${Math.round(n).toLocaleString()} kcal`} style={styles.calStatValue} />
+                <AnimatedNumber value={consumed} formatter={(n) => `~${Math.round(n).toLocaleString()} kcal`} style={styles.calStatValue} />
               </View>
               <View style={styles.calStatRow}>
                 <Text style={styles.calStatLabel}>Burned</Text>
-                <AnimatedNumber value={burned} formatter={(n) => `${Math.round(n).toLocaleString()} kcal`} style={[styles.calStatValue, { color: colors.highlight }]} />
+                <AnimatedNumber value={burned} formatter={(n) => `~${Math.round(n).toLocaleString()} kcal`} style={[styles.calStatValue, { color: colors.highlight }]} />
               </View>
               <View style={styles.calStatRow}>
                 <Text style={styles.calStatLabel}>Remaining</Text>
-                <AnimatedNumber value={remainingKcal} formatter={(n) => `${Math.round(n).toLocaleString()} kcal`} style={[styles.calStatValue, { color: colors.accent }]} />
+                <AnimatedNumber value={remainingKcal} formatter={(n) => `~${Math.round(n).toLocaleString()} kcal`} style={[styles.calStatValue, { color: colors.accent }]} />
               </View>
             </View>
           </View>

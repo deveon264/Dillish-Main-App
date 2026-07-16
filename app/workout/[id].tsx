@@ -911,7 +911,7 @@ export default function WorkoutPlayer() {
               </View>
               <View style={styles.metaItem}>
                 <Ionicons name="flame-outline" size={15} color={colors.muted} />
-                <Text style={styles.metaText2}>{workout.kcal} kcal</Text>
+                <Text style={styles.metaText2}>~{workout.kcal} kcal</Text>
               </View>
               <View style={styles.metaItem}>
                 <Ionicons name="person-outline" size={15} color={colors.muted} />
@@ -1277,7 +1277,7 @@ export default function WorkoutPlayer() {
         )}
         <View style={styles.doneStats}>
           <View style={styles.doneStat}>
-            <Text style={styles.doneStatNum}>{workout.kcal}</Text>
+            <Text style={styles.doneStatNum}>~{workout.kcal}</Text>
             <Text style={styles.doneStatLbl}>kcal burned</Text>
           </View>
           <View style={styles.doneStatDivider} />

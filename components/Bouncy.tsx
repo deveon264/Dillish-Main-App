@@ -1,4 +1,4 @@
-import React, { forwardRef } from "react";
+import React, { forwardRef, useState } from "react";
 import { Pressable, View, type PressableProps } from "react-native";
 import Animated, {
   ReduceMotion,
@@ -31,20 +31,22 @@ export const Bouncy = forwardRef<View, BouncyProps>(function Bouncy(
   ref
 ) {
   const scale = useSharedValue(1);
+  const [pressed, setPressed] = useState(false);
   const animated = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   const targetScale = Math.min(1, Math.max(0.9, pressedScale));
-  const combinedStyle: PressableProps["style"] =
-    typeof style === "function"
-      ? (state) => [style(state), animated]
-      : [style, animated];
+  // Reanimated's animated components drop Pressable's callback-style prop at
+  // runtime, taking the whole resolved style (card chrome, flexDirection) with
+  // it. Resolve the callback here and always hand the native side a plain array.
+  const resolvedStyle = typeof style === "function" ? style({ pressed }) : style;
 
   return (
     <AnimatedPressable
       ref={ref}
-      style={combinedStyle}
+      style={[resolvedStyle, animated]}
       disabled={disabled}
       {...rest}
       onPressIn={(event) => {
+        setPressed(true);
         if (disabled) return;
         scale.value = withSpring(targetScale, {
           damping: 20,
@@ -55,6 +57,7 @@ export const Bouncy = forwardRef<View, BouncyProps>(function Bouncy(
         onPressIn?.(event);
       }}
       onPressOut={(event) => {
+        setPressed(false);
         if (disabled) return;
         scale.value = withSpring(1, {
           damping: 18,

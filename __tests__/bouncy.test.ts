@@ -77,7 +77,7 @@ test("springs down and back with reduced-motion-aware, clamped configs", async (
   assert.equal(springCalls[1].config.reduceMotion, "system");
 });
 
-test("composes press callbacks and supports callback styles", async () => {
+test("composes press callbacks and resolves callback styles to a plain array", async () => {
   const events: string[] = [];
   const renderer = await renderBouncy({
     pressedScale: 0.985,
@@ -87,9 +87,16 @@ test("composes press callbacks and supports callback styles", async () => {
   });
   const pressable = renderer.root.findByType("Pressable" as any);
 
-  assert.deepEqual(pressable.props.style({ pressed: true })[0], { opacity: 0.8 });
+  // Reanimated components drop callback styles, so Bouncy must never forward
+  // a function: the style prop is a resolved array that re-renders on press.
+  assert.equal(typeof pressable.props.style, "object");
+  assert.deepEqual(pressable.props.style[0], { opacity: 1 });
+
   await act(async () => pressable.props.onPressIn({ nativeEvent: {} }));
+  assert.deepEqual(pressable.props.style[0], { opacity: 0.8 });
+
   await act(async () => pressable.props.onPressOut({ nativeEvent: {} }));
+  assert.deepEqual(pressable.props.style[0], { opacity: 1 });
 
   assert.deepEqual(events, ["in", "out"]);
   assert.deepEqual(springCalls.map(({ value }) => value), [0.985, 1]);

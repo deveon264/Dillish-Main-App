@@ -154,7 +154,7 @@ export default function RecipeDetail() {
           <SectionLabel style={styles.section}>NUTRITION PER SERVING</SectionLabel>
           <Card style={styles.nutritionCard}>
             <View style={styles.kcalWrap}>
-              <Text style={styles.kcalNum}>{recipe.kcal}</Text>
+              <Text style={styles.kcalNum}>~{recipe.kcal}</Text>
               <Text style={styles.kcalLabel}>kcal</Text>
             </View>
             <View style={styles.macroRow}>
