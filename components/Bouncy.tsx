@@ -4,6 +4,8 @@ import Animated, {
   ReduceMotion,
   useAnimatedStyle,
   useSharedValue,
+  withTiming,
+  Easing,
   withSpring,
 } from "react-native-reanimated";
 
@@ -16,11 +18,15 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export type BouncyProps = PressableProps & {
   pressedScale?: number;
+  motion?: "spring" | "timing";
+  pressDurationMs?: number;
 };
 
 export const Bouncy = forwardRef<View, BouncyProps>(function Bouncy(
   {
     pressedScale = 0.965,
+    motion = "spring",
+    pressDurationMs = 120,
     onPressIn,
     onPressOut,
     style,
@@ -48,23 +54,35 @@ export const Bouncy = forwardRef<View, BouncyProps>(function Bouncy(
       onPressIn={(event) => {
         setPressed(true);
         if (disabled) return;
-        scale.value = withSpring(targetScale, {
-          damping: 20,
-          stiffness: 320,
-          overshootClamping: true,
-          reduceMotion: ReduceMotion.System,
-        });
+        scale.value = motion === "timing"
+          ? withTiming(targetScale, {
+              duration: pressDurationMs,
+              easing: Easing.out(Easing.cubic),
+              reduceMotion: ReduceMotion.System,
+            })
+          : withSpring(targetScale, {
+              damping: 20,
+              stiffness: 320,
+              overshootClamping: true,
+              reduceMotion: ReduceMotion.System,
+            });
         onPressIn?.(event);
       }}
       onPressOut={(event) => {
         setPressed(false);
         if (disabled) return;
-        scale.value = withSpring(1, {
-          damping: 18,
-          stiffness: 280,
-          overshootClamping: true,
-          reduceMotion: ReduceMotion.System,
-        });
+        scale.value = motion === "timing"
+          ? withTiming(1, {
+              duration: pressDurationMs,
+              easing: Easing.out(Easing.cubic),
+              reduceMotion: ReduceMotion.System,
+            })
+          : withSpring(1, {
+              damping: 18,
+              stiffness: 280,
+              overshootClamping: true,
+              reduceMotion: ReduceMotion.System,
+            });
         onPressOut?.(event);
       }}
     >

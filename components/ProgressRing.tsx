@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { View, StyleSheet } from "react-native";
 import Svg, { Circle, Defs, LinearGradient, Stop } from "react-native-svg";
-import Animated, { ReduceMotion, useAnimatedProps, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, { Easing, ReduceMotion, useAnimatedProps, useSharedValue, withTiming } from "react-native-reanimated";
 import type { AppColors } from "@/constants/colors";
 import { useColors, useThemedStyles } from "@/hooks/useColors";
 
@@ -15,6 +15,7 @@ export function ProgressRing({
   trackColor,
   gradientId = "ringGrad",
   color,
+  durationMs = 280,
 }: {
   size?: number;
   strokeWidth?: number;
@@ -23,6 +24,7 @@ export function ProgressRing({
   trackColor?: string;
   gradientId?: string;
   color?: string;
+  durationMs?: number;
 }) {
   const colors = useColors();
   const clamped = Math.max(0, Math.min(1, progress));
@@ -31,8 +33,12 @@ export function ProgressRing({
   const fill = useSharedValue(0);
 
   useEffect(() => {
-    fill.value = withTiming(clamped, { duration: 280, reduceMotion: ReduceMotion.System });
-  }, [clamped, fill]);
+    fill.value = withTiming(clamped, {
+      duration: durationMs,
+      easing: Easing.out(Easing.cubic),
+      reduceMotion: ReduceMotion.System,
+    });
+  }, [clamped, durationMs, fill]);
 
   const animatedProps = useAnimatedProps(() => ({
     strokeDashoffset: circumference * (1 - fill.value),

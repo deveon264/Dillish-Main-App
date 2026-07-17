@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Bouncy as Pressable } from "@/components/Bouncy";
-import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
 import { HelpButton } from "@/components/HelpButton";
 import { PageHeader } from "@/components/PageHeader";
@@ -9,7 +8,7 @@ import { CaloriesTracker } from "@/components/trackers/CaloriesTracker";
 import { WaterTracker } from "@/components/trackers/WaterTracker";
 import { ProgressTracker } from "@/components/trackers/ProgressTracker";
 import type { AppColors } from "@/constants/colors";
-import { useColors, useThemedStyles } from "@/hooks/useColors";
+import { useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
 import { haptics } from "@/lib/haptics";
 
@@ -57,10 +56,10 @@ const HELP: Record<TrackerMode, { title: string; intro: string; points: string[]
   progress: WELLNESS_HELP,
 };
 
-const SEGMENTS: { key: TrackerMode; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { key: "calories", label: "Calories", icon: "flame-outline" },
-  { key: "water", label: "Water", icon: "water-outline" },
-  { key: "progress", label: "Progress", icon: "trending-up" },
+const SEGMENTS: { key: TrackerMode; label: string }[] = [
+  { key: "calories", label: "Calories" },
+  { key: "water", label: "Water" },
+  { key: "progress", label: "Progress" },
 ];
 
 const MODE_KEYS = SEGMENTS.map((s) => s.key);
@@ -75,7 +74,6 @@ function isTrackerMode(v: string | undefined): v is TrackerMode {
 // `?mode=` param lets other screens deep link straight to a specific tracker
 // (e.g. the home dashboard's quick actions).
 export default function Tracker() {
-  const colors = useColors();
   const styles = useThemedStyles(createStyles);
   const params = useLocalSearchParams<{ mode?: string }>();
   const [mode, setMode] = useState<TrackerMode>(isTrackerMode(params.mode) ? params.mode : "calories");
@@ -104,13 +102,15 @@ export default function Tracker() {
           return (
             <Pressable
               key={s.key}
+              accessibilityRole="button"
+              accessibilityLabel={s.label}
+              accessibilityState={{ selected: active }}
+              motion="timing"
+              pressedScale={0.96}
               style={[styles.segItem, active && styles.segItemActive]}
               onPress={() => select(s.key)}
             >
-              <Ionicons name={s.icon} size={13} color={active ? colors.onPrimary : colors.muted} />
-              <Text style={[styles.segLabel, { color: active ? colors.onPrimary : colors.muted }]}>
-                {s.label}
-              </Text>
+              <Text style={[styles.segLabel, active && styles.segLabelActive]}>{s.label}</Text>
             </Pressable>
           );
         })}
@@ -133,26 +133,27 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     flexDirection: "row",
     gap: 4,
     marginTop: 16,
-    backgroundColor: "rgba(62, 39, 51, 0.05)",
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
     borderRadius: 999,
-    padding: 4,
+    padding: 5,
   },
   segItem: {
     flex: 1,
-    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    paddingVertical: 11,
+    paddingVertical: 9,
     borderRadius: 999,
   },
   segItemActive: {
     backgroundColor: colors.primary,
     shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
-    shadowRadius: 10,
+    shadowRadius: 14,
     elevation: 4,
   },
-  segLabel: { fontFamily: fonts.sansSemibold, fontSize: 13 },
+  segLabel: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.muted },
+  segLabelActive: { fontFamily: fonts.sansBold, color: colors.onPrimary },
 });

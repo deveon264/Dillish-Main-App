@@ -1,15 +1,14 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable as StructuralPressable, Image, Modal, useWindowDimensions } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { View, Text, StyleSheet, ScrollView, Pressable as StructuralPressable, Image, Modal, Platform, useWindowDimensions } from "react-native";
 import { Image as ExpoImage, ImageBackground } from "expo-image";
+import { StatusBar } from "expo-status-bar";
 import { Asset } from "expo-asset";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import Svg, { Path, Circle, Defs, RadialGradient, Stop } from "react-native-svg";
 import { useRouter } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Card } from "@/components/Card";
 import { ProgressRing } from "@/components/ProgressRing";
-import { ProgressBar } from "@/components/ProgressBar";
 import { SectionLabel } from "@/components/PageHeader";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/Button";
@@ -32,7 +31,7 @@ import { avatarUri } from "@/lib/avatar";
 import type { AppColors } from "@/constants/colors";
 import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
-import { haptics, waterAddFeedback } from "@/lib/haptics";
+import { haptics } from "@/lib/haptics";
 
 function greeting() {
   const h = new Date().getHours();
@@ -47,16 +46,6 @@ function greeting() {
 // band). The fade stays within the bottom SKY_BAND via `locations`.
 const SKY_BAND = 170;
 const SKY_FILL = 400;
-
-// Soft sky tint behind the header that shifts with the time of day, fading to
-// transparent over the app background.
-function skyTint(): string {
-  const h = new Date().getHours();
-  if (h >= 5 && h < 12) return "rgba(252, 226, 220, 0.9)"; // morning blush
-  if (h >= 12 && h < 17) return "rgba(247, 235, 215, 0.9)"; // afternoon gold
-  if (h >= 17 && h < 21) return "rgba(240, 222, 233, 0.95)"; // evening rose
-  return "rgba(226, 215, 229, 0.95)"; // night lavender
-}
 
 // Rotates daily with one polished, encouraging line from Dillish under the hero.
 const QUOTES = [
@@ -88,40 +77,13 @@ const QUICK_ACCESS = [
   { icon: "stats-chart-outline" as const, title: "My Progress", sub: "Photos & stats", route: "/(tabs)/tracker?mode=progress" as const },
 ];
 
-const WATER_QUICK = [250, 500, 750];
-
-const SPARKLE_PATH = "M12 2l2.2 7.8L22 12l-7.8 2.2L12 22l-2.2-7.8L2 12l7.8-2.2z";
-
-// Decorative 4-point star scattered over the streak card. `glow` underlays a soft
-// radial halo (react-native-svg has no drop-shadow filter).
-function Sparkle({ size, fill, glow, style }: { size: number; fill: string; glow?: boolean; style: object }) {
-  const colors = useColors();
-  const styles = useThemedStyles(createStyles);
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" style={[{ position: "absolute" }, style]}>
-      {glow && (
-        <>
-          <Defs>
-            <RadialGradient id="sparkleGlow" cx="12" cy="12" r="12" gradientUnits="userSpaceOnUse">
-              <Stop offset="0" stopColor="#F08CAD" stopOpacity="0.6" />
-              <Stop offset="1" stopColor="#F08CAD" stopOpacity="0" />
-            </RadialGradient>
-          </Defs>
-          <Circle cx={12} cy={12} r={12} fill="url(#sparkleGlow)" />
-        </>
-      )}
-      <Path d={SPARKLE_PATH} fill={fill} />
-    </Svg>
-  );
-}
-
 export default function Dashboard() {
   const colors = useColors();
   const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const insets = useInsets();
   const { user } = useAuth();
-  const { profile, waterLogs, calorieLogs, completions, addWater, favorites, toggleFavorite, notifications, unreadCount, markNotificationsRead, streak, streakBest, streakDays, updateProfile, welcomePending, dismissWelcome } = useData();
+  const { profile, waterLogs, calorieLogs, completions, favorites, toggleFavorite, notifications, unreadCount, markNotificationsRead, streak, streakBest, streakDays, updateProfile, welcomePending, dismissWelcome } = useData();
   const { refreshControl, scrollRef } = useDataRefresh();
   const [notifOpen, setNotifOpen] = useState(false);
   const [streakHistoryOpen, setStreakHistoryOpen] = useState(false);
@@ -157,7 +119,6 @@ export default function Dashboard() {
   const firstName = (user?.name ?? "there").split(" ")[0];
   const avatar = avatarUri(user);
   const initial = (firstName[0] ?? "?").toUpperCase();
-  const greetingEmoji = profile.gender === "female" ? "🌸" : "💗";
 
   const todayWaterMl = useMemo(
     () => waterLogs.filter((l) => todayKey(new Date(l.ts)) === tk).reduce((s, l) => s + l.amountMl, 0),
@@ -186,26 +147,12 @@ export default function Dashboard() {
 
   const waterGoalMl = profile.waterGoalMl > 0 ? profile.waterGoalMl : 2500;
   const waterPct = Math.min(1, todayWaterMl / waterGoalMl);
-  const waterTotalRef = useRef(todayWaterMl);
-  useEffect(() => {
-    waterTotalRef.current = todayWaterMl;
-  }, [todayWaterMl]);
-
-  const logQuickWater = (amountMl: number) => {
-    const currentMl = waterTotalRef.current;
-    waterTotalRef.current = currentMl + amountMl;
-    void addWater(amountMl);
-    haptics[waterAddFeedback(currentMl, amountMl, waterGoalMl)]();
-  };
-
   // This week plus the last 4 (Mon-start, newest first); week 0 feeds the
   // card's tracker, the full list feeds the streak history sheet. `tk` is a
   // dependency so the memo rolls over at midnight.
   const weekHistory = useMemo(() => buildWeekHistory(streakDays, 5), [streakDays, tk]);
   const weekMarks = weekHistory[0].days;
-  const activeThisWeek = weekHistory[0].activeCount;
   const todayWorkoutLogged = completions.some((c) => todayKey(new Date(c.ts)) === tk);
-  const nudgeEmoji = profile.gender === "female" ? "💗" : "🌸";
   const streakNudge = todayWorkoutLogged
     ? "You showed up for yourself today"
     : "You got this, work out today to keep it up";
@@ -233,427 +180,334 @@ export default function Dashboard() {
   const saved = useMemo(() => WORKOUTS.filter((w) => favorites.includes(w.id)), [favorites]);
   const featuredDuration = workoutDurationMinutes(featured.exercises, DEFAULT_REST_GAP);
 
-  // Size the "Today's Workout" hero so its base sits just above the floating tab
-  // bar on the default (unscrolled) view — otherwise its bottom (title/meta/play)
-  // hides behind the bar. Start near the final value to avoid a first-frame
-  // flash, then refine from the hero's measured on-screen top.
   const { height: windowHeight } = useWindowDimensions();
-  const heroRef = useRef<View>(null);
-  const [heroHeight, setHeroHeight] = useState(Math.min(430, Math.round(windowHeight * 0.42)));
-  const measureHero = () => {
-    heroRef.current?.measureInWindow((_x, y) => {
-      if (y > 0) {
-        // Tab-bar footprint ≈ insets.bottom + ~72; 84 leaves a ~12px gap above it.
-        const available = windowHeight - insets.bottom - 84 - y;
-        setHeroHeight(Math.max(300, Math.min(430, available)));
-      }
-    });
-  };
-
-  const tint = skyTint();
+  const heroHeight = Math.max(520, Math.min(560, Math.round(windowHeight * 0.64)));
 
   return (
-    <GradientBackground>
+    <View style={styles.polishScreen}>
+      <StatusBar style="light" />
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 110 }]}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 110 }}
         showsVerticalScrollIndicator={false}
         refreshControl={refreshControl}
       >
-        {/* Time-of-day sky tint behind the header. The solid tint extends above
-            the content top (SKY_FILL) so a pull-to-refresh overscroll stays tinted
-            rather than exposing the cream background; the fade is kept in the
-            bottom SKY_BAND band via `locations`. */}
-        <LinearGradient
-          colors={[tint, tint, "rgba(253, 252, 250, 0)"]}
-          locations={[0, SKY_FILL / (SKY_BAND + SKY_FILL), 1]}
-          style={styles.sky}
-          pointerEvents="none"
-        />
-
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.greet}>{greeting().toUpperCase()}</Text>
-            <View style={styles.nameRow}>
-              <Text style={styles.name}>{firstName}</Text>
-              <Text style={styles.nameEmoji}>{greetingEmoji}</Text>
-            </View>
-          </View>
-          <Pressable style={styles.iconBtn} hitSlop={6} onPress={openNotifs}>
-            <Ionicons name="notifications-outline" size={19} color={colors.foreground} />
-            {unreadCount > 0 ? <View style={styles.notifDot} /> : null}
-          </Pressable>
-          <Pressable style={styles.avatarBtn} hitSlop={6} onPress={() => router.navigate("/(tabs)/profile")}>
-            {avatar ? (
-              <Image source={{ uri: avatar }} style={styles.avatarImg} />
-            ) : (
-              <View style={styles.avatarFallback}>
-                <Text style={styles.avatarInitial}>{initial}</Text>
-              </View>
-            )}
-          </Pressable>
-        </View>
-
-        {/* Streak card ("17c") — the top number is the rolling consecutive-day
-            streak (spans weeks); the pills below are the current Mon→Sun week. */}
-        <Card style={styles.streakCard}>
+        <ImageBackground
+          source={featured.image}
+          style={[styles.polishHero, { height: heroHeight }]}
+          contentFit="cover"
+          transition={150}
+          cachePolicy="memory-disk"
+        >
           <LinearGradient
-            colors={["#FDF1F5", "#FBE7EE"]}
-            start={{ x: 0.2, y: 0 }}
-            end={{ x: 0.8, y: 1 }}
-            style={styles.streakSurface}
-          >
-            {/* Background décor: white glow wisp + scattered sparkles */}
-            <View style={StyleSheet.absoluteFill} pointerEvents="none" accessible={false} importantForAccessibility="no-hide-descendants">
-              <Svg width={140} height={140} style={styles.streakWisp}>
-                <Defs>
-                  <RadialGradient id="streakWisp" cx="70" cy="70" r="70" gradientUnits="userSpaceOnUse">
-                    <Stop offset="0" stopColor="#FFFFFF" stopOpacity="0.6" />
-                    <Stop offset="0.68" stopColor="#FFFFFF" stopOpacity="0" />
-                  </RadialGradient>
-                </Defs>
-                <Circle cx={70} cy={70} r={70} fill="url(#streakWisp)" />
-              </Svg>
-              <Sparkle size={14} fill="#F2A9C1" glow style={{ top: 14, right: 16 }} />
-              <Sparkle size={8} fill="#F5BCCF" style={{ top: 38, right: 38 }} />
-              <Sparkle size={10} fill="#F5BCCF" style={{ top: 16, left: 150 }} />
-              <Sparkle size={7} fill="#F5BCCF" style={{ top: 58, right: 20 }} />
-              <Sparkle size={6} fill="#F5BCCF" style={{ top: 8, left: 120 }} />
-              <Sparkle size={8} fill="#F2A9C1" style={{ top: 88, right: 44 }} />
-              <Sparkle size={6} fill="#F5BCCF" style={{ top: 100, right: 14 }} />
-            </View>
+            colors={["rgba(51,28,38,0.55)", "rgba(51,28,38,0)", "rgba(51,28,38,0)", "rgba(51,28,38,0.88)"]}
+            locations={[0, 0.26, 0.46, 1]}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+          <Pressable
+            motion="timing"
+            pressedScale={0.985}
+            style={StyleSheet.absoluteFill}
+            onPress={() => router.push(`/workout/${featured.id}`)}
+            accessibilityRole="button"
+            accessibilityLabel={`${heroCtaText}: ${featured.title}`}
+          />
 
-            {/* Top row: text block left, flame medallion right */}
-            <View style={styles.streakTopRow}>
-              <View style={styles.streakTextCol}>
-                <View style={styles.streakTitleRow}>
-                  <Text style={styles.streakTitle}>Keep It Going</Text>
-                  <Sparkle size={13} fill="#F2A9C1" glow style={{ position: "relative" }} />
-                  <Sparkle size={7} fill="#F5BCCF" style={{ position: "relative", marginBottom: 8 }} />
-                </View>
-                <View style={styles.streakCount}>
-                  <Text style={styles.streakNum}>{streak}</Text>
-                  <Text style={styles.streakUnit}>day streak</Text>
-                </View>
-                <View style={styles.streakNudgeRow}>
-                  <Text style={styles.streakNudgeEmoji}>{nudgeEmoji}</Text>
-                  <Text style={styles.streakNudge} numberOfLines={2}>{streakNudge}</Text>
-                </View>
-              </View>
-              <Pressable
-                style={({ pressed }) => [styles.streakMedallion, pressed && styles.pressed]}
-                hitSlop={6}
-                onPress={openStreakHistory}
-                accessibilityRole="button"
-                accessibilityLabel="View streak history"
-              >
-                <Svg width={58} height={58} style={styles.streakHalo}>
-                  <Defs>
-                    <RadialGradient id="streakHalo" cx="29" cy="29" r="29" gradientUnits="userSpaceOnUse">
-                      <Stop offset="0" stopColor="#F08CAD" stopOpacity="0.45" />
-                      <Stop offset="0.7" stopColor="#F7B7CD" stopOpacity="0" />
-                    </RadialGradient>
-                  </Defs>
-                  <Circle cx={29} cy={29} r={29} fill="url(#streakHalo)" />
-                </Svg>
-                <LinearGradient
-                  colors={colors.gradient}
-                  start={{ x: 0.25, y: 0 }}
-                  end={{ x: 0.75, y: 1 }}
-                  style={styles.streakDisc}
-                >
-                  <Ionicons name="flame" size={20} color="#fff" />
-                </LinearGradient>
-              </Pressable>
+          <View style={[styles.polishHeroHeader, { top: (Platform.OS === "web" ? Math.max(insets.top, 50) : insets.top) + 14 }]}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={styles.polishGreeting}>{greeting().toUpperCase()}</Text>
+              <Text style={styles.polishName} numberOfLines={1}>{firstName}</Text>
             </View>
-
-            <View style={styles.streakDivider} />
-
-            <View style={styles.streakWeekHead}>
-              <Text style={styles.streakWeekLabel}>THIS WEEK</Text>
-              <Text style={styles.streakActiveText}>
-                {activeThisWeek} / 7 active
-              </Text>
-            </View>
-            <View style={styles.streakWeek}>
-              {weekMarks.map((d, i) => (
-                <View key={i} style={styles.streakDayCol}>
-                  {d.active ? (
-                    <LinearGradient
-                      colors={colors.gradient}
-                      start={{ x: 0, y: 0.5 }}
-                      end={{ x: 1, y: 0.5 }}
-                      style={[styles.streakSeg, styles.streakSegOn]}
-                    />
-                  ) : (
-                    <View style={[styles.streakSeg, styles.streakSegOff]} />
-                  )}
-                  <Text style={[styles.streakDayLabel, d.active && styles.streakDayLabelActive]}>
-                    {d.label}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </LinearGradient>
-        </Card>
-
-        {/* Today's workout hero */}
-        <View style={{ marginTop: 22 }}>
-          <SectionLabel style={{ marginBottom: 10 }}>{heroEyebrow}</SectionLabel>
-          <Pressable pressedScale={0.985} ref={heroRef} onLayout={measureHero} onPress={() => router.push(`/workout/${featured.id}`)}>
-            <ImageBackground
-              source={featured.image}
-              style={[styles.hero, { height: heroHeight }]}
-              imageStyle={styles.heroImg}
-              contentFit="cover"
-              transition={150}
-              cachePolicy="memory-disk"
+            <Pressable
+              motion="timing"
+              pressedScale={0.94}
+              style={styles.polishHeaderButton}
+              hitSlop={6}
+              onPress={openNotifs}
+              accessibilityRole="button"
+              accessibilityLabel="Open notifications"
             >
-              <LinearGradient
-                colors={colors.photoOverlay}
-                locations={[0.48, 1]}
-                style={StyleSheet.absoluteFill}
-              />
-              <View style={styles.heroContent}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{featured.title}</Text>
-                  <View style={styles.heroMeta}>
-                    <Text style={styles.heroMetaText}>{featuredDuration} min</Text>
-                    <Text style={styles.heroMetaText}>~{featured.kcal} kcal</Text>
-                    <Text style={styles.heroMetaText}>{featured.level}</Text>
-                  </View>
-                  <Text style={styles.heroCtaText}>{heroCtaText}</Text>
+              <Ionicons name="notifications-outline" size={18} color="#FFFFFF" />
+              {unreadCount > 0 ? <View style={styles.polishNotifDot} /> : null}
+            </Pressable>
+            <Pressable
+              motion="timing"
+              pressedScale={0.94}
+              style={styles.polishAvatar}
+              hitSlop={6}
+              onPress={() => router.navigate("/(tabs)/profile")}
+              accessibilityRole="button"
+              accessibilityLabel="Open profile"
+            >
+              {avatar ? (
+                <Image source={{ uri: avatar }} style={styles.avatarImg} />
+              ) : (
+                <View style={styles.polishAvatarFallback}>
+                  <Text style={styles.polishAvatarInitial}>{initial}</Text>
                 </View>
-                <View style={styles.heroPlay}>
-                  <Ionicons name="chevron-forward" size={24} color={colors.onPrimary} />
-                </View>
-              </View>
-            </ImageBackground>
-          </Pressable>
-          {todayPlan?.programComplete && todayPlan.program ? (
-            todayPlan.nextProgram ? (
-              <View style={styles.programNextCard}>
-                <Text style={styles.programDoneNote}>
-                  You finished {todayPlan.program.title}, beautiful work. Ready for the next phase?
-                </Text>
-                <Pressable
-                  style={styles.programNextBtn}
-                  onPress={() => {
-                    const next = todayPlan.nextProgram;
-                    if (next) void updateProfile({ programId: next.id, programStartedAt: Date.now() });
-                  }}
-                >
-                  <Text style={styles.programNextBtnText}>Start {todayPlan.nextProgram.title}</Text>
-                  <Ionicons name="arrow-forward" size={15} color={colors.onPrimary} />
-                </Pressable>
-              </View>
-            ) : (
-              <Text style={styles.programDoneNote}>
-                You finished {todayPlan.program.title}, beautiful work. Here's a pick we think you'll love.
-              </Text>
-            )
-          ) : null}
-        </View>
+              )}
+            </Pressable>
+          </View>
 
-        {/* Personalize prompt for accounts that predate the fitness questions */}
-        {!hasFitnessProfile(profile) ? (
-          <Pressable pressedScale={0.985} onPress={() => router.push("/onboarding/goal?mode=personalize" as any)}>
-            <Card style={styles.personalizeCard}>
-              <View style={[styles.chipIcon, { backgroundColor: colors.accentTint, width: 38, height: 38, borderRadius: 12 }]}>
+          <View style={styles.polishHeroBottom}>
+            <View style={styles.polishHeroCopy}>
+              <Text style={styles.polishHeroEyebrow}>{heroEyebrow}</Text>
+              <Text style={styles.polishHeroTitle} numberOfLines={2}>{featured.title}</Text>
+              <View style={styles.polishHeroMeta}>
+                <Text style={styles.polishHeroMetaText}>{featuredDuration} min</Text>
+                <Text style={styles.polishHeroMetaText}>~{featured.kcal} kcal</Text>
+                <Text style={styles.polishHeroMetaText}>{featured.level}</Text>
+              </View>
+            </View>
+            <Pressable
+              motion="timing"
+              pressedScale={0.96}
+              style={styles.polishHeroCta}
+              onPress={() => router.push(`/workout/${featured.id}`)}
+              accessibilityRole="button"
+              accessibilityLabel={`${heroCtaText}: ${featured.title}`}
+            >
+              <Text style={styles.polishHeroCtaText} numberOfLines={1}>{heroCtaText}</Text>
+              <Ionicons name="chevron-forward" size={14} color="#FFFFFF" />
+            </Pressable>
+          </View>
+        </ImageBackground>
+
+        <View style={styles.polishContent}>
+          {todayPlan?.programComplete && todayPlan.program ? (
+            <View style={styles.polishConditionalCard}>
+              <View style={styles.polishConditionalIcon}>
+                <Ionicons name="checkmark" size={18} color={colors.accent} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.polishConditionalTitle}>Program complete</Text>
+                <Text style={styles.polishConditionalText}>
+                  You finished {todayPlan.program.title}, beautiful work.
+                </Text>
+              </View>
+              {todayPlan.nextProgram ? (
+                <Pressable
+                  motion="timing"
+                  pressedScale={0.96}
+                  style={styles.polishConditionalCta}
+                  onPress={() => void updateProfile({ programId: todayPlan.nextProgram!.id, programStartedAt: Date.now() })}
+                >
+                  <Text style={styles.polishConditionalCtaText}>Start next</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
+
+          {!hasFitnessProfile(profile) ? (
+            <Pressable
+              motion="timing"
+              pressedScale={0.98}
+              style={styles.polishConditionalCard}
+              onPress={() => router.push("/onboarding/goal?mode=personalize" as any)}
+            >
+              <View style={styles.polishConditionalIcon}>
                 <Ionicons name="sparkles-outline" size={18} color={colors.accent} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.personalizeTitle}>Personalize your plan</Text>
-                <Text style={styles.personalizeDesc}>Answer 7 quick questions for workouts picked for you</Text>
+                <Text style={styles.polishConditionalTitle}>Personalize your plan</Text>
+                <Text style={styles.polishConditionalText}>Answer 7 quick questions for workouts picked for you</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
-            </Card>
+              <Ionicons name="chevron-forward" size={17} color={colors.mutedForeground} />
+            </Pressable>
+          ) : null}
+
+          <Pressable
+            motion="timing"
+            pressedScale={0.98}
+            style={styles.polishStreak}
+            onPress={openStreakHistory}
+            accessibilityRole="button"
+            accessibilityLabel="View streak history"
+          >
+            <View style={styles.polishStreakIcon}>
+              <Ionicons name="flame" size={18} color={colors.primary} />
+            </View>
+            <View style={styles.polishStreakCopy}>
+              <Text style={styles.polishStreakTitle}>{streak}-day streak</Text>
+              <Text style={styles.polishStreakText} numberOfLines={1}>{streakNudge}</Text>
+            </View>
+            <View style={styles.polishStreakDots}>
+              {weekMarks.map((day) => (
+                <View key={day.key} style={[styles.polishStreakDot, day.active && styles.polishStreakDotActive]} />
+              ))}
+            </View>
           </Pressable>
-        ) : null}
 
-        {/* Dillish quote of the day */}
-        <View style={styles.quoteWrap}>
-          <Text style={styles.quoteText}>"{dailyQuote()}"</Text>
-          <Text style={styles.quoteBy}>DILLISH'S QUOTE OF THE DAY</Text>
-        </View>
-
-        {/* Calorie summary */}
-        <Card style={styles.calCard}>
-          <View style={styles.cardHead}>
-            <View style={styles.rowCenter}>
-              <View style={[styles.chipIcon, { backgroundColor: colors.blush }]}>
-                <Ionicons name="restaurant-outline" size={13} color={colors.accent} />
-              </View>
-              <View style={styles.cardTitleStack}>
-                <Text style={styles.cardTodayLabel}>Today's</Text>
-                <Text style={styles.cardEyebrow}>CALORIE SUMMARY</Text>
-              </View>
-            </View>
-            <Pressable
-              style={({ pressed }) => [styles.logMealBtn, pressed && styles.pressed]}
-              onPress={() => router.navigate("/(tabs)/tracker?mode=calories")}
-            >
-              <Text style={styles.logMealText}>Log meal</Text>
-            </Pressable>
+          <View style={styles.polishQuote}>
+            <Text style={styles.polishQuoteMark}>“</Text>
+            <Text style={styles.polishQuoteText}>
+              {dailyQuote()} <Text style={styles.polishQuoteBy}>— DILLISH&apos;S QUOTE OF THE DAY</Text>
+            </Text>
           </View>
 
-      <View style={styles.calBody}>
-        <ProgressRing size={116} strokeWidth={10} progress={consumedPct} gradientId="calRing">
-          <View style={styles.calRingContent}>
-            <AnimatedNumber
-              value={consumedPct * 100}
-              formatter={(n) => `${Math.round(n)}%`}
-              style={styles.calRingPct}
-            />
-            <Text style={styles.calRingGoal} numberOfLines={1}>Goal: {calorieGoal} kcal</Text>
-          </View>
-        </ProgressRing>
-        <View style={styles.calStats}>
-              <View style={styles.calStatRow}>
-                <Text style={styles.calStatLabel}>Consumed</Text>
-                <AnimatedNumber value={consumed} formatter={(n) => `~${Math.round(n).toLocaleString()} kcal`} style={styles.calStatValue} />
-              </View>
-              <View style={styles.calStatRow}>
-                <Text style={styles.calStatLabel}>Burned</Text>
-                <AnimatedNumber value={burned} formatter={(n) => `~${Math.round(n).toLocaleString()} kcal`} style={[styles.calStatValue, { color: colors.highlight }]} />
-              </View>
-              <View style={styles.calStatRow}>
-                <Text style={styles.calStatLabel}>Remaining</Text>
-                <AnimatedNumber value={remainingKcal} formatter={(n) => `~${Math.round(n).toLocaleString()} kcal`} style={[styles.calStatValue, { color: colors.accent }]} />
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.macroRow}>
-            <MacroPill label={`Protein · ${proteinGoal} g`} value={protein} goal={proteinGoal} color={colors.protein} />
-            <MacroPill label={`Carbs · ${carbsGoal} g`} value={carbs} goal={carbsGoal} color={colors.carbs} />
-            <MacroPill label={`Fats · ${fatsGoal} g`} value={fats} goal={fatsGoal} color={colors.fats} />
-          </View>
-        </Card>
-
-        {/* Hydration */}
-        <Card style={styles.hydrationCard}>
-          <View style={styles.cardHead}>
-            <View style={styles.rowCenter}>
-              <View style={[styles.chipIcon, { backgroundColor: colors.waterTint }]}>
-                <Ionicons name="water-outline" size={13} color={colors.water} />
-              </View>
-              <View style={styles.cardTitleStack}>
-                <Text style={styles.cardTodayLabel}>Today's</Text>
-                <Text style={styles.cardEyebrow}>HYDRATION</Text>
-              </View>
-            </View>
-            <Pressable
-              style={({ pressed }) => [styles.logMealBtn, styles.logWaterBtn, pressed && styles.pressed]}
-              onPress={() => router.navigate("/(tabs)/tracker?mode=water")}
-            >
-              <Text style={styles.logMealText}>Log water</Text>
-            </Pressable>
-          </View>
-          <ProgressBar progress={waterPct} height={6} color={colors.water} style={{ marginTop: 14 }} />
-          <View style={styles.hydroMetaRow}>
-            <Text style={styles.hydroMeta}>Drank: <AnimatedNumber value={todayWaterMl / 1000} formatter={(n) => `${n.toFixed(2)} L`} style={styles.hydroMeta} /></Text>
-            <Text style={styles.hydroMeta}>Goal: {(waterGoalMl / 1000).toFixed(2)} L</Text>
-          </View>
-          <View style={styles.waterBtnRow}>
-            {WATER_QUICK.map((ml) => (
-              <Pressable
-                key={ml}
-                style={({ pressed }) => [styles.waterBtn, pressed && styles.pressed]}
-                onPress={() => logQuickWater(ml)}
-              >
-                <Text style={styles.waterBtnText}>+ {ml} ml</Text>
-              </Pressable>
-            ))}
-          </View>
-        </Card>
-
-        {/* Quick access */}
-        <View style={styles.sectionHead}>
-          <SectionLabel>QUICK ACCESS</SectionLabel>
-        </View>
-        <View style={styles.qaGrid}>
-          {QUICK_ACCESS.map((q) => (
-            <Pressable
-              pressedScale={0.985}
-              key={q.title}
-              style={({ pressed }) => [styles.qaCard, pressed && styles.pressed]}
-              onPress={() => router.navigate(q.route)}
-            >
-              <View style={[styles.qaIcon, { backgroundColor: colors.track }]}>
-                <Ionicons name={q.icon} size={18} color={colors.foreground} />
-              </View>
-              <Text style={styles.qaTitle}>{q.title}</Text>
-              <Text style={styles.qaSub}>{q.sub}</Text>
-            </Pressable>
-          ))}
-        </View>
-
-        {/* Saved workouts */}
-        <View style={styles.sectionHead}>
-          <SectionLabel>SAVED WORKOUTS</SectionLabel>
-          <Pressable onPress={() => router.navigate("/(tabs)/workouts")}>
-            <Text style={styles.seeAll}>See all</Text>
-          </Pressable>
-        </View>
-        {saved.length === 0 ? (
-          <Card style={styles.savedEmpty}>
-            <Ionicons name="heart-outline" size={26} color={colors.muted} />
-            <Text style={styles.savedEmptyText}>No saved workouts yet</Text>
-            <Text style={styles.savedEmptySub}>Tap the heart on a workout to save it here</Text>
-            <Pressable
-              style={({ pressed }) => [styles.savedEmptyBtn, pressed && styles.pressed]}
-              onPress={() => router.navigate("/(tabs)/workouts")}
-            >
-              <Text style={styles.savedEmptyBtnText}>Browse library</Text>
-            </Pressable>
-          </Card>
-        ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.savedRow}>
-            {saved.map((w) => (
-              <MotionListItem key={w.id}>
-              <Pressable pressedScale={0.985} style={styles.savedCard} onPress={() => router.push(`/workout/${w.id}`)}>
-                <ImageBackground
-                  source={w.image}
-                  style={styles.savedImg}
-                  imageStyle={{ borderRadius: colors.radiusLg }}
-                  contentFit="cover"
-                  transition={150}
-                  cachePolicy="memory-disk"
+          <Card style={styles.polishTodayCard}>
+            <View style={styles.polishTodayHead}>
+              <SectionLabel>TODAY</SectionLabel>
+              <View style={styles.polishTodayActions}>
+                <Pressable
+                  motion="timing"
+                  pressedScale={0.96}
+                  style={styles.polishOutlineButton}
+                  onPress={() => router.navigate("/(tabs)/tracker?mode=water")}
                 >
-                  <LinearGradient colors={["transparent", "rgba(51,28,38,0.85)"]} style={styles.savedOverlay} />
-                  <Pressable
-                    style={styles.savedHeart}
-                    hitSlop={8}
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      haptics.selection();
-                      toggleFavorite(w.id);
-                    }}
-                  >
-                    <Ionicons name="heart" size={15} color={colors.primary} />
-                  </Pressable>
-                  <View style={styles.savedInfo}>
-                    <Text style={styles.savedTitle} numberOfLines={1}>{w.title}</Text>
-                    <Text style={styles.savedMeta}>
-                      {workoutDurationMinutes(w.exercises, DEFAULT_REST_GAP)} min · {w.level}
-                    </Text>
-                  </View>
-                </ImageBackground>
+                  <Text style={styles.polishOutlineButtonText}>Log water</Text>
+                </Pressable>
+                <Pressable
+                  motion="timing"
+                  pressedScale={0.96}
+                  style={styles.polishFilledButton}
+                  onPress={() => router.navigate("/(tabs)/tracker?mode=calories")}
+                >
+                  <Text style={styles.polishFilledButtonText}>Log meal</Text>
+                </Pressable>
+              </View>
+            </View>
+
+            <View style={styles.polishRings}>
+              <View style={styles.polishRingColumn}>
+                <ProgressRing
+                  size={104}
+                  strokeWidth={10}
+                  progress={consumedPct}
+                  color={colors.primary}
+                  trackColor={colors.ringTrack}
+                  durationMs={600}
+                  gradientId="home-calories"
+                >
+                  <AnimatedNumber value={consumedPct * 100} formatter={(value) => `${Math.round(value)}%`} style={styles.polishRingValue} />
+                  <Text style={styles.polishRingGoal}>of {calorieGoal.toLocaleString()} kcal</Text>
+                </ProgressRing>
+                <Text style={styles.polishRingLabel}>Calories</Text>
+                <Text style={styles.polishRingStatus} numberOfLines={1}>
+                  ~{remainingKcal.toLocaleString()} kcal left{burned > 0 ? ` · ~${Math.round(burned)} burned` : ""}
+                </Text>
+              </View>
+
+              <View style={styles.polishRingColumn}>
+                <ProgressRing
+                  size={104}
+                  strokeWidth={10}
+                  progress={waterPct}
+                  color={colors.hydrationAccent}
+                  trackColor={colors.hydrationRingTrack}
+                  durationMs={600}
+                  gradientId="home-hydration"
+                >
+                  <AnimatedNumber value={todayWaterMl / 1000} formatter={(value) => `${value.toFixed(1)}L`} style={styles.polishRingValue} />
+                  <Text style={styles.polishRingGoal}>of {(waterGoalMl / 1000).toFixed(2)} L</Text>
+                </ProgressRing>
+                <Text style={styles.polishRingLabel}>Hydration</Text>
+                <Text style={styles.polishHydrationStatus}>Drank {(todayWaterMl / 1000).toFixed(2)} L</Text>
+              </View>
+            </View>
+
+            <View style={styles.polishMacros}>
+              <MacroPill label={`Protein · ${proteinGoal}g`} value={protein} goal={proteinGoal} color={colors.protein} />
+              <MacroPill label={`Carbs · ${carbsGoal}g`} value={carbs} goal={carbsGoal} color={colors.carbs} />
+              <MacroPill label={`Fats · ${fatsGoal}g`} value={fats} goal={fatsGoal} color={colors.fats} />
+            </View>
+          </Card>
+
+          <View>
+            <SectionLabel style={styles.polishSectionLabel}>QUICK ACCESS</SectionLabel>
+            {QUICK_ACCESS.map((item) => (
+              <Pressable
+                key={item.title}
+                motion="timing"
+                pressedScale={0.98}
+                style={styles.polishRowCard}
+                onPress={() => router.navigate(item.route)}
+              >
+                <View style={styles.polishRowIcon}>
+                  <Ionicons name={item.icon} size={19} color={colors.foreground} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.polishRowTitle}>{item.title}</Text>
+                  <Text style={styles.polishRowSub}>{item.sub}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="rgba(62,39,51,0.30)" />
               </Pressable>
-              </MotionListItem>
             ))}
-          </ScrollView>
-        )}
+          </View>
+
+          <View>
+            <View style={styles.polishSectionHead}>
+              <SectionLabel>SAVED WORKOUTS</SectionLabel>
+              <Pressable hitSlop={8} onPress={() => router.navigate("/(tabs)/workouts")}>
+                <Text style={styles.polishSeeAll}>See all</Text>
+              </Pressable>
+            </View>
+            {saved.length === 0 ? (
+              <Card style={styles.savedEmpty}>
+                <Ionicons name="heart-outline" size={26} color={colors.muted} />
+                <Text style={styles.savedEmptyText}>No saved workouts yet</Text>
+                <Text style={styles.savedEmptySub}>Tap the heart on a workout to save it here</Text>
+                <Pressable
+                  motion="timing"
+                  pressedScale={0.96}
+                  style={styles.savedEmptyBtn}
+                  onPress={() => router.navigate("/(tabs)/workouts")}
+                >
+                  <Text style={styles.savedEmptyBtnText}>Browse library</Text>
+                </Pressable>
+              </Card>
+            ) : (
+              <View style={styles.polishSavedGrid}>
+                {saved.map((workout) => (
+                  <MotionListItem key={workout.id} style={styles.polishSavedGridItem}>
+                    <Pressable
+                      motion="timing"
+                      pressedScale={0.98}
+                      style={styles.polishSavedCard}
+                      onPress={() => router.push(`/workout/${workout.id}`)}
+                    >
+                      <ImageBackground
+                        source={workout.image}
+                        style={styles.polishSavedImage}
+                        imageStyle={styles.polishSavedImageRadius}
+                        contentFit="cover"
+                        transition={150}
+                        cachePolicy="memory-disk"
+                      >
+                        <LinearGradient colors={["transparent", "rgba(51,28,38,0.78)"]} locations={[0.4, 1]} style={StyleSheet.absoluteFill} />
+                        <Pressable
+                          motion="timing"
+                          pressedScale={0.9}
+                          style={styles.polishSavedHeart}
+                          hitSlop={8}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Remove ${workout.title} from saved workouts`}
+                          onPress={(event) => {
+                            event.stopPropagation();
+                            haptics.selection();
+                            void toggleFavorite(workout.id);
+                          }}
+                        >
+                          <Ionicons name="heart" size={14} color={colors.hydrationAccent} />
+                        </Pressable>
+                        <View style={styles.polishSavedInfo}>
+                          <Text style={styles.polishSavedTitle} numberOfLines={1}>{workout.title}</Text>
+                          <Text style={styles.polishSavedMeta} numberOfLines={1}>
+                            {workoutDurationMinutes(workout.exercises, DEFAULT_REST_GAP)} min · {workout.level}
+                          </Text>
+                        </View>
+                      </ImageBackground>
+                    </Pressable>
+                  </MotionListItem>
+                ))}
+              </View>
+            )}
+          </View>
+        </View>
       </ScrollView>
 
-      <NotificationsSheet
-        visible={notifOpen}
-        notifications={notifications}
-        onClose={() => setNotifOpen(false)}
-        insets={insets}
-      />
+      <NotificationsSheet visible={notifOpen} notifications={notifications} onClose={() => setNotifOpen(false)} insets={insets} />
       <StreakHistorySheet
         visible={streakHistoryOpen}
         history={weekHistory}
@@ -663,7 +517,7 @@ export default function Dashboard() {
         insets={insets}
       />
       <WelcomeModal visible={welcomePending} name={firstName} onClose={dismissWelcome} />
-    </GradientBackground>
+    </View>
   );
 }
 
@@ -740,7 +594,7 @@ function NotificationsSheet({
           <View style={styles.notifHandle} />
           <View style={styles.notifHead}>
             <Text style={styles.notifHeadTitle}>Notifications</Text>
-            <Pressable style={styles.notifClose} hitSlop={8} onPress={onClose}>
+            <Pressable accessibilityLabel="Close notifications" style={styles.notifClose} hitSlop={8} onPress={onClose}>
               <Ionicons name="close" size={18} color={colors.foreground} />
             </Pressable>
           </View>
@@ -819,7 +673,7 @@ function StreakHistorySheet({
           <View style={styles.notifHandle} />
           <View style={styles.notifHead}>
             <Text style={styles.notifHeadTitle}>Streak History</Text>
-            <Pressable style={styles.notifClose} hitSlop={8} onPress={onClose}>
+            <Pressable accessibilityLabel="Close streak history" style={styles.notifClose} hitSlop={8} onPress={onClose}>
               <Ionicons name="close" size={18} color={colors.foreground} />
             </Pressable>
           </View>
@@ -868,13 +722,13 @@ function StreakHistorySheet({
 }
 
 function MacroPill({ label, value, goal, color }: { label: string; value: number; goal: number; color: string }) {
-  const colors = useColors();
   const styles = useThemedStyles(createStyles);
+  void goal;
+  void color;
   return (
     <View style={styles.macroPill}>
-      <Text style={styles.macroValue}><AnimatedNumber value={value} style={styles.macroValue} /><Text style={styles.macroUnit}> g</Text></Text>
+      <Text style={styles.macroValue}><AnimatedNumber value={value} formatter={(n) => `${Math.round(n)}`} style={styles.macroValue} /><Text style={styles.macroUnit}>g</Text></Text>
       <Text style={styles.macroLabel}>{label}</Text>
-      <ProgressBar progress={goal > 0 ? value / goal : 0} height={4} color={color} style={{ marginTop: 6 }} />
     </View>
   );
 }
@@ -1322,6 +1176,250 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
   savedInfo: { padding: 14 },
   savedTitle: { fontFamily: fonts.serifMedium, fontSize: 17, color: colors.onPrimary },
   savedMeta: { fontFamily: fonts.sans, fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 2 },
+
+  polishScreen: { flex: 1, backgroundColor: colors.background },
+  polishHero: { width: "100%", position: "relative" },
+  polishHeroHeader: {
+    position: "absolute",
+    left: 24,
+    right: 24,
+    zIndex: 3,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  polishGreeting: {
+    fontFamily: fonts.sansBold,
+    fontSize: 10,
+    letterSpacing: 3,
+    color: "rgba(255,255,255,0.75)",
+    marginBottom: 5,
+  },
+  polishName: { fontFamily: fonts.serifMedium, fontSize: 30, lineHeight: 32, color: "#FFFFFF" },
+  polishHeaderButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.16)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  polishNotifDot: {
+    position: "absolute",
+    top: 8,
+    right: 9,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.9)",
+  },
+  polishAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.34)",
+  },
+  polishAvatarFallback: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: "rgba(255,255,255,0.92)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  polishAvatarInitial: { fontFamily: fonts.sansBold, fontSize: 15, color: colors.accent },
+  polishHeroBottom: {
+    position: "absolute",
+    left: 24,
+    right: 24,
+    bottom: 24,
+    zIndex: 3,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 12,
+  },
+  polishHeroCopy: { flex: 1, minWidth: 0 },
+  polishHeroEyebrow: {
+    fontFamily: fonts.sansBold,
+    fontSize: 10,
+    lineHeight: 14,
+    letterSpacing: 2,
+    color: "rgba(255,255,255,0.70)",
+    marginBottom: 8,
+  },
+  polishHeroTitle: { fontFamily: fonts.serifMedium, fontSize: 30, lineHeight: 34, color: "#FFFFFF" },
+  polishHeroMeta: { flexDirection: "row", flexWrap: "wrap", gap: 14, marginTop: 8 },
+  polishHeroMetaText: { fontFamily: fonts.sansSemibold, fontSize: 12, color: "rgba(255,255,255,0.85)" },
+  polishHeroCta: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    maxWidth: 142,
+    paddingHorizontal: 18,
+    paddingVertical: 13,
+    borderRadius: 999,
+    backgroundColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.45,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  polishHeroCtaText: { flexShrink: 1, fontFamily: fonts.sansBold, fontSize: 13.5, color: "#FFFFFF" },
+  polishContent: { paddingHorizontal: 24, paddingTop: 18, gap: 18 },
+  polishConditionalCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 20,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  polishConditionalIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.accentTint,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  polishConditionalTitle: { fontFamily: fonts.sansBold, fontSize: 14, color: colors.foreground },
+  polishConditionalText: { fontFamily: fonts.sans, fontSize: 11.5, lineHeight: 16, color: colors.muted, marginTop: 2 },
+  polishConditionalCta: { paddingHorizontal: 13, paddingVertical: 9, borderRadius: 999, backgroundColor: colors.primary },
+  polishConditionalCtaText: { fontFamily: fonts.sansBold, fontSize: 11.5, color: colors.onPrimary },
+  polishStreak: {
+    minHeight: 64,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 999,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  polishStreakIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.accentTint,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  polishStreakCopy: { flex: 1, minWidth: 0 },
+  polishStreakTitle: { fontFamily: fonts.sansBold, fontSize: 14.5, lineHeight: 17, color: colors.foreground },
+  polishStreakText: { fontFamily: fonts.sans, fontSize: 11.5, color: "rgba(62,39,51,0.50)", marginTop: 1 },
+  polishStreakDots: { flexDirection: "row", gap: 4, flexShrink: 0 },
+  polishStreakDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "rgba(62,39,51,0.12)" },
+  polishStreakDotActive: { backgroundColor: colors.primary },
+  polishQuote: { flexDirection: "row", alignItems: "flex-start", gap: 8, paddingHorizontal: 6, paddingVertical: 2 },
+  polishQuoteMark: { fontFamily: fonts.serifSemibold, fontSize: 28, lineHeight: 24, color: "rgba(228,93,135,0.35)" },
+  polishQuoteText: {
+    flex: 1,
+    fontFamily: fonts.serifItalicLight,
+    fontStyle: "italic",
+    fontSize: 14,
+    lineHeight: 20,
+    color: "rgba(62,39,51,0.75)",
+  },
+  polishQuoteBy: {
+    fontFamily: fonts.sansBold,
+    fontStyle: "normal",
+    fontSize: 10,
+    letterSpacing: 1.5,
+    color: colors.accentDark,
+  },
+  polishTodayCard: { padding: 18, borderRadius: 22 },
+  polishTodayHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
+  polishTodayActions: { flexDirection: "row", alignItems: "center", gap: 8 },
+  polishOutlineButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 7.5,
+    borderRadius: 999,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+  },
+  polishOutlineButtonText: { fontFamily: fonts.sansBold, fontSize: 12, color: colors.accentDark },
+  polishFilledButton: {
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 14,
+    elevation: 5,
+  },
+  polishFilledButtonText: { fontFamily: fonts.sansBold, fontSize: 12, color: colors.onPrimary },
+  polishRings: { flexDirection: "row", gap: 14, marginTop: 18, marginBottom: 16 },
+  polishRingColumn: { flex: 1, alignItems: "center", minWidth: 0 },
+  polishRingValue: { fontFamily: fonts.serifSemibold, fontSize: 21, lineHeight: 24, color: colors.foreground },
+  polishRingGoal: { fontFamily: fonts.sansSemibold, fontSize: 9, color: "rgba(62,39,51,0.40)", marginTop: 2 },
+  polishRingLabel: { fontFamily: fonts.sansBold, fontSize: 12.5, color: colors.foreground, marginTop: 10 },
+  polishRingStatus: { maxWidth: "100%", fontFamily: fonts.sansSemibold, fontSize: 10.5, color: colors.accentDark, marginTop: 2 },
+  polishHydrationStatus: { fontFamily: fonts.sansSemibold, fontSize: 10.5, color: "rgba(62,39,51,0.50)", marginTop: 2 },
+  polishMacros: {
+    flexDirection: "row",
+    gap: 12,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(62,39,51,0.07)",
+  },
+  polishSectionLabel: { marginBottom: 10 },
+  polishRowCard: {
+    minHeight: 78,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    borderRadius: 20,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  polishRowIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(62,39,51,0.05)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  polishRowTitle: { fontFamily: fonts.sansBold, fontSize: 14.5, color: colors.foreground },
+  polishRowSub: { fontFamily: fonts.sans, fontSize: 12, color: colors.mutedForeground, marginTop: 2 },
+  polishSectionHead: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10 },
+  polishSeeAll: { fontFamily: fonts.sansSemibold, fontSize: 12, color: colors.accentDark },
+  polishSavedGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  polishSavedGridItem: { width: "48.5%" },
+  polishSavedCard: { width: "100%", height: 150, borderRadius: 20, overflow: "hidden" },
+  polishSavedImage: { width: "100%", height: 150, justifyContent: "flex-end" },
+  polishSavedImageRadius: { borderRadius: 20 },
+  polishSavedHeart: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "rgba(0,0,0,0.32)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  polishSavedInfo: { paddingHorizontal: 12, paddingBottom: 10 },
+  polishSavedTitle: { fontFamily: fonts.sansBold, fontSize: 13, color: "#FFFFFF" },
+  polishSavedMeta: { fontFamily: fonts.sans, fontSize: 10.5, color: "rgba(255,255,255,0.80)", marginTop: 2 },
 
   savedEmpty: { alignItems: "center", paddingVertical: 28, gap: 6 },
   savedEmptyText: { fontFamily: fonts.sansBold, fontSize: 15, color: colors.foreground, marginTop: 4 },

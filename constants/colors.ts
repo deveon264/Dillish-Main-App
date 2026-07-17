@@ -52,6 +52,9 @@ export const colors = {
   primary: "#E45D87",
   accent: "#C8446E",
   accentSoft: "#F08CAD",
+  hydrationAccent: "#F2A9C2",
+  ringTrack: "#F6EDF1",
+  hydrationRingTrack: "#F1F0EE",
   // Deep rose — secondary-button text, eyebrow labels, links.
   accentDark: "#C8446E",
   // Soft accent fills — icon circles, badge/chip backgrounds, active states.

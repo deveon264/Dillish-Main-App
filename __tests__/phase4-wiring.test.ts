@@ -25,7 +25,7 @@ test("initial blank routes use content-shaped skeletons", () => {
 
 test("every Phase 4 empty collection exposes its intended action", () => {
   const expected: Array<[string, RegExp]> = [
-    ["components/trackers/CaloriesTracker.tsx", /actionLabel="Log with text"[\s\S]*onAction=\{startTextLogging\}/],
+    ["components/trackers/CaloriesTracker.tsx", /Card style=\{styles\.polishMealEmpty\}[\s\S]*accessibilityLabel="Log first meal with text"[\s\S]*onPress=\{startTextLogging\}/],
     ["components/trackers/WaterTracker.tsx", /actionLabel="Add 250 ml"[\s\S]*onAction=\{\(\) => logWater\(250\)\}/],
     ["components/trackers/ProgressTracker.tsx", /actionLabel="Enter weight"[\s\S]*weightInputRef\.current\?\.focus/],
     ["components/trackers/ProgressTracker.tsx", /actionLabel="Add first photo"[\s\S]*onAction=\{pickProgressPhoto\}/],

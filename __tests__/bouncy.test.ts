@@ -12,6 +12,7 @@ const Module = require("node:module");
 const originalLoad = Module._load;
 
 const springCalls: Array<{ value: number; config: Record<string, unknown> }> = [];
+const timingCalls: Array<{ value: number; config: Record<string, unknown> }> = [];
 
 const HostPressable = forwardRef<any, any>(function HostPressable({ children, ...props }, ref) {
   return createElement("Pressable", { ...props, ref }, children);
@@ -42,6 +43,11 @@ Module._load = function patchedLoad(request: string, parent: unknown, isMain: bo
         springCalls.push({ value, config });
         return value;
       },
+      withTiming: (value: number, config: Record<string, unknown>) => {
+        timingCalls.push({ value, config });
+        return value;
+      },
+      Easing: { cubic: "cubic", out: (value: unknown) => value },
     };
   }
   return originalLoad.apply(this, [request, parent, isMain]);
@@ -53,6 +59,7 @@ after(() => {
 
 beforeEach(() => {
   springCalls.length = 0;
+  timingCalls.length = 0;
 });
 
 async function renderBouncy(props: Record<string, unknown> = {}) {
@@ -121,5 +128,18 @@ test("forwards refs and standard Pressable props without animating disabled cont
   assert.equal(pressable.props.onPress, onPress);
   await act(async () => pressable.props.onPressIn({ nativeEvent: {} }));
   await act(async () => pressable.props.onPressOut({ nativeEvent: {} }));
+  assert.equal(springCalls.length, 0);
+});
+
+test("supports an opt-in 120ms ease-out timing response", async () => {
+  const renderer = await renderBouncy({ motion: "timing", pressedScale: 0.95 });
+  const pressable = renderer.root.findByType("Pressable" as any);
+
+  await act(async () => pressable.props.onPressIn({ nativeEvent: {} }));
+  await act(async () => pressable.props.onPressOut({ nativeEvent: {} }));
+
+  assert.deepEqual(timingCalls.map(({ value }) => value), [0.95, 1]);
+  assert.deepEqual(timingCalls.map(({ config }) => config.duration), [120, 120]);
+  assert.deepEqual(timingCalls.map(({ config }) => config.reduceMotion), ["system", "system"]);
   assert.equal(springCalls.length, 0);
 });

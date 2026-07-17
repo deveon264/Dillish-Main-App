@@ -15,7 +15,6 @@ import { MotionListItem } from "@/components/Motion";
 import { useDataRefresh } from "@/hooks/useDataRefresh";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
-import { EmptyState } from "@/components/EmptyState";
 import { SectionLabel } from "@/components/PageHeader";
 import { ProgressRing } from "@/components/ProgressRing";
 import { useData, type CalorieLog } from "@/contexts/DataContext";
@@ -141,7 +140,7 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
   const [analyzeDone, setAnalyzeDone] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<LogTab>("photo");
+  const [tab, setTab] = useState<LogTab | null>(null);
   const [qty, setQty] = useState(1);
   const [mealType, setMealType] = useState("Lunch");
   const [mealMenu, setMealMenu] = useState(false);
@@ -561,17 +560,28 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
   const kcalPct = Math.min(1, totals.kcal / profile.calorieGoal);
   const remaining = Math.max(0, profile.calorieGoal - totals.kcal);
 
-  const TABS: { key: LogTab; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-    { key: "photo", label: "Photo", icon: "camera-outline" },
-    { key: "voice", label: "Voice", icon: "mic-outline" },
-    { key: "text", label: "Text", icon: "create-outline" },
+  const TABS: { key: LogTab; label: string; sub: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+    { key: "photo", label: "Photo", sub: "AI recognizes it", icon: "camera-outline" },
+    { key: "voice", label: "Voice", sub: "Say what you ate", icon: "mic-outline" },
+    { key: "text", label: "Text", sub: "Type it in", icon: "create-outline" },
   ];
+
+  const openLogFlow = (next: LogTab) => {
+    reset();
+    setTab(next);
+    haptics.selection();
+    if (next === "photo") {
+      requestAnimationFrame(choosePhotoSource);
+    } else if (next === "text") {
+      requestAnimationFrame(() => mealTextInputRef.current?.focus());
+    }
+  };
 
   return (
     <GradientBackground>
       <KeyboardAwareScrollView
         ref={scrollRef}
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 110 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: (Platform.OS === "web" ? Math.max(insets.top, 52) : insets.top) + 12, paddingBottom: insets.bottom + 110 }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
@@ -580,60 +590,87 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
       >
         {header}
 
-        <Card style={styles.goalCard}>
-          <View style={styles.goalHead}>
-            <View style={styles.eyebrowRow}>
-              <Ionicons name="flame-outline" size={14} color={colors.accent} />
-              <Text style={styles.cardEyebrow}>TODAY'S GOAL</Text>
-            </View>
-            <View style={styles.dateChip}>
-              <Ionicons name="calendar-outline" size={13} color={colors.muted} />
-              <Text style={styles.dateText}>{dateStr}</Text>
-            </View>
+        <Card style={styles.polishGoalCard}>
+          <View style={styles.polishGoalHead}>
+            <Text style={styles.polishEyebrow}>TODAY&apos;S GOAL</Text>
+            <Text style={styles.polishDate}>{dateStr}</Text>
           </View>
 
-          <View style={styles.goalRingWrap}>
-            <ProgressRing size={170} strokeWidth={12} progress={kcalPct} gradientId="calorieGoalRing">
+          <View style={styles.polishGoalMain}>
+            <ProgressRing
+              size={96}
+              strokeWidth={9}
+              progress={kcalPct}
+              color={colors.primary}
+              trackColor={colors.ringTrack}
+              durationMs={600}
+              gradientId="calorie-goal-polish"
+            >
               <AnimatedNumber
                 value={remaining}
                 formatter={(n) => `~${Math.round(n).toLocaleString()}`}
-                style={styles.remainingNum}
+                style={styles.polishRemaining}
               />
-              <Text style={styles.remainingLabel}>KCAL REMAINING</Text>
+              <Text style={styles.polishRemainingLabel}>KCAL REMAINING</Text>
             </ProgressRing>
-            <Text style={styles.eatenLine}>
-              <AnimatedNumber
-                value={totals.kcal}
-                formatter={(n) => `~${Math.round(n).toLocaleString()}`}
-                style={styles.eatenStrong}
-              /> eaten · goal {profile.calorieGoal.toLocaleString()}
-            </Text>
+            <View style={styles.polishGoalDetails}>
+              <Text style={styles.polishEatenLine}>
+                <AnimatedNumber value={totals.kcal} formatter={(n) => `~${Math.round(n).toLocaleString()}`} style={styles.polishEatenStrong} /> eaten · goal {profile.calorieGoal.toLocaleString()}
+              </Text>
+              <View style={styles.polishGoalMacros}>
+                <GoalMacro label="Protein" value={totals.protein} goal={goalProtein} />
+                <GoalMacro label="Carbs" value={totals.carbs} goal={goalCarbs} />
+                <GoalMacro label="Fats" value={totals.fats} goal={goalFats} />
+              </View>
+            </View>
           </View>
 
-          <View style={styles.macros}>
-            <Macro label="Protein" value={totals.protein} goal={goalProtein} color={colors.protein} />
-            <Macro label="Carbs" value={totals.carbs} goal={goalCarbs} color={colors.carbs} />
-            <Macro label="Fats" value={totals.fats} goal={goalFats} color={colors.fats} />
+          <View style={styles.polishWeekZone}>
+            <View style={styles.polishWeekHead}>
+              <Text style={styles.polishWeekEyebrow}>THIS WEEK</Text>
+              <Text style={styles.polishWeekRange}>{week.range}</Text>
+            </View>
+            <View style={styles.polishWeekBars}>
+              {week.days.map((day) => {
+                const ratio = profile.calorieGoal > 0 ? Math.min(1, day.total / profile.calorieGoal) : 0;
+                const height = day.total > 0 ? Math.max(8, Math.round(ratio * 42)) : 3;
+                return (
+                  <View key={day.label} style={styles.polishWeekColumn}>
+                    <View
+                      style={[
+                        styles.polishWeekBar,
+                        { height },
+                        day.total > 0 && styles.polishWeekBarLogged,
+                        day.isToday && styles.polishWeekBarToday,
+                      ]}
+                    />
+                    <Text style={[styles.polishWeekDay, day.isToday && styles.polishWeekDayToday]}>{day.label.slice(0, 1)}</Text>
+                  </View>
+                );
+              })}
+            </View>
           </View>
         </Card>
 
-        <SectionLabel style={styles.section}>LOG A MEAL</SectionLabel>
-        <View style={styles.tabRow}>
-          {TABS.map((t) => {
-            const active = tab === t.key;
+        <SectionLabel style={styles.polishLogSection}>LOG A MEAL</SectionLabel>
+        <View style={styles.polishActionTiles}>
+          {TABS.map((item) => {
+            const photo = item.key === "photo";
             return (
               <Pressable
-                key={t.key}
-                style={[styles.tab, active && styles.tabActive]}
-                onPress={() => {
-                  if (t.key === tab) return;
-                  haptics.selection();
-                  setTab(t.key);
-                  reset();
-                }}
+                key={item.key}
+                motion="timing"
+                pressedScale={0.95}
+                style={[styles.polishActionTile, photo && styles.polishActionTilePrimary]}
+                onPress={() => openLogFlow(item.key)}
+                accessibilityRole="button"
+                accessibilityLabel={`Log a meal with ${item.label.toLowerCase()}`}
               >
-                <Ionicons name={t.icon} size={16} color={active ? colors.onPrimaryStrong : colors.muted} />
-                <Text style={[styles.tabLabel, { color: active ? colors.onPrimaryStrong : colors.muted }]}>{t.label}</Text>
+                <Ionicons name={item.icon} size={21} color={photo ? colors.onPrimary : colors.accentDark} />
+                <View style={styles.polishActionCopy}>
+                  <Text style={[styles.polishActionTitle, photo && styles.polishActionTitlePrimary]}>{item.label}</Text>
+                  <Text style={[styles.polishActionSub, photo && styles.polishActionSubPrimary]} numberOfLines={1}>{item.sub}</Text>
+                </View>
               </Pressable>
             );
           })}
@@ -872,7 +909,7 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
               <Button label="Try Again" variant="outline" onPress={reset} style={{ marginTop: 12 }} />
             </View>
           </Card>
-        ) : (
+        ) : tab === "photo" ? (
           <Pressable pressedScale={0.985} onPress={choosePhotoSource}>
             <Card style={styles.dropCard}>
               <View style={styles.dropInner}>
@@ -888,7 +925,7 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
               </View>
             </Card>
           </Pressable>
-        )}
+        ) : null}
 
         {!image && !result && !analyzing && error && tab !== "text" ? (
           <View style={styles.inlineError}>
@@ -897,22 +934,6 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
           </View>
         ) : null}
 
-        <SectionLabel style={styles.section}>RECIPE IDEAS</SectionLabel>
-        <Pressable pressedScale={0.985} onPress={() => router.push("/recipes")}>
-          {({ pressed }) => (
-            <Card style={[styles.recipesCard, pressed && { opacity: 0.9 }]}>
-              <View style={styles.recipesIcon}>
-                <Ionicons name="restaurant" size={20} color={colors.accent} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.recipesTitle}>Browse Recipes</Text>
-                <Text style={styles.recipesSub}>Mediterranean, high protein, pre and post workout and more</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
-            </Card>
-          )}
-        </Pressable>
-
         <View style={styles.diaryHead}>
           <Text style={styles.diaryEyebrow}>TODAY'S MEALS</Text>
           {todayLogs.length > 0 ? (
@@ -920,47 +941,57 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
           ) : null}
         </View>
         {todayLogs.length === 0 ? (
-          <Card>
-            <EmptyState
-              compact
-              icon="restaurant-outline"
-              title="No meals logged yet"
-              description="Describe what you ate and Florish will estimate the nutrition."
-              actionLabel="Log with text"
-              onAction={startTextLogging}
-            />
+          <Card style={styles.polishMealEmpty}>
+            <View style={styles.polishMealEmptyIcon}>
+              <Ionicons name="restaurant-outline" size={20} color={colors.accentDark} />
+            </View>
+            <View style={styles.polishMealEmptyCopy}>
+              <Text style={styles.polishMealEmptyTitle}>No meals logged yet</Text>
+              <Text style={styles.polishMealEmptyDescription}>Describe what you ate and Florish will estimate the nutrition.</Text>
+            </View>
+            <Pressable
+              motion="timing"
+              pressedScale={0.96}
+              accessibilityRole="button"
+              accessibilityLabel="Log first meal with text"
+              style={styles.polishMealEmptyAction}
+              onPress={startTextLogging}
+            >
+              <Text style={styles.polishMealEmptyActionText}>Log</Text>
+            </Pressable>
           </Card>
         ) : (
           <View style={{ gap: 12 }}>
             {visibleTodayLogs.map((l) => (
               <MotionListItem key={l.id}>
-              <Pressable
-                pressedScale={0.985}
-                accessibilityRole="button"
-                accessibilityLabel={`View meal details for ${l.name}`}
-                onPress={() => setSelectedMeal(l)}
-                style={({ pressed }) => [pressed && styles.logCardPressed]}
-              >
               <Card style={styles.logCard}>
-                {l.photoUri ? (
-                  <Image source={{ uri: l.photoUri }} style={styles.logThumb} />
-                ) : (
-                  <View style={[styles.logThumb, styles.logThumbFallback]}>
-                    <Ionicons name="restaurant-outline" size={20} color={colors.accent} />
+                <Pressable
+                  pressedScale={0.985}
+                  accessibilityRole="button"
+                  accessibilityLabel={`View meal details for ${l.name}`}
+                  onPress={() => setSelectedMeal(l)}
+                  style={({ pressed }) => [styles.logDetailsTap, pressed && styles.logCardPressed]}
+                >
+                  {l.photoUri ? (
+                    <Image source={{ uri: l.photoUri }} style={styles.logThumb} />
+                  ) : (
+                    <View style={[styles.logThumb, styles.logThumbFallback]}>
+                      <Ionicons name="restaurant-outline" size={20} color={colors.accent} />
+                    </View>
+                  )}
+                  <View style={styles.logMid}>
+                    <View style={styles.logMetaRow}>
+                      {l.mealType ? (
+                        <View style={styles.mealTag}>
+                          <Text style={styles.mealTagText}>{l.mealType}</Text>
+                        </View>
+                      ) : null}
+                      <Text style={styles.logTime}>{formatTime(l.ts)}</Text>
+                    </View>
+                    <Text style={styles.logName} numberOfLines={1}>{l.name}</Text>
+                    <Text style={styles.logMacro}>P: {l.protein}g · C: {l.carbs}g · F: {l.fats}g</Text>
                   </View>
-                )}
-                <View style={styles.logMid}>
-                  <View style={styles.logMetaRow}>
-                    {l.mealType ? (
-                      <View style={styles.mealTag}>
-                        <Text style={styles.mealTagText}>{l.mealType}</Text>
-                      </View>
-                    ) : null}
-                    <Text style={styles.logTime}>{formatTime(l.ts)}</Text>
-                  </View>
-                  <Text style={styles.logName} numberOfLines={1}>{l.name}</Text>
-                  <Text style={styles.logMacro}>P: {l.protein}g · C: {l.carbs}g · F: {l.fats}g</Text>
-                </View>
+                </Pressable>
                 <View style={styles.logRight}>
                   <Text style={styles.logKcal}>~{l.kcal}</Text>
                   <Text style={styles.logKcalUnit}>kcal</Text>
@@ -980,7 +1011,6 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
                   </Pressable>
                 </View>
               </Card>
-              </Pressable>
               </MotionListItem>
             ))}
             {canExpandTodayLogs ? (
@@ -1009,41 +1039,16 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
           />
         </Card>
 
-        <Card style={styles.weekCard}>
-          <View style={styles.weekHead}>
-            <Text style={styles.weekEyebrow}>WEEKLY OVERVIEW</Text>
-            <Text style={styles.weekRange}>{week.range}</Text>
+        <Pressable motion="timing" pressedScale={0.98} style={styles.polishRecipesRow} onPress={() => router.push("/recipes")}>
+          <View style={styles.polishRecipesIcon}>
+            <Ionicons name="restaurant-outline" size={19} color={colors.foreground} />
           </View>
-          <View style={styles.chartWrap}>
-            <View style={styles.chartYAxis}>
-              <Text style={styles.chartYLabel}>{(profile.calorieGoal / 1000).toFixed(1)}k</Text>
-              <Text style={styles.chartYLabel}>{(profile.calorieGoal / 2000).toFixed(1)}k</Text>
-              <Text style={styles.chartYLabel}>0</Text>
-            </View>
-            <View style={styles.chartArea}>
-              <View style={styles.chartGoalLine} />
-              <View style={styles.chartBars}>
-                {week.days.map((d) => {
-                  const h = Math.max(0.02, Math.min(1, d.total / profile.calorieGoal));
-                  return (
-                    <View key={d.label} style={styles.chartCol}>
-                      <View style={styles.chartBarTrack}>
-                        <View
-                          style={[
-                            styles.chartBar,
-                            { height: `${h * 100}%` },
-                            d.isToday && styles.chartBarToday,
-                          ]}
-                        />
-                      </View>
-                      <Text style={styles.chartXLabel}>{d.label}</Text>
-                    </View>
-                  );
-                })}
-              </View>
-            </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.polishRecipesTitle}>Browse Recipes</Text>
+            <Text style={styles.polishRecipesSub} numberOfLines={2}>Mediterranean, high protein, pre and post workout and more</Text>
           </View>
-        </Card>
+          <Ionicons name="chevron-forward" size={16} color="rgba(62,39,51,0.30)" />
+        </Pressable>
       </KeyboardAwareScrollView>
 
       <Modal visible={mealMenu} transparent animationType="fade" onRequestClose={() => setMealMenu(false)}>
@@ -1211,16 +1216,15 @@ function formatTime(ts: number) {
   return new Date(ts).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
-function Macro({ label, value, goal, color }: { label: string; value: number; goal: number; color: string }) {
-  const colors = useColors();
+function GoalMacro({ label, value, goal }: { label: string; value: number; goal: number }) {
   const styles = useThemedStyles(createStyles);
   return (
-    <View style={styles.macroTile}>
-      <ProgressRing size={54} strokeWidth={5} progress={goal ? value / goal : 0} color={color} gradientId={`macro-${label}`}>
-        <AnimatedNumber value={value} formatter={(n) => `${Math.round(n)}g`} style={styles.macroRingValue} />
-      </ProgressRing>
-      <Text style={styles.macroLabel}>{label}</Text>
-      <Text style={styles.macroValue}>{goal}g</Text>
+    <View style={styles.polishGoalMacro}>
+      <Text style={styles.polishGoalMacroValue}>
+        <AnimatedNumber value={value} formatter={(n) => `${Math.round(n)}`} style={styles.polishGoalMacroValue} />
+        <Text style={styles.polishGoalMacroUnit}>g</Text>
+      </Text>
+      <Text style={styles.polishGoalMacroLabel} numberOfLines={1}>{label} {goal}g</Text>
     </View>
   );
 }
@@ -1248,7 +1252,63 @@ function DetailMacro({ label, value }: { label: string; value: number }) {
 }
 
 const createStyles = (colors: AppColors) => StyleSheet.create({
-  scroll: { paddingHorizontal: 20 },
+  scroll: { paddingHorizontal: 24 },
+  polishGoalCard: { marginTop: 16, padding: 18, borderRadius: 22 },
+  polishGoalHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
+  polishEyebrow: { fontFamily: fonts.sansBold, fontSize: 11, letterSpacing: 1.8, color: colors.mutedForeground },
+  polishDate: { fontFamily: fonts.sansSemibold, fontSize: 11.5, color: "rgba(62,39,51,0.50)" },
+  polishGoalMain: { flexDirection: "row", alignItems: "center", gap: 18, marginTop: 16 },
+  polishRemaining: { fontFamily: fonts.serifSemibold, fontSize: 20, lineHeight: 23, color: colors.foreground },
+  polishRemainingLabel: { fontFamily: fonts.sansBold, fontSize: 7.5, letterSpacing: 1.2, color: colors.mutedForeground, marginTop: 3 },
+  polishGoalDetails: { flex: 1, minWidth: 0, gap: 10 },
+  polishEatenLine: { fontFamily: fonts.sans, fontSize: 13, color: "rgba(62,39,51,0.60)" },
+  polishEatenStrong: { fontFamily: fonts.sansBold, color: colors.foreground },
+  polishGoalMacros: { flexDirection: "row", gap: 10 },
+  polishGoalMacro: { flex: 1, minWidth: 0 },
+  polishGoalMacroValue: { fontFamily: fonts.sansBold, fontSize: 13.5, color: colors.foreground },
+  polishGoalMacroUnit: { fontFamily: fonts.sansSemibold, fontSize: 9.5, color: colors.mutedForeground },
+  polishGoalMacroLabel: { fontFamily: fonts.sansSemibold, fontSize: 9, color: colors.mutedForeground, marginTop: 1 },
+  polishWeekZone: { borderTopWidth: 1, borderTopColor: "rgba(62,39,51,0.07)", paddingTop: 14, marginTop: 16 },
+  polishWeekHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
+  polishWeekEyebrow: { fontFamily: fonts.sansBold, fontSize: 11, letterSpacing: 1, color: colors.mutedForeground },
+  polishWeekRange: { fontFamily: fonts.sansSemibold, fontSize: 11, color: "rgba(62,39,51,0.50)" },
+  polishWeekBars: { height: 56, flexDirection: "row", alignItems: "flex-end", gap: 8 },
+  polishWeekColumn: { flex: 1, height: "100%", justifyContent: "flex-end", alignItems: "center", gap: 5 },
+  polishWeekBar: { width: "100%", maxWidth: 22, height: 3, borderRadius: 99, backgroundColor: "rgba(62,39,51,0.10)" },
+  polishWeekBarLogged: { backgroundColor: colors.hydrationAccent },
+  polishWeekBarToday: { backgroundColor: colors.primary },
+  polishWeekDay: { fontFamily: fonts.sansSemibold, fontSize: 9, color: colors.mutedForeground },
+  polishWeekDayToday: { fontFamily: fonts.sansBold, color: colors.accentDark },
+  polishLogSection: { marginTop: 16, marginBottom: 10 },
+  polishActionTiles: { flexDirection: "row", gap: 10 },
+  polishActionTile: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 93,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 16,
+    borderRadius: 20,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  polishActionTilePrimary: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.30,
+    shadowRadius: 20,
+    elevation: 7,
+  },
+  polishActionCopy: { alignItems: "center", maxWidth: "100%" },
+  polishActionTitle: { fontFamily: fonts.sansBold, fontSize: 12.5, color: colors.foreground },
+  polishActionTitlePrimary: { color: colors.onPrimary },
+  polishActionSub: { fontFamily: fonts.sansSemibold, fontSize: 9.5, color: colors.mutedForeground, marginTop: 1 },
+  polishActionSubPrimary: { color: "rgba(255,255,255,0.75)" },
   goalCard: { marginTop: 20, padding: 20 },
   goalHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   eyebrowRow: { flexDirection: "row", alignItems: "center", gap: 8 },
@@ -1512,13 +1572,21 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
   },
   recipesTitle: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.foreground },
   recipesSub: { fontFamily: fonts.sans, fontSize: 12, color: colors.mutedForeground, marginTop: 2 },
-  diaryHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 28, marginBottom: 14 },
-  diaryEyebrow: { fontFamily: fonts.sansMedium, fontSize: 12, letterSpacing: 2, color: colors.muted },
+  diaryHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 24, marginBottom: 10 },
+  diaryEyebrow: { fontFamily: fonts.sansBold, fontSize: 11, letterSpacing: 1.8, color: colors.mutedForeground },
   diaryCount: { fontFamily: fonts.sansMedium, fontSize: 12.5, color: colors.primary },
+  polishMealEmpty: { minHeight: 90, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 18, paddingVertical: 14 },
+  polishMealEmptyIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.accentTint, alignItems: "center", justifyContent: "center" },
+  polishMealEmptyCopy: { flex: 1, minWidth: 0 },
+  polishMealEmptyTitle: { fontFamily: fonts.sansBold, fontSize: 14, color: colors.foreground },
+  polishMealEmptyDescription: { fontFamily: fonts.sans, fontSize: 11.5, lineHeight: 16, color: colors.mutedForeground, marginTop: 2 },
+  polishMealEmptyAction: { minWidth: 54, minHeight: 38, borderRadius: 999, borderWidth: 1, borderColor: colors.primary, alignItems: "center", justifyContent: "center", paddingHorizontal: 14 },
+  polishMealEmptyActionText: { fontFamily: fonts.sansBold, fontSize: 12, color: colors.accentDark },
   emptyText: { fontFamily: fonts.sans, fontSize: 14, color: colors.muted, marginTop: 10 },
   seeMoreButton: { alignSelf: "center", paddingHorizontal: 8, paddingVertical: 4, marginTop: -2 },
   seeMoreText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.accent },
   logCard: { flexDirection: "row", gap: 12, paddingVertical: 14, paddingHorizontal: 14 },
+  logDetailsTap: { flex: 1, flexDirection: "row", alignItems: "center", gap: 12 },
   logCardPressed: { opacity: 0.86 },
   logThumb: { width: 56, height: 56, borderRadius: 14 },
   logThumbFallback: { backgroundColor: colors.accentTint, alignItems: "center", justifyContent: "center" },
@@ -1581,11 +1649,11 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     textAlign: "center",
   },
 
-  insightCard: { marginTop: 14, padding: 18 },
+  insightCard: { marginTop: 16, padding: 18, borderRadius: 22 },
   insightHead: { flexDirection: "row", alignItems: "center", gap: 9, marginBottom: 12 },
   insightIcon: { width: 30, height: 30, borderRadius: 15, backgroundColor: colors.accentTintMd, alignItems: "center", justifyContent: "center" },
-  insightEyebrow: { fontFamily: fonts.sansSemibold, fontSize: 12, letterSpacing: 1.2, color: colors.muted },
-  insightText: { fontFamily: fonts.sans, fontSize: 14, lineHeight: 22, color: colors.muted },
+  insightEyebrow: { fontFamily: fonts.sansBold, fontSize: 11, letterSpacing: 1.8, color: colors.mutedForeground },
+  insightText: { fontFamily: fonts.sans, fontSize: 13.5, lineHeight: 21, color: "rgba(62,39,51,0.75)" },
   insightStrong: { fontFamily: fonts.sansSemibold, color: colors.foreground },
   insightChipsCaption: {
     fontFamily: fonts.sansSemibold,
@@ -1600,16 +1668,39 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: colors.cardElevated,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
+    backgroundColor: colors.blushSurface,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   insightChipPressed: { opacity: 0.6 },
   insightChipName: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.foreground, flex: 1 },
   insightChipVal: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.primary },
+
+  polishRecipesRow: {
+    minHeight: 78,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    marginTop: 16,
+    marginBottom: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    borderRadius: 20,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  polishRecipesIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(62,39,51,0.05)",
+  },
+  polishRecipesTitle: { fontFamily: fonts.sansBold, fontSize: 14.5, color: colors.foreground },
+  polishRecipesSub: { fontFamily: fonts.sans, fontSize: 12, lineHeight: 16, color: colors.mutedForeground, marginTop: 2 },
 
   weekCard: { marginTop: 14, padding: 18, marginBottom: 8 },
   weekHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 18 },
