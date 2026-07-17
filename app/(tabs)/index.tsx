@@ -185,7 +185,7 @@ export default function Dashboard() {
 
   return (
     <View style={styles.polishScreen}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={{ paddingBottom: insets.bottom + 110 }}
@@ -200,9 +200,20 @@ export default function Dashboard() {
           cachePolicy="memory-disk"
         >
           <LinearGradient
-            colors={["rgba(51,28,38,0.55)", "rgba(51,28,38,0)", "rgba(51,28,38,0)", "rgba(51,28,38,0.88)"]}
-            locations={[0, 0.26, 0.46, 1]}
+            colors={["rgba(51,28,38,0)", "rgba(51,28,38,0)", "rgba(51,28,38,0.9)"]}
+            locations={[0, 0.36, 1]}
             style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+          <LinearGradient
+            colors={colors.heroFade}
+            locations={[0, 0.55, 0.85, 1]}
+            style={styles.polishHeroBottomFade}
+            pointerEvents="none"
+          />
+          <LinearGradient
+            colors={colors.heroTopFade}
+            style={[styles.polishHeroTopFade, { height: insets.top + 96 }]}
             pointerEvents="none"
           />
           <Pressable
@@ -228,7 +239,7 @@ export default function Dashboard() {
               accessibilityRole="button"
               accessibilityLabel="Open notifications"
             >
-              <Ionicons name="notifications-outline" size={18} color="#FFFFFF" />
+              <Ionicons name="notifications-outline" size={18} color={colors.foreground} />
               {unreadCount > 0 ? <View style={styles.polishNotifDot} /> : null}
             </Pressable>
             <Pressable
@@ -251,26 +262,36 @@ export default function Dashboard() {
           </View>
 
           <View style={styles.polishHeroBottom}>
-            <View style={styles.polishHeroCopy}>
-              <Text style={styles.polishHeroEyebrow}>{heroEyebrow}</Text>
-              <Text style={styles.polishHeroTitle} numberOfLines={2}>{featured.title}</Text>
-              <View style={styles.polishHeroMeta}>
-                <Text style={styles.polishHeroMetaText}>{featuredDuration} min</Text>
-                <Text style={styles.polishHeroMetaText}>~{featured.kcal} kcal</Text>
-                <Text style={styles.polishHeroMetaText}>{featured.level}</Text>
-              </View>
-            </View>
-            <Pressable
-              motion="timing"
-              pressedScale={0.96}
-              style={styles.polishHeroCta}
-              onPress={() => router.push(`/workout/${featured.id}`)}
-              accessibilityRole="button"
-              accessibilityLabel={`${heroCtaText}: ${featured.title}`}
+            <Text style={styles.polishHeroEyebrow}>{heroEyebrow}</Text>
+            <Text
+              style={styles.polishHeroTitle}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
             >
-              <Text style={styles.polishHeroCtaText} numberOfLines={1}>{heroCtaText}</Text>
-              <Ionicons name="chevron-forward" size={14} color="#FFFFFF" />
-            </Pressable>
+              {featured.title}
+            </Text>
+            <View style={styles.polishHeroActions}>
+              <Text
+                style={styles.polishHeroMetaText}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+              >
+                {featuredDuration} min · ~{featured.kcal} kcal · {featured.level}
+              </Text>
+              <Pressable
+                motion="timing"
+                pressedScale={0.96}
+                style={styles.polishHeroCta}
+                onPress={() => router.push(`/workout/${featured.id}`)}
+                accessibilityRole="button"
+                accessibilityLabel={`${heroCtaText}: ${featured.title}`}
+              >
+                <Text style={styles.polishHeroCtaText} numberOfLines={1}>{heroCtaText}</Text>
+                <Ionicons name="chevron-forward" size={14} color="#FFFFFF" />
+              </Pressable>
+            </View>
           </View>
         </ImageBackground>
 
@@ -1192,17 +1213,17 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     fontFamily: fonts.sansBold,
     fontSize: 10,
     letterSpacing: 3,
-    color: "rgba(255,255,255,0.75)",
+    color: colors.muted,
     marginBottom: 5,
   },
-  polishName: { fontFamily: fonts.serifMedium, fontSize: 30, lineHeight: 32, color: "#FFFFFF" },
+  polishName: { fontFamily: fonts.serifMedium, fontSize: 30, lineHeight: 32, color: colors.foreground },
   polishHeaderButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.16)",
+    backgroundColor: "rgba(255,255,255,0.55)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.25)",
+    borderColor: colors.cardBorder,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1215,7 +1236,7 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     borderRadius: 4,
     backgroundColor: colors.primary,
     borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.9)",
+    borderColor: colors.background,
   },
   polishAvatar: {
     width: 40,
@@ -1223,7 +1244,7 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     borderRadius: 20,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.34)",
+    borderColor: colors.cardBorder,
   },
   polishAvatarFallback: {
     width: "100%",
@@ -1237,13 +1258,22 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     position: "absolute",
     left: 24,
     right: 24,
-    bottom: 24,
+    bottom: 64,
     zIndex: 3,
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 12,
   },
-  polishHeroCopy: { flex: 1, minWidth: 0 },
+  polishHeroTopFade: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  polishHeroBottomFade: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 130,
+  },
   polishHeroEyebrow: {
     fontFamily: fonts.sansBold,
     fontSize: 10,
@@ -1253,14 +1283,25 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     marginBottom: 8,
   },
   polishHeroTitle: { fontFamily: fonts.serifMedium, fontSize: 30, lineHeight: 34, color: "#FFFFFF" },
-  polishHeroMeta: { flexDirection: "row", flexWrap: "wrap", gap: 14, marginTop: 8 },
-  polishHeroMetaText: { fontFamily: fonts.sansSemibold, fontSize: 12, color: "rgba(255,255,255,0.85)" },
+  polishHeroActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 14,
+  },
+  polishHeroMetaText: {
+    flex: 1,
+    minWidth: 0,
+    fontFamily: fonts.sansSemibold,
+    fontSize: 12,
+    color: "rgba(255,255,255,0.92)",
+  },
   polishHeroCta: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 7,
-    maxWidth: 142,
+    flexShrink: 0,
     paddingHorizontal: 18,
     paddingVertical: 13,
     borderRadius: 999,

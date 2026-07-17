@@ -110,6 +110,9 @@ export const colors = {
   bgGradient: ["#FDFCFA", "#FDFCFA", "#FDFCFA"] as Gradient3,
   // Fade used to scrim the welcome hero down to the app background.
   welcomeScrim: ["rgba(253, 252, 250, 0.5)", "rgba(253, 252, 250, 0.82)", "#FDFCFA"] as Gradient3,
+  // Soft cream fade over the top of the home hero so the status bar and
+  // greeting stay legible as dark ink over any photo.
+  heroTopFade: ["rgba(253, 252, 250, 0.9)", "rgba(253, 252, 250, 0)"] as Gradient2,
   // Fade laid over the home hero banner so its bottom edge dissolves into the
   // background.
   heroFade: [
