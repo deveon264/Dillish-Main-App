@@ -1,12 +1,21 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable as StructuralPressable, Image, Modal, Platform, useWindowDimensions } from "react-native";
 import { Image as ExpoImage, ImageBackground } from "expo-image";
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+} from "react-native-reanimated";
 import { StatusBar } from "expo-status-bar";
 import { Asset } from "expo-asset";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
+import { useScrollDecor } from "@/components/BackgroundDecor";
+import { PillGloss } from "@/components/PillGloss";
 import { Card } from "@/components/Card";
 import { ProgressRing } from "@/components/ProgressRing";
 import { SectionLabel } from "@/components/PageHeader";
@@ -183,15 +192,36 @@ export default function Dashboard() {
   const { height: windowHeight } = useWindowDimensions();
   const heroHeight = Math.max(520, Math.min(560, Math.round(windowHeight * 0.64)));
 
+  // The web build has no native status bar; mirror the header's 50px fallback.
+  const heroTopInset = Platform.OS === "web" ? Math.max(insets.top, 50) : insets.top;
+
+  // Scroll-activated status-bar cap: transparent while the hero is at rest so
+  // the image reaches the very top, fading in once content starts sliding
+  // under the time so nothing ever clashes with it.
+  const scrollY = useSharedValue(0);
+  const onHeroScroll = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+  });
+  const statusBarCapStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.value, [40, 120], [0, 1], Extrapolation.CLAMP),
+  }));
+
+  // Petal texture embedded in the scroll content so it moves with the page.
+  const { decor, onContentSizeChange } = useScrollDecor();
+
   return (
     <View style={styles.polishScreen}>
       <StatusBar style="dark" />
-      <ScrollView
+      <Animated.ScrollView
         ref={scrollRef}
         contentContainerStyle={{ paddingBottom: insets.bottom + 110 }}
         showsVerticalScrollIndicator={false}
         refreshControl={refreshControl}
+        onScroll={onHeroScroll}
+        scrollEventThrottle={16}
+        onContentSizeChange={onContentSizeChange}
       >
+        {decor}
         <ImageBackground
           source={featured.image}
           style={[styles.polishHero, { height: heroHeight }]}
@@ -213,7 +243,7 @@ export default function Dashboard() {
           />
           <LinearGradient
             colors={colors.heroTopFade}
-            style={[styles.polishHeroTopFade, { height: insets.top + 96 }]}
+            style={[styles.polishHeroTopFade, { height: heroTopInset + 56 }]}
             pointerEvents="none"
           />
           <Pressable
@@ -225,7 +255,7 @@ export default function Dashboard() {
             accessibilityLabel={`${heroCtaText}: ${featured.title}`}
           />
 
-          <View style={[styles.polishHeroHeader, { top: (Platform.OS === "web" ? Math.max(insets.top, 50) : insets.top) + 14 }]}>
+          <View style={[styles.polishHeroHeader, { top: heroTopInset + 14 }]}>
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={styles.polishGreeting}>{greeting().toUpperCase()}</Text>
               <Text style={styles.polishName} numberOfLines={1}>{firstName}</Text>
@@ -288,8 +318,16 @@ export default function Dashboard() {
                 accessibilityRole="button"
                 accessibilityLabel={`${heroCtaText}: ${featured.title}`}
               >
-                <Text style={styles.polishHeroCtaText} numberOfLines={1}>{heroCtaText}</Text>
-                <Ionicons name="chevron-forward" size={14} color="#FFFFFF" />
+                <LinearGradient
+                  colors={colors.gradient}
+                  start={{ x: 0.5, y: 0 }}
+                  end={{ x: 0.5, y: 1 }}
+                  style={styles.polishHeroCtaInner}
+                >
+                  <Text style={styles.polishHeroCtaText} numberOfLines={1}>{heroCtaText}</Text>
+                  <Ionicons name="chevron-forward" size={14} color="#FFFFFF" />
+                  <PillGloss />
+                </LinearGradient>
               </Pressable>
             </View>
           </View>
@@ -385,7 +423,15 @@ export default function Dashboard() {
                   style={styles.polishFilledButton}
                   onPress={() => router.navigate("/(tabs)/tracker?mode=calories")}
                 >
-                  <Text style={styles.polishFilledButtonText}>Log meal</Text>
+                  <LinearGradient
+                    colors={colors.gradient}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 1 }}
+                    style={styles.polishFilledButtonInner}
+                  >
+                    <Text style={styles.polishFilledButtonText}>Log meal</Text>
+                    <PillGloss />
+                  </LinearGradient>
                 </Pressable>
               </View>
             </View>
@@ -475,7 +521,15 @@ export default function Dashboard() {
                   style={styles.savedEmptyBtn}
                   onPress={() => router.navigate("/(tabs)/workouts")}
                 >
-                  <Text style={styles.savedEmptyBtnText}>Browse library</Text>
+                  <LinearGradient
+                    colors={colors.gradient}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 1 }}
+                    style={styles.savedEmptyBtnInner}
+                  >
+                    <Text style={styles.savedEmptyBtnText}>Browse library</Text>
+                    <PillGloss />
+                  </LinearGradient>
                 </Pressable>
               </Card>
             ) : (
@@ -526,7 +580,12 @@ export default function Dashboard() {
             )}
           </View>
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
+
+      <Animated.View style={[styles.statusBarCap, statusBarCapStyle]} pointerEvents="none">
+        <View style={[styles.statusBarCapSolid, { height: heroTopInset }]} />
+        <LinearGradient colors={colors.statusBarCapFade} style={styles.statusBarCapEdge} />
+      </Animated.View>
 
       <NotificationsSheet visible={notifOpen} notifications={notifications} onClose={() => setNotifOpen(false)} insets={insets} />
       <StreakHistorySheet
@@ -1213,19 +1272,35 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     fontFamily: fonts.sansBold,
     fontSize: 10,
     letterSpacing: 3,
-    color: colors.muted,
+    color: colors.foreground,
     marginBottom: 5,
+    textShadowColor: "rgba(255,255,255,0.85)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 8,
   },
-  polishName: { fontFamily: fonts.serifMedium, fontSize: 30, lineHeight: 32, color: colors.foreground },
+  polishName: {
+    fontFamily: fonts.serifMedium,
+    fontSize: 30,
+    lineHeight: 32,
+    color: colors.foreground,
+    textShadowColor: "rgba(255,255,255,0.85)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 8,
+  },
   polishHeaderButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.55)",
+    backgroundColor: "rgba(255,255,255,0.88)",
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: "rgba(255,255,255,0.95)",
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: colors.foreground,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 4,
   },
   polishNotifDot: {
     position: "absolute",
@@ -1236,15 +1311,20 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     borderRadius: 4,
     backgroundColor: colors.primary,
     borderWidth: 1.5,
-    borderColor: colors.background,
+    borderColor: "#FFFFFF",
   },
   polishAvatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
     overflow: "hidden",
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.95)",
+    shadowColor: colors.foreground,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 4,
   },
   polishAvatarFallback: {
     width: "100%",
@@ -1261,6 +1341,15 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     bottom: 64,
     zIndex: 3,
   },
+  statusBarCap: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  statusBarCapSolid: { backgroundColor: colors.background },
+  statusBarCapEdge: { height: 18 },
   polishHeroTopFade: {
     position: "absolute",
     top: 0,
@@ -1297,20 +1386,23 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     color: "rgba(255,255,255,0.92)",
   },
   polishHeroCta: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 7,
     flexShrink: 0,
-    paddingHorizontal: 18,
-    paddingVertical: 13,
     borderRadius: 999,
-    backgroundColor: colors.primary,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.45,
     shadowRadius: 20,
     elevation: 8,
+  },
+  polishHeroCtaInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    paddingHorizontal: 18,
+    paddingVertical: 13,
+    borderRadius: 999,
+    overflow: "hidden",
   },
   polishHeroCtaText: { flexShrink: 1, fontFamily: fonts.sansBold, fontSize: 13.5, color: "#FFFFFF" },
   polishContent: { paddingHorizontal: 24, paddingTop: 18, gap: 18 },
@@ -1389,18 +1481,27 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1.5,
     borderColor: colors.primary,
+    backgroundColor: "rgba(255,255,255,0.85)",
+    shadowColor: colors.foreground,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
   polishOutlineButtonText: { fontFamily: fonts.sansBold, fontSize: 12, color: colors.accentDark },
   polishFilledButton: {
-    paddingHorizontal: 15,
-    paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: colors.primary,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 14,
     elevation: 5,
+  },
+  polishFilledButtonInner: {
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 999,
+    overflow: "hidden",
   },
   polishFilledButtonText: { fontFamily: fonts.sansBold, fontSize: 12, color: colors.onPrimary },
   polishRings: { flexDirection: "row", gap: 14, marginTop: 18, marginBottom: 16 },
@@ -1467,15 +1568,18 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
   savedEmptySub: { fontFamily: fonts.sans, fontSize: 12, color: colors.muted, textAlign: "center" },
   savedEmptyBtn: {
     marginTop: 12,
-    backgroundColor: colors.primary,
-    paddingHorizontal: 26,
-    paddingVertical: 11,
     borderRadius: 999,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 14,
     elevation: 4,
+  },
+  savedEmptyBtnInner: {
+    paddingHorizontal: 26,
+    paddingVertical: 11,
+    borderRadius: 999,
+    overflow: "hidden",
   },
   savedEmptyBtnText: { fontFamily: fonts.sansBold, fontSize: 13, color: colors.onPrimary },
 

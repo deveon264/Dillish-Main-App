@@ -7,6 +7,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { GradientBackground } from "@/components/GradientBackground";
+import { useScrollDecor } from "@/components/BackgroundDecor";
 import { MotionListItem } from "@/components/Motion";
 import { useDataRefresh } from "@/hooks/useDataRefresh";
 import { Card } from "@/components/Card";
@@ -70,6 +71,8 @@ export function ProgressTracker({ header }: { header?: React.ReactNode }) {
   const { profile, weightLogs, progressPhotos, addWeight, removeWeight, addPhoto, removePhoto } =
     useData();
   const { refreshControl, scrollRef } = useDataRefresh();
+  // Petal texture embedded in the scroll content so it moves with the page.
+  const { decor, onContentSizeChange } = useScrollDecor();
 
   const [tab, setTab] = useState("progress");
   const [weightInput, setWeightInput] = useState("");
@@ -238,7 +241,7 @@ export function ProgressTracker({ header }: { header?: React.ReactNode }) {
   const hasData = current != null;
 
   return (
-    <GradientBackground>
+    <GradientBackground showDecor={false}>
       <KeyboardAwareScrollView
         ref={scrollRef}
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 110 }]}
@@ -247,7 +250,9 @@ export function ProgressTracker({ header }: { header?: React.ReactNode }) {
         keyboardDismissMode="on-drag"
         bottomOffset={110}
         refreshControl={refreshControl}
+        onContentSizeChange={onContentSizeChange}
       >
+        {decor}
         {header}
 
         <View style={styles.tabBar}>

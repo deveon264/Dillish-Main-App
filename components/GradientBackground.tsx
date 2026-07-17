@@ -5,13 +5,18 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { AppColors } from "@/constants/colors";
 import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { ScreenEntrance } from "@/components/Motion";
+import { BackgroundDecor } from "@/components/BackgroundDecor";
 
 export function GradientBackground({
   children,
   style,
+  // Screens that embed a scrolling BackgroundDecor (useScrollDecor) pass
+  // false so the texture isn't doubled by this fixed copy.
+  showDecor = true,
 }: {
   children?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
+  showDecor?: boolean;
 }) {
   const colors = useColors();
   const styles = useThemedStyles(createStyles);
@@ -24,6 +29,7 @@ export function GradientBackground({
       end={{ x: 0.85, y: 1 }}
       style={[styles.fill, style]}
     >
+      {showDecor ? <BackgroundDecor /> : null}
       <ScreenEntrance style={styles.motion}>{children}</ScreenEntrance>
       {insets.top > 0 ? (
         <LinearGradient

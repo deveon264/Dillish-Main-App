@@ -14,6 +14,7 @@ import { Bouncy as Pressable } from "@/components/Bouncy";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
+import { useScrollDecor } from "@/components/BackgroundDecor";
 import { MotionListItem } from "@/components/Motion";
 import { CommunityFeedSkeleton } from "@/components/LoadingSkeletons";
 import { EmptyState } from "@/components/EmptyState";
@@ -73,6 +74,10 @@ export default function Community() {
   const router = useRouter();
   const { token, user } = useAuth();
   const { unreadCount } = useNotifications();
+  // Petal texture embedded in the list content so it moves with the feed. The
+  // FlatList can't take a direct child, so it rides inside the list header
+  // (absolute, painting behind the items).
+  const { decor, onContentSizeChange } = useScrollDecor();
 
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [pinned, setPinned] = useState<CommunityPost[]>([]);
@@ -471,7 +476,7 @@ export default function Community() {
   };
 
   return (
-    <GradientBackground>
+    <GradientBackground showDecor={false}>
       {initialLoading ? (
         <CommunityFeedSkeleton topPadding={insets.top + 12} />
       ) : (
@@ -491,7 +496,12 @@ export default function Community() {
             />
             </MotionListItem>
           )}
-          ListHeaderComponent={header}
+          ListHeaderComponent={
+            <View>
+              {decor}
+              {header}
+            </View>
+          }
           ListEmptyComponent={renderEmpty}
           ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
           contentContainerStyle={{
@@ -499,6 +509,7 @@ export default function Community() {
             paddingBottom: insets.bottom + 110,
             paddingHorizontal: 20,
           }}
+          onContentSizeChange={onContentSizeChange}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"

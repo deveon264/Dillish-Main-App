@@ -7,6 +7,7 @@ import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withTiming } 
 import { AnimatedNumber } from "@/components/AnimatedNumber";
 import { Bouncy } from "@/components/Bouncy";
 import { GradientBackground } from "@/components/GradientBackground";
+import { useScrollDecor } from "@/components/BackgroundDecor";
 import { MotionListItem } from "@/components/Motion";
 import { useDataRefresh } from "@/hooks/useDataRefresh";
 import { Card } from "@/components/Card";
@@ -56,6 +57,8 @@ export function WaterTracker({ header }: { header?: React.ReactNode }) {
   const insets = useInsets();
   const { profile, waterLogs, addWater, removeWater } = useData();
   const { refreshControl, scrollRef } = useDataRefresh();
+  // Petal texture embedded in the scroll content so it moves with the page.
+  const { decor, onContentSizeChange } = useScrollDecor();
 
   const [custom, setCustom] = useState("");
   const [showAllTodayLogs, setShowAllTodayLogs] = useState(false);
@@ -125,7 +128,7 @@ export function WaterTracker({ header }: { header?: React.ReactNode }) {
   };
 
   return (
-    <GradientBackground>
+    <GradientBackground showDecor={false}>
       <KeyboardAwareScrollView
         ref={scrollRef}
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 110 }]}
@@ -134,7 +137,9 @@ export function WaterTracker({ header }: { header?: React.ReactNode }) {
         keyboardDismissMode="on-drag"
         bottomOffset={88}
         refreshControl={refreshControl}
+        onContentSizeChange={onContentSizeChange}
       >
+        {decor}
         {header}
 
         <Card style={styles.hydrationCard}>

@@ -10,6 +10,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
 import { Bouncy as Pressable } from "@/components/Bouncy";
 import { GradientBackground } from "@/components/GradientBackground";
+import { useScrollDecor } from "@/components/BackgroundDecor";
 import { AnalyzingCard } from "@/components/trackers/AnalyzingCard";
 import { MotionListItem } from "@/components/Motion";
 import { useDataRefresh } from "@/hooks/useDataRefresh";
@@ -128,6 +129,8 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
   const router = useRouter();
   const { profile, calorieLogs, addCalorie, updateCaloriePhoto, deleteCalorie } = useData();
   const { refreshControl, scrollRef } = useDataRefresh();
+  // Petal texture embedded in the scroll content so it moves with the page.
+  const { decor, onContentSizeChange } = useScrollDecor();
   const [image, setImage] = useState<string | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoLoading, setPhotoLoading] = useState(false);
@@ -578,7 +581,7 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
   };
 
   return (
-    <GradientBackground>
+    <GradientBackground showDecor={false}>
       <KeyboardAwareScrollView
         ref={scrollRef}
         contentContainerStyle={[styles.scroll, { paddingTop: (Platform.OS === "web" ? Math.max(insets.top, 52) : insets.top) + 12, paddingBottom: insets.bottom + 110 }]}
@@ -587,7 +590,9 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
         keyboardDismissMode="on-drag"
         bottomOffset={110}
         refreshControl={refreshControl}
+        onContentSizeChange={onContentSizeChange}
       >
+        {decor}
         {header}
 
         <Card style={styles.polishGoalCard}>

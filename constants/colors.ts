@@ -112,7 +112,9 @@ export const colors = {
   welcomeScrim: ["rgba(253, 252, 250, 0.5)", "rgba(253, 252, 250, 0.82)", "#FDFCFA"] as Gradient3,
   // Soft cream fade over the top of the home hero so the status bar and
   // greeting stay legible as dark ink over any photo.
-  heroTopFade: ["rgba(253, 252, 250, 0.9)", "rgba(253, 252, 250, 0)"] as Gradient2,
+  heroTopFade: ["rgba(253, 252, 250, 0.5)", "rgba(253, 252, 250, 0)"] as Gradient2,
+  // Soft bottom edge of the scroll-activated status-bar cap on Home.
+  statusBarCapFade: ["#FDFCFA", "rgba(253, 252, 250, 0)"] as Gradient2,
   // Fade laid over the home hero banner so its bottom edge dissolves into the
   // background.
   heroFade: [
@@ -121,6 +123,11 @@ export const colors = {
     "rgba(253, 252, 250, 0.85)",
     "#FDFCFA",
   ] as Gradient4,
+  // Background decor — the repeating petal/dot texture that keeps the cream
+  // canvas from reading as blank. Solid pre-blended shades (accent/ink over
+  // cream) rather than rgba so SVG renders identically on native and web.
+  bgPetal: "#F9E8EE",
+  bgPetalDot: "#F3EFEF",
   // Plum photo-overlay gradients for hero/photo cards.
   photoOverlay: ["rgba(51, 28, 38, 0)", "rgba(51, 28, 38, 0.78)"] as Gradient2,
   // Dimmed backdrop behind centered dialogs and bottom sheets.

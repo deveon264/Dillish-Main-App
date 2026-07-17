@@ -10,6 +10,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { Bouncy } from "@/components/Bouncy";
+import { PillGloss } from "@/components/PillGloss";
 import type { AppColors } from "@/constants/colors";
 import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
@@ -63,15 +64,16 @@ export function Button({
         testID={testID}
         onPress={handle}
         disabled={disabled || loading}
-        style={[styles.wrap, style]}
+        style={[styles.wrap, styles.glow, style]}
       >
         <LinearGradient
           colors={colors.gradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.base, (disabled || loading) && { opacity: 0.5 }]}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={[styles.base, styles.clip, (disabled || loading) && { opacity: 0.5 }]}
         >
           {loading ? <ActivityIndicator color={colors.onPrimaryStrong} /> : Inner}
+          <PillGloss radius={colors.radiusLg} />
         </LinearGradient>
       </Bouncy>
     );
@@ -105,7 +107,27 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 20,
   },
-  outline: { borderWidth: 1, borderColor: colors.accentBorderMd, backgroundColor: "transparent" },
+  // Colored glow that sells the elevation; sits on the unclipped wrap so the
+  // clipped gradient inner doesn't swallow the shadow.
+  glow: {
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 6,
+  },
+  clip: { overflow: "hidden" },
+  // Frosted glass for secondary pills.
+  outline: {
+    borderWidth: 1,
+    borderColor: colors.accentBorderMd,
+    backgroundColor: "rgba(255,255,255,0.65)",
+    shadowColor: colors.foreground,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2,
+  },
   ghost: { backgroundColor: "transparent", minHeight: 44 },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "center" },
   label: { fontFamily: fonts.sansSemibold, fontSize: 16, letterSpacing: 0.2 },

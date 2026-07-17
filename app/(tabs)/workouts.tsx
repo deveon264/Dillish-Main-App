@@ -7,6 +7,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
+import { useScrollDecor } from "@/components/BackgroundDecor";
 import { HelpButton } from "@/components/HelpButton";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
@@ -47,6 +48,8 @@ export default function Workouts() {
   const [savedOnly, setSavedOnly] = useState(false);
   const [forYou, setForYou] = useState(false);
   const [picker, setPicker] = useState<"duration" | "level" | null>(null);
+  // Petal texture embedded in the scroll content so it moves with the page.
+  const { decor, onContentSizeChange } = useScrollDecor();
 
   // Floating back-to-top button: fades in once the list is scrolled past the
   // first cards and jumps the ScrollView back to the header/filters.
@@ -112,7 +115,7 @@ export default function Workouts() {
   }, [category, query, duration, level, savedOnly, favorites, forYou, profile]);
 
   return (
-    <GradientBackground>
+    <GradientBackground showDecor={false}>
       <KeyboardAwareScrollView
         ref={scrollRef}
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 110 }]}
@@ -123,7 +126,9 @@ export default function Workouts() {
         refreshControl={refreshControl}
         onScroll={(e) => setTopBtnVisible(e.nativeEvent.contentOffset.y > 600)}
         scrollEventThrottle={32}
+        onContentSizeChange={onContentSizeChange}
       >
+        {decor}
         <PageHeader
           eyebrow="EXPLORE"
           title="Workout"

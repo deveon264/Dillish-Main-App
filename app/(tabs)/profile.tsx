@@ -9,6 +9,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useNavigation, useRouter } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
+import { useScrollDecor } from "@/components/BackgroundDecor";
 import { Card } from "@/components/Card";
 import { InfoTip } from "@/components/InfoTip";
 import { Button } from "@/components/Button";
@@ -47,6 +48,8 @@ export default function Profile() {
   const { user, isAdmin, logout, updateUser, uploadAvatar, removeAvatar: removeAvatarFn } = useAuth();
   const { profile, completions, calorieLogs, weightLogs, updateProfile, streak, streakBest } = useData();
   const { refreshControl, scrollRef } = useDataRefresh();
+  // Petal texture embedded in the scroll content so it moves with the page.
+  const { decor, onContentSizeChange } = useScrollDecor();
   const { subscription, switchPlan, cancel, resume, subscribe } = useSubscription();
 
   const [editing, setEditing] = useState(false);
@@ -738,7 +741,7 @@ export default function Profile() {
   ) : null;
 
   return (
-    <GradientBackground>
+    <GradientBackground showDecor={false}>
       <KeyboardAwareScrollView
         ref={scrollRef}
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 110 }]}
@@ -747,7 +750,9 @@ export default function Profile() {
         keyboardDismissMode="on-drag"
         bottomOffset={96}
         refreshControl={refreshControl}
+        onContentSizeChange={onContentSizeChange}
       >
+        {decor}
         {profileHeader}
 
         <View style={styles.tabBar}>
