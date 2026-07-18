@@ -15,8 +15,10 @@ import { EmptyState } from "@/components/EmptyState";
 import { SectionLabel } from "@/components/PageHeader";
 import { InfoTip } from "@/components/InfoTip";
 import { KeyboardFormToolbar } from "@/components/KeyboardFormToolbar";
+import { DateWheelPicker } from "@/components/DateWheelPicker";
 import { ProgressBar } from "@/components/ProgressBar";
 import { LineChart, LinePoint } from "@/components/LineChart";
+import { computeMilestones } from "@/lib/weightMilestones";
 import { useData } from "@/contexts/DataContext";
 import { useInsets } from "@/hooks/useInsets";
 import type { AppColors } from "@/constants/colors";
@@ -77,6 +79,9 @@ export function ProgressTracker({ header }: { header?: React.ReactNode }) {
   const [tab, setTab] = useState("progress");
   const [weightInput, setWeightInput] = useState("");
   const [dateInput, setDateInput] = useState(fmtDateInput(new Date()));
+  // Which date field the wheel picker is editing: the weigh-in date or the
+  // photo-details date. Null when the picker is closed.
+  const [dateTarget, setDateTarget] = useState<null | "weigh" | "photo">(null);
   const [logError, setLogError] = useState("");
   const [photoError, setPhotoError] = useState("");
   const [showAllRecentLogs, setShowAllRecentLogs] = useState(false);
@@ -85,7 +90,6 @@ export function ProgressTracker({ header }: { header?: React.ReactNode }) {
   const [photoWeightInput, setPhotoWeightInput] = useState("");
   const [photoDetailsError, setPhotoDetailsError] = useState("");
   const weightInputRef = useRef<TextInput>(null);
-  const dateInputRef = useRef<TextInput>(null);
   const photoWeightRef = useRef<TextInput>(null);
 
   const unit = profile.weightUnit ?? "kg";
@@ -98,12 +102,9 @@ export function ProgressTracker({ header }: { header?: React.ReactNode }) {
     : profile.startWeight ?? current;
   const goal = profile.goalWeight;
 
-  const trend = current != null && start != null ? current - start : null;
   const toGoal = current != null && goal != null ? current - goal : null;
-  const improving =
-    current != null && start != null && goal != null
-      ? Math.abs(current - goal) < Math.abs(start - goal)
-      : trend != null && trend < 0;
+
+  const milestones = useMemo(() => computeMilestones(start, current, goal), [start, current, goal]);
 
   const goalProgress = useMemo(() => {
     if (current == null || start == null || goal == null || start === goal) return 0;
@@ -135,6 +136,46 @@ export function ProgressTracker({ header }: { header?: React.ReactNode }) {
     setWeightInput("");
     setDateInput(fmtDateInput(new Date()));
     setLogError("");
+  };
+
+  // Stepper: nudge the input by ±0.1, seeded from the current value or, when the
+  // field is empty, the last logged weight.
+  const stepWeight = (delta: number) => {
+    const parsed = parseFloat(weightInput.replace(",", "."));
+    const seed = Number.isFinite(parsed) ? parsed : current ?? 0;
+    setWeightInput((Math.round((seed + delta) * 10) / 10).toFixed(1));
+  };
+
+  const chipDate = useMemo(() => {
+    const ts = parseDateInput(dateInput);
+    if (ts == null) return dateInput;
+    const d = new Date(ts);
+    return `${d.toLocaleDateString("en-US", { weekday: "short" })}, ${d.getDate()} ${M[d.getMonth()]}`;
+  }, [dateInput]);
+
+  const photoChipDate = useMemo(() => {
+    const ts = parseDateInput(photoDateInput);
+    if (ts == null) return photoDateInput;
+    const d = new Date(ts);
+    return `${d.getDate()} ${M[d.getMonth()]} ${d.getFullYear()}`;
+  }, [photoDateInput]);
+
+  // The date the wheel picker opens on: the active field's current value, or
+  // today when it can't be parsed.
+  const pickerValue = useMemo(() => {
+    const raw = dateTarget === "photo" ? photoDateInput : dateInput;
+    const ts = parseDateInput(raw);
+    return ts != null ? new Date(ts) : new Date();
+  }, [dateTarget, photoDateInput, dateInput]);
+
+  const onPickDate = (d: Date) => {
+    if (dateTarget === "photo") {
+      setPhotoDateInput(fmtDateInput(d));
+      // Continue the sheet's flow: date picked, move focus on to the weight.
+      photoWeightRef.current?.focus();
+    } else {
+      setDateInput(fmtDateInput(d));
+    }
   };
 
   const sortedPhotos = useMemo(
@@ -284,65 +325,62 @@ export function ProgressTracker({ header }: { header?: React.ReactNode }) {
                   <Text style={styles.cardEyebrow}>WEIGHT PROGRESS</Text>
                   <InfoTip
                     title="Weight Progress"
-                    body="Your current weight next to your starting weight and goal. The badge is your total change since you started."
+                    body="Your current weight next to your starting weight and goal, and how far you have left to go."
                   />
                 </View>
-                {trend != null && Math.abs(trend) >= 0.05 ? (
-                  <View style={styles.trendPill}>
-                    <Ionicons
-                      name={trend < 0 ? "trending-down" : "trending-up"}
-                      size={13}
-                      color={improving ? colors.success : colors.primary}
-                    />
-                    <Text style={[styles.trendText, { color: improving ? colors.success : colors.primary }]}>
-                      {trend > 0 ? "+" : ""}
-                      {trend.toFixed(1)} {unit}
-                    </Text>
-                  </View>
+                {toGoal != null && Math.abs(toGoal) >= 0.05 ? (
+                  <Text style={styles.toGoalBadge}>
+                    {Math.abs(toGoal).toFixed(1)} {unit} to goal
+                  </Text>
                 ) : null}
               </View>
 
               {hasData ? (
-                <View style={styles.weightBody}>
-                  <View style={styles.weightLeft}>
+                <>
+                  <View style={styles.weightBody}>
                     <View style={styles.bigRow}>
                       <Text style={styles.bigNum}>{current!.toFixed(1)}</Text>
                       <Text style={styles.bigUnit}> {unit}</Text>
                     </View>
-                    {start != null ? (
-                      <Text style={styles.startedText}>
-                        Started at {start.toFixed(1)} {unit}
-                      </Text>
-                    ) : null}
-                  </View>
-
-                  <View style={styles.weightRight}>
-                    {goal != null ? (
-                      <>
-                        <View style={styles.goalRow}>
-                          <Text style={styles.goalLabel}>Goal</Text>
-                          <Text style={styles.goalVal}>
+                    <View style={styles.weightRight}>
+                      {goal != null ? (
+                        <Text style={styles.goalLine}>
+                          Goal{" "}
+                          <Text style={styles.goalStrong}>
                             {goal.toFixed(0)} {unit}
                           </Text>
-                        </View>
-                        <ProgressBar progress={goalProgress} height={8} style={{ marginTop: 10 }} />
-                        {toGoal != null ? (
-                          <Text style={styles.toGoalText}>
-                            {Math.abs(toGoal).toFixed(1)} {unit} to goal
-                          </Text>
-                        ) : null}
-                      </>
-                    ) : (
-                      <Text style={styles.noGoalText}>Set a goal weight in your profile to track progress.</Text>
-                    )}
+                        </Text>
+                      ) : null}
+                      {start != null ? (
+                        <Text style={styles.startedText}>
+                          Started at {start.toFixed(1)} {unit}
+                        </Text>
+                      ) : null}
+                    </View>
                   </View>
-                </View>
+
+                  {goal != null && start != null ? (
+                    <>
+                      <ProgressBar progress={Math.max(0.02, goalProgress)} height={8} style={{ marginTop: 16 }} />
+                      <View style={styles.endpointRow}>
+                        <Text style={styles.endpoint}>
+                          {start.toFixed(0)} {unit}
+                        </Text>
+                        <Text style={styles.endpoint}>
+                          {goal.toFixed(0)} {unit}
+                        </Text>
+                      </View>
+                    </>
+                  ) : (
+                    <Text style={styles.noGoalText}>Set a goal weight in your profile to track progress.</Text>
+                  )}
+                </>
               ) : (
                 <Text style={styles.emptyHint}>Log your weight below to start tracking your progress.</Text>
               )}
-            </Card>
 
-            <Card style={{ marginTop: 20 }}>
+              <View style={styles.divider} />
+
               <View style={styles.cardHead}>
                 <View style={styles.eyebrowRow}>
                   <Ionicons name="analytics-outline" size={14} color={colors.accent} />
@@ -360,42 +398,79 @@ export function ProgressTracker({ header }: { header?: React.ReactNode }) {
                 </View>
               ) : (
                 <View style={styles.chartEmpty}>
-                  <Ionicons name="analytics-outline" size={30} color={colors.mutedForeground} />
-                  <Text style={styles.chartEmptyText}>Log at least two weigh-ins to see your trend</Text>
+                  <Ionicons name="pulse-outline" size={28} color={colors.mutedForeground} />
+                  <Text style={styles.chartEmptyText}>One more weigh-in and your trend appears here</Text>
                 </View>
               )}
             </Card>
 
-            <SectionLabel style={styles.section}>LOG WEIGHT</SectionLabel>
+            {start != null && goal != null ? (
+              <>
+                <SectionLabel style={styles.section}>MILESTONES</SectionLabel>
+                <Card style={styles.milestoneCard}>
+                  <View style={styles.milestoneRow}>
+                    {milestones.map((m) => {
+                      const active = m.done || m.isNext;
+                      return (
+                        <View
+                          key={m.key}
+                          style={[
+                            styles.milestoneTile,
+                            active ? styles.milestoneTileActive : styles.milestoneTilePending,
+                          ]}
+                        >
+                          <Ionicons
+                            name={m.done ? "checkmark-circle" : m.isNext ? "flag" : "ellipse-outline"}
+                            size={16}
+                            color={active ? colors.accent : colors.mutedForeground}
+                          />
+                          <Text style={[styles.milestoneLabel, active && styles.milestoneLabelActive]}>{m.label}</Text>
+                          <Text style={styles.milestoneSub}>
+                            {m.done
+                              ? "Done"
+                              : m.isNext
+                                ? `Next · ${m.awayKg.toFixed(1)} ${unit} away`
+                                : `${m.awayKg.toFixed(1)} ${unit} away`}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </Card>
+              </>
+            ) : null}
+
+            <SectionLabel style={styles.section}>LOG WEIGH-IN</SectionLabel>
             <Card style={styles.logCard}>
-              <View style={styles.formRow}>
-                <View style={styles.formField}>
-                  <Text style={styles.fieldLabel}>WEIGHT ({unit.toUpperCase()})</Text>
+              <View style={styles.stepRow}>
+                <View style={styles.stepper}>
+                  <Pressable style={styles.stepBtn} onPress={() => stepWeight(-0.1)} hitSlop={6}>
+                    <Ionicons name="remove" size={16} color={colors.foreground} />
+                  </Pressable>
                   <TextInput
                     ref={weightInputRef}
                     value={weightInput}
                     onChangeText={setWeightInput}
-                    placeholder="e.g. 62.4"
+                    placeholder={current != null ? current.toFixed(1) : "0.0"}
                     placeholderTextColor={colors.mutedForeground}
                     keyboardType="decimal-pad"
-                    style={styles.input}
-                    returnKeyType="next"
-                    onSubmitEditing={() => dateInputRef.current?.focus()}
-                  />
-                </View>
-                <View style={styles.formField}>
-                  <Text style={styles.fieldLabel}>DATE</Text>
-                  <TextInput
-                    ref={dateInputRef}
-                    value={dateInput}
-                    onChangeText={setDateInput}
-                    placeholder="dd/mm/yyyy"
-                    placeholderTextColor={colors.mutedForeground}
-                    style={styles.input}
+                    style={styles.stepInput}
                     returnKeyType="done"
                     onSubmitEditing={logWeight}
                   />
+                  <Pressable style={styles.stepBtn} onPress={() => stepWeight(0.1)} hitSlop={6}>
+                    <Ionicons name="add" size={16} color={colors.foreground} />
+                  </Pressable>
                 </View>
+                <Pressable
+                  style={styles.dateChip}
+                  onPress={() => setDateTarget("weigh")}
+                  accessibilityRole="button"
+                  accessibilityLabel="Change weigh-in date"
+                >
+                  <Text style={styles.dateChipText}>{chipDate}</Text>
+                  <Ionicons name="chevron-down" size={14} color={colors.muted} />
+                </Pressable>
               </View>
               {logError ? <Text style={styles.logErrorText}>{logError}</Text> : null}
               <Pressable style={styles.logBtn} onPress={logWeight}>
@@ -423,6 +498,7 @@ export function ProgressTracker({ header }: { header?: React.ReactNode }) {
                 {visibleRecentLogs.map((l, i) => {
                   const prev = sortedDesc[i + 1];
                   const delta = prev ? l.weight - prev.weight : null;
+                  const isStart = i === sortedDesc.length - 1;
                   return (
                     <MotionListItem key={l.id}>
                     <Card style={styles.logRow}>
@@ -434,7 +510,9 @@ export function ProgressTracker({ header }: { header?: React.ReactNode }) {
                           <Text style={styles.logVal}>
                             {l.weight.toFixed(1)} {unit}
                           </Text>
-                          <Text style={styles.logDate}>{fmtLogDate(new Date(l.ts))}</Text>
+                          <Text style={styles.logDate}>
+                            {isStart ? "Starting weight" : fmtLogDate(new Date(l.ts))}
+                          </Text>
                         </View>
                       </View>
                       <View style={styles.logRight}>
@@ -624,15 +702,15 @@ export function ProgressTracker({ header }: { header?: React.ReactNode }) {
                 <View style={styles.formRow}>
                   <View style={styles.formField}>
                     <Text style={styles.fieldLabel}>DATE TAKEN</Text>
-                    <TextInput
-                      value={photoDateInput}
-                      onChangeText={setPhotoDateInput}
-                      placeholder="dd/mm/yyyy"
-                      placeholderTextColor={colors.mutedForeground}
-                      style={styles.input}
-                      returnKeyType="next"
-                      onSubmitEditing={() => photoWeightRef.current?.focus()}
-                    />
+                    <Pressable
+                      style={styles.inputChip}
+                      onPress={() => setDateTarget("photo")}
+                      accessibilityRole="button"
+                      accessibilityLabel="Change photo date"
+                    >
+                      <Text style={styles.inputChipText}>{photoChipDate}</Text>
+                      <Ionicons name="chevron-down" size={14} color={colors.muted} />
+                    </Pressable>
                   </View>
                   <View style={styles.formField}>
                     <Text style={styles.fieldLabel}>WEIGHT ({unit.toUpperCase()})</Text>
@@ -670,6 +748,13 @@ export function ProgressTracker({ header }: { header?: React.ReactNode }) {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+      <DateWheelPicker
+        visible={dateTarget != null}
+        value={pickerValue}
+        maximumDate={new Date()}
+        onConfirm={onPickDate}
+        onClose={() => setDateTarget(null)}
+      />
       <KeyboardFormToolbar />
     </GradientBackground>
   );
@@ -704,28 +789,75 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
   cardHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   eyebrowRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   cardEyebrow: { fontFamily: fonts.sansSemibold, fontSize: 12, letterSpacing: 1.2, color: colors.muted },
-  trendPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: colors.successTint,
-    borderRadius: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  trendText: { fontFamily: fonts.sansSemibold, fontSize: 12.5 },
-  weightBody: { flexDirection: "row", alignItems: "center", marginTop: 16, gap: 16 },
-  weightLeft: {},
+  toGoalBadge: { fontFamily: fonts.sansSemibold, fontSize: 12.5, color: colors.accent },
+  weightBody: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", marginTop: 16, gap: 16 },
   bigRow: { flexDirection: "row", alignItems: "baseline" },
   bigNum: { fontFamily: fonts.serifSemibold, fontSize: 44, color: colors.foreground },
   bigUnit: { fontFamily: fonts.sans, fontSize: 16, color: colors.muted },
-  startedText: { fontFamily: fonts.sans, fontSize: 13, color: colors.muted, marginTop: 2 },
-  weightRight: { flex: 1 },
-  goalRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  goalLabel: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.muted },
-  goalVal: { fontFamily: fonts.sansSemibold, fontSize: 14, color: colors.foreground },
-  toGoalText: { fontFamily: fonts.sans, fontSize: 12, color: colors.mutedForeground, marginTop: 8 },
+  startedText: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.muted, marginTop: 2 },
+  weightRight: { alignItems: "flex-end" },
+  goalLine: { fontFamily: fonts.sansMedium, fontSize: 12.5, color: colors.muted },
+  goalStrong: { fontFamily: fonts.sansSemibold, color: colors.foreground },
+  endpointRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 7 },
+  endpoint: { fontFamily: fonts.sansSemibold, fontSize: 10.5, color: colors.mutedForeground },
+  divider: { height: 1, backgroundColor: colors.cardBorder, marginVertical: 16 },
   noGoalText: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.mutedForeground, lineHeight: 18 },
+
+  milestoneCard: { padding: 18 },
+  milestoneRow: { flexDirection: "row", gap: 9 },
+  milestoneTile: { flex: 1, borderRadius: 16, padding: 12, gap: 6 },
+  milestoneTileActive: { backgroundColor: colors.accentTint },
+  milestoneTilePending: { backgroundColor: colors.accentTintFaint },
+  milestoneLabel: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.muted },
+  milestoneLabelActive: { color: colors.accent },
+  milestoneSub: { fontFamily: fonts.sansMedium, fontSize: 10.5, color: colors.mutedForeground },
+
+  stepRow: { flexDirection: "row", gap: 10 },
+  stepper: {
+    flex: 1.4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: colors.track,
+    borderRadius: 14,
+    padding: 5,
+  },
+  stepBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepInput: { flex: 1, minWidth: 0, fontFamily: fonts.sansBold, fontSize: 16, color: colors.foreground, textAlign: "center", padding: 0 },
+  dateChip: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: colors.track,
+    borderRadius: 14,
+  },
+  dateChipText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.muted },
+  // Photo-modal date chip: dressed like the neighbouring text input, but a
+  // pressable that opens the wheel picker.
+  inputChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  inputChipText: { fontFamily: fonts.sans, fontSize: 14.5, color: colors.foreground },
   emptyHint: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.muted, marginTop: 14, lineHeight: 20 },
 
   weekRange: { fontFamily: fonts.sans, fontSize: 12, color: colors.mutedForeground },
