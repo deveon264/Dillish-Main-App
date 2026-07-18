@@ -36,7 +36,6 @@ import { hasFitnessProfile } from "@/lib/profile";
 import { DEFAULT_REST_GAP, workoutDurationMinutes } from "@/lib/workoutDuration";
 import { todayKey } from "@/lib/storage";
 import { buildWeekHistory, type WeekHistoryRow } from "@/lib/streakHistory";
-import { avatarUri } from "@/lib/avatar";
 import type { AppColors } from "@/constants/colors";
 import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
@@ -126,8 +125,9 @@ export default function Dashboard() {
 
   const tk = todayKey();
   const firstName = (user?.name ?? "there").split(" ")[0];
-  const avatar = avatarUri(user);
-  const initial = (firstName[0] ?? "?").toUpperCase();
+  // Next to the name: pink flower for members who registered as female,
+  // pink heart for male or other (the profile default).
+  const greetingEmoji = profile.gender === "female" ? "🌸" : "🩷";
 
   const todayWaterMl = useMemo(
     () => waterLogs.filter((l) => todayKey(new Date(l.ts)) === tk).reduce((s, l) => s + l.amountMl, 0),
@@ -189,8 +189,9 @@ export default function Dashboard() {
   const saved = useMemo(() => WORKOUTS.filter((w) => favorites.includes(w.id)), [favorites]);
   const featuredDuration = workoutDurationMinutes(featured.exercises, DEFAULT_REST_GAP);
 
-  const { height: windowHeight } = useWindowDimensions();
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const heroHeight = Math.max(520, Math.min(560, Math.round(windowHeight * 0.64)));
+  const isNarrowHero = windowWidth < 390;
 
   // The web build has no native status bar; mirror the header's 50px fallback.
   const heroTopInset = Platform.OS === "web" ? Math.max(insets.top, 50) : insets.top;
@@ -206,8 +207,21 @@ export default function Dashboard() {
     opacity: interpolate(scrollY.value, [40, 120], [0, 1], Extrapolation.CLAMP),
   }));
 
-  // Petal texture embedded in the scroll content so it moves with the page.
+  // Ambient background embedded in the scroll content so it moves with the page.
   const { decor, onContentSizeChange } = useScrollDecor();
+
+  // Stretchy hero: on iOS pull-down overscroll the image's top edge follows
+  // the finger (translate compensates the center-origin scale so the bottom
+  // edge stays fixed), so the cream background never peeks above the hero.
+  const heroStretchStyle = useAnimatedStyle(() => {
+    const y = Math.min(0, scrollY.value);
+    return {
+      transform: [
+        { translateY: y / 2 },
+        { scale: (heroHeight - y) / heroHeight },
+      ],
+    };
+  });
 
   return (
     <View style={styles.polishScreen}>
@@ -222,6 +236,7 @@ export default function Dashboard() {
         onContentSizeChange={onContentSizeChange}
       >
         {decor}
+        <Animated.View style={heroStretchStyle}>
         <ImageBackground
           source={featured.image}
           style={[styles.polishHero, { height: heroHeight }]}
@@ -258,7 +273,10 @@ export default function Dashboard() {
           <View style={[styles.polishHeroHeader, { top: heroTopInset + 14 }]}>
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={styles.polishGreeting}>{greeting().toUpperCase()}</Text>
-              <Text style={styles.polishName} numberOfLines={1}>{firstName}</Text>
+              <View style={styles.polishNameRow}>
+                <Text style={[styles.polishName, { flexShrink: 1 }]} numberOfLines={1}>{firstName}</Text>
+                <Text style={styles.polishNameEmoji}>{greetingEmoji}</Text>
+              </View>
             </View>
             <Pressable
               motion="timing"
@@ -272,23 +290,6 @@ export default function Dashboard() {
               <Ionicons name="notifications-outline" size={18} color={colors.foreground} />
               {unreadCount > 0 ? <View style={styles.polishNotifDot} /> : null}
             </Pressable>
-            <Pressable
-              motion="timing"
-              pressedScale={0.94}
-              style={styles.polishAvatar}
-              hitSlop={6}
-              onPress={() => router.navigate("/(tabs)/profile")}
-              accessibilityRole="button"
-              accessibilityLabel="Open profile"
-            >
-              {avatar ? (
-                <Image source={{ uri: avatar }} style={styles.avatarImg} />
-              ) : (
-                <View style={styles.polishAvatarFallback}>
-                  <Text style={styles.polishAvatarInitial}>{initial}</Text>
-                </View>
-              )}
-            </Pressable>
           </View>
 
           <View style={styles.polishHeroBottom}>
@@ -301,7 +302,7 @@ export default function Dashboard() {
             >
               {featured.title}
             </Text>
-            <View style={styles.polishHeroActions}>
+            <View style={[styles.polishHeroActions, isNarrowHero && styles.polishHeroActionsNarrow]}>
               <Text
                 style={styles.polishHeroMetaText}
                 numberOfLines={1}
@@ -310,28 +311,31 @@ export default function Dashboard() {
               >
                 {featuredDuration} min · ~{featured.kcal} kcal · {featured.level}
               </Text>
-              <Pressable
-                motion="timing"
-                pressedScale={0.96}
-                style={styles.polishHeroCta}
-                onPress={() => router.push(`/workout/${featured.id}`)}
-                accessibilityRole="button"
-                accessibilityLabel={`${heroCtaText}: ${featured.title}`}
-              >
-                <LinearGradient
-                  colors={colors.gradient}
-                  start={{ x: 0.5, y: 0 }}
-                  end={{ x: 0.5, y: 1 }}
-                  style={styles.polishHeroCtaInner}
+              <View style={styles.polishHeroCtaLift}>
+                <Pressable
+                  motion="timing"
+                  pressedScale={0.96}
+                  style={styles.polishHeroCta}
+                  onPress={() => router.push(`/workout/${featured.id}`)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${heroCtaText}: ${featured.title}`}
                 >
-                  <Text style={styles.polishHeroCtaText} numberOfLines={1}>{heroCtaText}</Text>
-                  <Ionicons name="chevron-forward" size={14} color="#FFFFFF" />
-                  <PillGloss />
-                </LinearGradient>
-              </Pressable>
+                  <LinearGradient
+                    colors={colors.gradient}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 1 }}
+                    style={styles.polishHeroCtaInner}
+                  >
+                    <Text style={styles.polishHeroCtaText} numberOfLines={1}>{heroCtaText}</Text>
+                    <Ionicons name="chevron-forward" size={15} color="#FFFFFF" />
+                    <PillGloss />
+                  </LinearGradient>
+                </Pressable>
+              </View>
             </View>
           </View>
         </ImageBackground>
+        </Animated.View>
 
         <View style={styles.polishContent}>
           {todayPlan?.programComplete && todayPlan.program ? (
@@ -384,44 +388,77 @@ export default function Dashboard() {
             accessibilityRole="button"
             accessibilityLabel="View streak history"
           >
-            <View style={styles.polishStreakIcon}>
-              <Ionicons name="flame" size={18} color={colors.primary} />
-            </View>
-            <View style={styles.polishStreakCopy}>
-              <Text style={styles.polishStreakTitle}>{streak}-day streak</Text>
-              <Text style={styles.polishStreakText} numberOfLines={1}>{streakNudge}</Text>
-            </View>
-            <View style={styles.polishStreakDots}>
-              {weekMarks.map((day) => (
-                <View key={day.key} style={[styles.polishStreakDot, day.active && styles.polishStreakDotActive]} />
-              ))}
-            </View>
+            <LinearGradient
+              colors={colors.streakCardGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.polishStreakInner}
+            >
+              <View style={styles.polishStreakIcon}>
+                <Ionicons name="flame" size={18} color={colors.primary} />
+              </View>
+              <View style={styles.polishStreakCopy}>
+                <View style={styles.polishStreakTopRow}>
+                  <Text style={styles.polishStreakTitle}>{streak}-day streak</Text>
+                  <View style={styles.polishStreakDots}>
+                    {weekMarks.map((day) => (
+                      <View key={day.key} style={styles.polishStreakDayCol}>
+                        <Text style={[styles.polishStreakDayLetter, day.active && styles.polishStreakDayLetterActive]}>
+                          {day.label}
+                        </Text>
+                        <View style={[styles.polishStreakDot, day.active && styles.polishStreakDotActive]} />
+                      </View>
+                    ))}
+                  </View>
+                </View>
+                <Text style={styles.polishStreakText}>{streakNudge}</Text>
+              </View>
+            </LinearGradient>
           </Pressable>
 
           <View style={styles.polishQuote}>
             <Text style={styles.polishQuoteMark}>“</Text>
             <Text style={styles.polishQuoteText}>
-              {dailyQuote()} <Text style={styles.polishQuoteBy}>— DILLISH&apos;S QUOTE OF THE DAY</Text>
+              {dailyQuote()} <Text style={styles.polishQuoteBy}>– DILLISH&apos;S QUOTE OF THE DAY</Text>
             </Text>
           </View>
 
           <Card style={styles.polishTodayCard}>
             <View style={styles.polishTodayHead}>
-              <SectionLabel>TODAY</SectionLabel>
+              <Text
+                style={styles.polishTodaySummaryLabel}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.85}
+              >
+                TODAY&apos;S SUMMARY
+              </Text>
               <View style={styles.polishTodayActions}>
                 <Pressable
                   motion="timing"
                   pressedScale={0.96}
-                  style={styles.polishOutlineButton}
+                  style={styles.polishFilledButton}
                   onPress={() => router.navigate("/(tabs)/tracker?mode=water")}
+                  accessibilityRole="button"
+                  accessibilityLabel="Log water"
                 >
-                  <Text style={styles.polishOutlineButtonText}>Log water</Text>
+                  <LinearGradient
+                    colors={colors.gradient}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 1 }}
+                    style={styles.polishFilledButtonInner}
+                  >
+                    <Text style={styles.polishFilledButtonText}>Log water</Text>
+                    <PillGloss />
+                  </LinearGradient>
                 </Pressable>
                 <Pressable
                   motion="timing"
                   pressedScale={0.96}
                   style={styles.polishFilledButton}
                   onPress={() => router.navigate("/(tabs)/tracker?mode=calories")}
+                  accessibilityRole="button"
+                  accessibilityLabel="Log meal"
                 >
                   <LinearGradient
                     colors={colors.gradient}
@@ -827,7 +864,6 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
   greet: { fontFamily: fonts.sansBold, fontSize: 14, color: colors.accentDark, letterSpacing: 2.4, marginBottom: 5 },
   nameRow: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
   name: { fontFamily: fonts.serifMedium, fontSize: 28, color: colors.foreground, lineHeight: 32 },
-  nameEmoji: { fontSize: 20, lineHeight: 22, marginBottom: 6 },
   iconBtn: {
     width: 42,
     height: 42,
@@ -857,7 +893,6 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
-  avatarImg: { width: "100%", height: "100%" },
   avatarFallback: {
     width: "100%",
     height: "100%",
@@ -1270,7 +1305,7 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
   },
   polishGreeting: {
     fontFamily: fonts.sansBold,
-    fontSize: 10,
+    fontSize: 13.5,
     letterSpacing: 3,
     color: colors.foreground,
     marginBottom: 5,
@@ -1278,10 +1313,14 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 8,
   },
+  // Bottom-aligned with an explicit lift: emoji glyphs descend below the text
+  // baseline on iOS, so the margin raises the heart's point to the name's base.
+  polishNameRow: { flexDirection: "row", alignItems: "flex-end", gap: 2, minWidth: 0 },
+  polishNameEmoji: { fontSize: 17, marginBottom: 6 },
   polishName: {
     fontFamily: fonts.serifMedium,
-    fontSize: 30,
-    lineHeight: 32,
+    fontSize: 26,
+    lineHeight: 28,
     color: colors.foreground,
     textShadowColor: "rgba(255,255,255,0.85)",
     textShadowOffset: { width: 0, height: 1 },
@@ -1313,32 +1352,11 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#FFFFFF",
   },
-  polishAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    overflow: "hidden",
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.95)",
-    shadowColor: colors.foreground,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  polishAvatarFallback: {
-    width: "100%",
-    height: "100%",
-    backgroundColor: "rgba(255,255,255,0.92)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  polishAvatarInitial: { fontFamily: fonts.sansBold, fontSize: 15, color: colors.accent },
   polishHeroBottom: {
     position: "absolute",
     left: 24,
     right: 24,
-    bottom: 64,
+    bottom: 32,
     zIndex: 3,
   },
   statusBarCap: {
@@ -1361,32 +1379,39 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 130,
+    height: 150,
   },
   polishHeroEyebrow: {
     fontFamily: fonts.sansBold,
-    fontSize: 10,
+    fontSize: 11,
     lineHeight: 14,
-    letterSpacing: 2,
-    color: "rgba(255,255,255,0.70)",
-    marginBottom: 8,
+    letterSpacing: 1.6,
+    color: "rgba(255,255,255,0.85)",
+    marginBottom: 4,
   },
   polishHeroTitle: { fontFamily: fonts.serifMedium, fontSize: 30, lineHeight: 34, color: "#FFFFFF" },
   polishHeroActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    marginTop: 14,
+    gap: 10,
+    marginTop: 0,
   },
+  polishHeroActionsNarrow: { marginTop: 10 },
   polishHeroMetaText: {
     flex: 1,
     minWidth: 0,
     fontFamily: fonts.sansSemibold,
-    fontSize: 12,
+    fontSize: 13,
+    lineHeight: 18,
     color: "rgba(255,255,255,0.92)",
   },
-  polishHeroCta: {
+  // A gentle tuck only: at the larger title size a deeper lift would overlap
+  // the title's descenders.
+  polishHeroCtaLift: {
     flexShrink: 0,
+    transform: [{ translateY: -4 }],
+  },
+  polishHeroCta: {
     borderRadius: 999,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 8 },
@@ -1398,13 +1423,13 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 7,
-    paddingHorizontal: 18,
-    paddingVertical: 13,
+    gap: 6,
+    paddingHorizontal: 19,
+    paddingVertical: 12,
     borderRadius: 999,
     overflow: "hidden",
   },
-  polishHeroCtaText: { flexShrink: 1, fontFamily: fonts.sansBold, fontSize: 13.5, color: "#FFFFFF" },
+  polishHeroCtaText: { flexShrink: 1, fontFamily: fonts.sansBold, fontSize: 14.5, color: "#FFFFFF" },
   polishContent: { paddingHorizontal: 24, paddingTop: 18, gap: 18 },
   polishConditionalCard: {
     flexDirection: "row",
@@ -1416,6 +1441,11 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.cardBorder,
+    shadowColor: colors.foreground,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    elevation: 3,
   },
   polishConditionalIcon: {
     width: 38,
@@ -1429,7 +1459,17 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
   polishConditionalText: { fontFamily: fonts.sans, fontSize: 11.5, lineHeight: 16, color: colors.muted, marginTop: 2 },
   polishConditionalCta: { paddingHorizontal: 13, paddingVertical: 9, borderRadius: 999, backgroundColor: colors.primary },
   polishConditionalCtaText: { fontFamily: fonts.sansBold, fontSize: 11.5, color: colors.onPrimary },
+  // Outer shell keeps the radius + shadow; the blush gradient inner carries the
+  // border and layout (same split as polishFilledButton, so the shadow renders).
   polishStreak: {
+    borderRadius: 999,
+    shadowColor: colors.foreground,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    elevation: 3,
+  },
+  polishStreakInner: {
     minHeight: 64,
     flexDirection: "row",
     alignItems: "center",
@@ -1437,23 +1477,27 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 999,
-    backgroundColor: colors.card,
+    overflow: "hidden",
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: colors.blushBorder,
   },
   polishStreakIcon: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: colors.accentTint,
+    backgroundColor: colors.card,
     alignItems: "center",
     justifyContent: "center",
   },
   polishStreakCopy: { flex: 1, minWidth: 0 },
-  polishStreakTitle: { fontFamily: fonts.sansBold, fontSize: 14.5, lineHeight: 17, color: colors.foreground },
-  polishStreakText: { fontFamily: fonts.sans, fontSize: 11.5, color: "rgba(62,39,51,0.50)", marginTop: 1 },
-  polishStreakDots: { flexDirection: "row", gap: 4, flexShrink: 0 },
-  polishStreakDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "rgba(62,39,51,0.12)" },
+  polishStreakTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
+  polishStreakTitle: { fontFamily: fonts.sansBold, fontSize: 14.5, lineHeight: 17, color: colors.foreground, flexShrink: 1 },
+  polishStreakText: { fontFamily: fonts.sans, fontSize: 11.5, color: "rgba(62,39,51,0.50)", marginTop: 2 },
+  polishStreakDots: { flexDirection: "row", gap: 5, flexShrink: 0 },
+  polishStreakDayCol: { alignItems: "center", gap: 2 },
+  polishStreakDayLetter: { fontFamily: fonts.sansBold, fontSize: 8, lineHeight: 10, color: colors.mutedForeground },
+  polishStreakDayLetterActive: { color: colors.accentDark },
+  polishStreakDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "rgba(62,39,51,0.14)" },
   polishStreakDotActive: { backgroundColor: colors.primary },
   polishQuote: { flexDirection: "row", alignItems: "flex-start", gap: 8, paddingHorizontal: 6, paddingVertical: 2 },
   polishQuoteMark: { fontFamily: fonts.serifSemibold, fontSize: 28, lineHeight: 24, color: "rgba(228,93,135,0.35)" },
@@ -1474,21 +1518,15 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
   },
   polishTodayCard: { padding: 18, borderRadius: 22 },
   polishTodayHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
-  polishTodayActions: { flexDirection: "row", alignItems: "center", gap: 8 },
-  polishOutlineButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 7.5,
-    borderRadius: 999,
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-    backgroundColor: "rgba(255,255,255,0.85)",
-    shadowColor: colors.foreground,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
+  // Matches SectionLabel's look but shrinks to stay on one line beside the pills.
+  polishTodaySummaryLabel: {
+    flexShrink: 1,
+    fontFamily: fonts.sansBold,
+    fontSize: 10.5,
+    letterSpacing: 0.6,
+    color: colors.mutedForeground,
   },
-  polishOutlineButtonText: { fontFamily: fonts.sansBold, fontSize: 12, color: colors.accentDark },
+  polishTodayActions: { flexDirection: "row", alignItems: "center", gap: 6, flexShrink: 0 },
   polishFilledButton: {
     borderRadius: 999,
     shadowColor: colors.primary,
@@ -1498,7 +1536,7 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     elevation: 5,
   },
   polishFilledButtonInner: {
-    paddingHorizontal: 15,
+    paddingHorizontal: 13,
     paddingVertical: 8,
     borderRadius: 999,
     overflow: "hidden",
@@ -1530,6 +1568,11 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.cardBorder,
+    shadowColor: colors.foreground,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    elevation: 3,
   },
   polishRowIcon: {
     width: 44,

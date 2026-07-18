@@ -25,6 +25,7 @@ import { rehostStockPhoto } from "@/lib/mealPhotos";
 import { addMealWithBackgroundPhoto } from "@/lib/optimisticMeal";
 import { todayKey } from "@/lib/storage";
 import { getCalorieInsight, type InsightChip } from "@/lib/calorieInsights";
+import { buildCalorieWeek, getCalorieWeekScale } from "@/lib/calorieWeek";
 import { CalorieInsightBody, insightMacroColor, type InsightBodyComponents } from "@/components/trackers/CalorieInsightCard";
 import type { AppColors } from "@/constants/colors";
 import { useColors, useThemedStyles } from "@/hooks/useColors";
@@ -205,33 +206,12 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
   const insightColor = insightMacroColor(insight.featuredMacro, colors);
   const INSIGHT_COMPONENTS = useMemo(() => insightComponents(styles), [styles]);
 
-  const week = useMemo(() => {
-    const base = new Date();
-    base.setHours(0, 0, 0, 0);
-    const mondayOffset = (base.getDay() + 6) % 7;
-    const monday = new Date(base);
-    monday.setDate(base.getDate() - mondayOffset);
-    const labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-    const todayMs = base.getTime();
-    const days = labels.map((label, i) => {
-      const start = new Date(monday);
-      start.setDate(monday.getDate() + i);
-      const startMs = start.getTime();
-      const endMs = startMs + 86400000;
-      const total = calorieLogs
-        .filter((l) => l.ts >= startMs && l.ts < endMs)
-        .reduce((a, l) => a + l.kcal, 0);
-      return { label, total, isToday: startMs === todayMs };
-    });
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    const mShort = (d: Date) => d.toLocaleDateString("en-US", { month: "short" });
-    const range =
-      monday.getMonth() === sunday.getMonth()
-        ? `${mShort(monday)} ${monday.getDate()} – ${sunday.getDate()}`
-        : `${mShort(monday)} ${monday.getDate()} – ${mShort(sunday)} ${sunday.getDate()}`;
-    return { days, range };
-  }, [calorieLogs]);
+  const week = useMemo(() => buildCalorieWeek(calorieLogs), [calorieLogs]);
+  const weekScale = useMemo(
+    () => getCalorieWeekScale(week.days, profile.calorieGoal),
+    [week.days, profile.calorieGoal],
+  );
+  const goalLineBottom = `${Math.min(1, weekScale.goal / weekScale.maximum) * 100}%` as `${number}%`;
 
   const now = new Date();
   const dateStr = `${now.toLocaleDateString("en-US", { weekday: "short" })}, ${now.getDate()} ${now.toLocaleDateString("en-US", { month: "short" })}`;
@@ -616,7 +596,7 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
                 formatter={(n) => `~${Math.round(n).toLocaleString()}`}
                 style={styles.polishRemaining}
               />
-              <Text style={styles.polishRemainingLabel}>KCAL REMAINING</Text>
+              <Text style={styles.polishRemainingLabel}>KCAL{"\n"}REMAINING</Text>
             </ProgressRing>
             <View style={styles.polishGoalDetails}>
               <Text style={styles.polishEatenLine}>
@@ -635,24 +615,74 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
               <Text style={styles.polishWeekEyebrow}>THIS WEEK</Text>
               <Text style={styles.polishWeekRange}>{week.range}</Text>
             </View>
-            <View style={styles.polishWeekBars}>
-              {week.days.map((day) => {
-                const ratio = profile.calorieGoal > 0 ? Math.min(1, day.total / profile.calorieGoal) : 0;
-                const height = day.total > 0 ? Math.max(8, Math.round(ratio * 42)) : 3;
-                return (
-                  <View key={day.label} style={styles.polishWeekColumn}>
-                    <View
-                      style={[
-                        styles.polishWeekBar,
-                        { height },
-                        day.total > 0 && styles.polishWeekBarLogged,
-                        day.isToday && styles.polishWeekBarToday,
-                      ]}
-                    />
-                    <Text style={[styles.polishWeekDay, day.isToday && styles.polishWeekDayToday]}>{day.label.slice(0, 1)}</Text>
+            <View style={styles.polishWeekChart}>
+              <View style={styles.polishWeekYAxis}>
+                <Text style={styles.polishWeekAxisUnit}>kcal</Text>
+                <View style={styles.polishWeekYTicks}>
+                  {[weekScale.maximum, weekScale.midpoint, 0].map((tick) => (
+                    <Text key={tick} style={styles.polishWeekYTick}>
+                      {Math.round(tick).toLocaleString()}
+                    </Text>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.polishWeekPlotColumn}>
+                <View style={styles.polishWeekPlotSpacer} />
+                <View style={styles.polishWeekPlotArea}>
+                  <View style={[styles.polishWeekGridLine, styles.polishWeekGridTop]} />
+                  <View style={[styles.polishWeekGridLine, styles.polishWeekGridMiddle]} />
+                  <View style={[styles.polishWeekGridLine, styles.polishWeekGridBottom]} />
+
+                  <View style={styles.polishWeekBars}>
+                    {week.days.map((day) => {
+                      const ratio = Math.min(1, day.total / weekScale.maximum);
+                      const barHeight = `${ratio * 100}%` as `${number}%`;
+                      const accessibilityLabel = `${day.fullDateLabel}: ${Math.round(day.total).toLocaleString()} calories${day.isToday ? ", today" : ""}`;
+
+                      return (
+                        <View
+                          key={`${day.label}-${day.dayOfMonth}`}
+                          style={styles.polishWeekColumn}
+                          accessible
+                          accessibilityRole="image"
+                          accessibilityLabel={accessibilityLabel}
+                        >
+                          {day.total > 0 ? (
+                            <View
+                              style={[
+                                styles.polishWeekBar,
+                                { height: barHeight },
+                                day.isToday && styles.polishWeekBarToday,
+                              ]}
+                            />
+                          ) : (
+                            <View style={[styles.polishWeekZeroMark, day.isToday && styles.polishWeekZeroMarkToday]} />
+                          )}
+                        </View>
+                      );
+                    })}
                   </View>
-                );
-              })}
+
+                  {weekScale.goal > 0 ? (
+                    <View style={[styles.polishWeekGoalLine, { bottom: goalLineBottom }]}>
+                      <Text style={styles.polishWeekGoalLabel}>Goal {Math.round(weekScale.goal).toLocaleString()}</Text>
+                    </View>
+                  ) : null}
+                </View>
+
+                <View style={styles.polishWeekXAxis}>
+                  {week.days.map((day) => (
+                    <View
+                      key={`${day.label}-${day.dayOfMonth}`}
+                      style={styles.polishWeekXLabel}
+                    >
+                      <Text style={[styles.polishWeekXDay, day.isToday && styles.polishWeekXLabelToday]}>{day.label}</Text>
+                      <Text style={[styles.polishWeekXDate, day.isToday && styles.polishWeekXLabelToday]}>{day.dayOfMonth}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
             </View>
           </View>
         </Card>
@@ -660,21 +690,24 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
         <SectionLabel style={styles.polishLogSection}>LOG A MEAL</SectionLabel>
         <View style={styles.polishActionTiles}>
           {TABS.map((item) => {
-            const photo = item.key === "photo";
+            // Highlight the method that's actually selected. `tab` is null until
+            // the member picks one, so Photo stays highlighted on first load.
+            const active = item.key === (tab ?? "photo");
             return (
               <Pressable
                 key={item.key}
                 motion="timing"
                 pressedScale={0.95}
-                style={[styles.polishActionTile, photo && styles.polishActionTilePrimary]}
+                style={[styles.polishActionTile, active && styles.polishActionTilePrimary]}
                 onPress={() => openLogFlow(item.key)}
                 accessibilityRole="button"
+                accessibilityState={{ selected: active }}
                 accessibilityLabel={`Log a meal with ${item.label.toLowerCase()}`}
               >
-                <Ionicons name={item.icon} size={21} color={photo ? colors.onPrimary : colors.accentDark} />
+                <Ionicons name={item.icon} size={21} color={active ? colors.onPrimary : colors.accentDark} />
                 <View style={styles.polishActionCopy}>
-                  <Text style={[styles.polishActionTitle, photo && styles.polishActionTitlePrimary]}>{item.label}</Text>
-                  <Text style={[styles.polishActionSub, photo && styles.polishActionSubPrimary]} numberOfLines={1}>{item.sub}</Text>
+                  <Text style={[styles.polishActionTitle, active && styles.polishActionTitlePrimary]}>{item.label}</Text>
+                  <Text style={[styles.polishActionSub, active && styles.polishActionSubPrimary]} numberOfLines={1}>{item.sub}</Text>
                 </View>
               </Pressable>
             );
@@ -1264,7 +1297,7 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
   polishDate: { fontFamily: fonts.sansSemibold, fontSize: 11.5, color: "rgba(62,39,51,0.50)" },
   polishGoalMain: { flexDirection: "row", alignItems: "center", gap: 18, marginTop: 16 },
   polishRemaining: { fontFamily: fonts.serifSemibold, fontSize: 20, lineHeight: 23, color: colors.foreground },
-  polishRemainingLabel: { fontFamily: fonts.sansBold, fontSize: 7.5, letterSpacing: 1.2, color: colors.mutedForeground, marginTop: 3 },
+  polishRemainingLabel: { fontFamily: fonts.sansBold, fontSize: 7.5, lineHeight: 10, letterSpacing: 0.8, color: colors.mutedForeground, marginTop: 2, textAlign: "center" },
   polishGoalDetails: { flex: 1, minWidth: 0, gap: 10 },
   polishEatenLine: { fontFamily: fonts.sans, fontSize: 13, color: "rgba(62,39,51,0.60)" },
   polishEatenStrong: { fontFamily: fonts.sansBold, color: colors.foreground },
@@ -1277,13 +1310,31 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
   polishWeekHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
   polishWeekEyebrow: { fontFamily: fonts.sansBold, fontSize: 11, letterSpacing: 1, color: colors.mutedForeground },
   polishWeekRange: { fontFamily: fonts.sansSemibold, fontSize: 11, color: "rgba(62,39,51,0.50)" },
-  polishWeekBars: { height: 56, flexDirection: "row", alignItems: "flex-end", gap: 8 },
-  polishWeekColumn: { flex: 1, height: "100%", justifyContent: "flex-end", alignItems: "center", gap: 5 },
-  polishWeekBar: { width: "100%", maxWidth: 22, height: 3, borderRadius: 99, backgroundColor: "rgba(62,39,51,0.10)" },
-  polishWeekBarLogged: { backgroundColor: colors.hydrationAccent },
+  polishWeekChart: { minHeight: 126, flexDirection: "row" },
+  polishWeekYAxis: { width: 38, marginRight: 7 },
+  polishWeekAxisUnit: { height: 16, fontFamily: fonts.sansBold, fontSize: 8.5, letterSpacing: 0.5, color: colors.mutedForeground, textTransform: "uppercase", textAlign: "right" },
+  polishWeekYTicks: { height: 86, justifyContent: "space-between", alignItems: "flex-end" },
+  polishWeekYTick: { fontFamily: fonts.sansMedium, fontSize: 8.5, lineHeight: 10, color: colors.mutedForeground, fontVariant: ["tabular-nums"] },
+  polishWeekPlotColumn: { flex: 1, minWidth: 0 },
+  polishWeekPlotSpacer: { height: 16 },
+  polishWeekPlotArea: { height: 86, position: "relative" },
+  polishWeekGridLine: { position: "absolute", left: 0, right: 0, height: 1, backgroundColor: colors.track },
+  polishWeekGridTop: { top: 0 },
+  polishWeekGridMiddle: { top: "50%" },
+  polishWeekGridBottom: { bottom: 0 },
+  polishWeekBars: { ...StyleSheet.absoluteFillObject, flexDirection: "row", alignItems: "flex-end" },
+  polishWeekColumn: { flex: 1, height: "100%", justifyContent: "flex-end", alignItems: "center", paddingHorizontal: 3 },
+  polishWeekBar: { width: "100%", maxWidth: 20, minHeight: 4, borderRadius: 6, backgroundColor: colors.hydrationAccent },
   polishWeekBarToday: { backgroundColor: colors.primary },
-  polishWeekDay: { fontFamily: fonts.sansSemibold, fontSize: 9, color: colors.mutedForeground },
-  polishWeekDayToday: { fontFamily: fonts.sansBold, color: colors.accentDark },
+  polishWeekZeroMark: { width: "100%", maxWidth: 20, height: 3, borderRadius: 99, backgroundColor: colors.track },
+  polishWeekZeroMarkToday: { backgroundColor: colors.primary },
+  polishWeekGoalLine: { position: "absolute", left: 0, right: 0, height: 1, borderTopWidth: 1, borderColor: colors.accentBorderMd, borderStyle: "dashed", zIndex: 2 },
+  polishWeekGoalLabel: { position: "absolute", top: 3, right: 0, paddingLeft: 4, backgroundColor: colors.card, fontFamily: fonts.sansBold, fontSize: 8, lineHeight: 10, color: colors.accentDark, fontVariant: ["tabular-nums"] },
+  polishWeekXAxis: { height: 31, flexDirection: "row", paddingTop: 5 },
+  polishWeekXLabel: { flex: 1, alignItems: "center" },
+  polishWeekXDay: { fontFamily: fonts.sansSemibold, fontSize: 8.5, lineHeight: 10, color: colors.mutedForeground, textAlign: "center" },
+  polishWeekXDate: { fontFamily: fonts.sansMedium, fontSize: 8, lineHeight: 10, color: colors.mutedForeground, textAlign: "center", fontVariant: ["tabular-nums"] },
+  polishWeekXLabelToday: { fontFamily: fonts.sansBold, color: colors.accentDark },
   polishLogSection: { marginTop: 16, marginBottom: 10 },
   polishActionTiles: { flexDirection: "row", gap: 10 },
   polishActionTile: {

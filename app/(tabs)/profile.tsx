@@ -1810,17 +1810,15 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
   toggleThumb: { width: 22, height: 22, borderRadius: 11, backgroundColor: "#FFFFFF" },
   // Outer layer holds the drop shadow; the inner card clips its contents with
   // overflow:hidden (which would otherwise suppress the shadow on iOS).
-  // Two-layer pink "neon" glow so the card reads as floating: the panel casts
-  // the wide halo (slight drop), the card itself adds a tight even rim.
+  // A soft neutral lift only - no coloured glow.
   headerPanel: {
     backgroundColor: colors.card,
     borderRadius: colors.radiusLg,
-    shadowColor: colors.accentSoft,
+    shadowColor: colors.foreground,
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.55,
-    shadowRadius: 26,
-    // RN tints elevation shadows with shadowColor on Android 9+.
-    elevation: 16,
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    elevation: 4,
   },
   memberCard: {
     backgroundColor: colors.card,
@@ -1828,10 +1826,6 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     borderColor: "rgba(228, 93, 135, 0.22)",
     borderRadius: colors.radiusLg,
     overflow: "hidden",
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
   },
   cover: { height: 118 },
   // Soft highlight in the cover's top-right — an approximation of the design's

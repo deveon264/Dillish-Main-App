@@ -43,7 +43,7 @@ export const colors = {
   backgroundDeep: "#F6F1EC",
   card: "#FFFFFF",
   cardElevated: "#FFFFFF",
-  cardBorder: `rgba(${inkRgb}, 0.08)`,
+  cardBorder: `rgba(${inkRgb}, 0.1)`,
   // Frosted-glass tint laid over the native blur in the floating tab bar.
   tabBarGlass: "rgba(255, 255, 255, 0.85)",
   tabBarGlassBorder: `rgba(${inkRgb}, 0.08)`,
@@ -101,6 +101,9 @@ export const colors = {
   waterTint: "#E7F0F6",
   waterGradient: ["#A8CBE0", "#6FA6C9"] as Gradient2,
   gradient: ["#F08CAD", "#E45D87"] as Gradient2,
+  // Home streak pill - echoes the hero photo's tones: blush rose wall fading
+  // into warm cream light.
+  streakCardGradient: ["#FBE7EE", "#FCEFEB", "#FDF6EE"] as Gradient3,
   // Gold gradient — streak pills and other celebratory fills.
   gradientGold: ["#D9A868", "#B58A55"] as Gradient2,
   // Rose-gold gradient — Dillish halo / pinned-post border.
@@ -123,11 +126,12 @@ export const colors = {
     "rgba(253, 252, 250, 0.85)",
     "#FDFCFA",
   ] as Gradient4,
-  // Background decor — the repeating petal/dot texture that keeps the cream
-  // canvas from reading as blank. Solid pre-blended shades (accent/ink over
-  // cream) rather than rgba so SVG renders identically on native and web.
-  bgPetal: "#F9E8EE",
-  bgPetalDot: "#F3EFEF",
+  // Background decor — the oversized tonal circles that keep the cream canvas
+  // from reading as blank (Flo-style soft shapes). Solid pre-blended shades
+  // rather than rgba so SVG renders identically on native and web.
+  bgOrb1: "#F7F1F0",
+  bgOrb2: "#FAF0F2",
+  bgOrb3: "#F5F1ED",
   // Plum photo-overlay gradients for hero/photo cards.
   photoOverlay: ["rgba(51, 28, 38, 0)", "rgba(51, 28, 38, 0.78)"] as Gradient2,
   // Dimmed backdrop behind centered dialogs and bottom sheets.

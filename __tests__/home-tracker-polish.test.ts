@@ -31,6 +31,19 @@ test("Home uses the full-bleed handoff composition and preserves its live action
   assert.doesNotMatch(home, /WATER_QUICK|logQuickWater/);
 });
 
+test("Home keeps the hero workout copy in a compact visual rhythm", () => {
+  const home = read("app/(tabs)/index.tsx");
+  assert.match(home, /polishHeroBottom:[\s\S]*bottom: 32,/);
+  // Sizes enlarged on request (2026-07-19) so the hero copy reads clearly.
+  assert.match(home, /polishHeroEyebrow:[\s\S]*fontSize: 11,[\s\S]*marginBottom: 4,/);
+  assert.match(home, /polishHeroTitle: \{[^}]*fontSize: 30,[^}]*lineHeight: 34,/);
+  assert.match(home, /polishHeroActions:[\s\S]*gap: 10,[\s\S]*marginTop: 0,/);
+  assert.match(home, /isNarrowHero && styles\.polishHeroActionsNarrow/);
+  assert.match(home, /polishHeroActionsNarrow: \{ marginTop: 10 \}/);
+  assert.match(home, /polishHeroCtaLift:[\s\S]*transform: \[\{ translateY: -4 \}\]/);
+  assert.match(home, /polishHeroCtaInner:[\s\S]*paddingHorizontal: 19,[\s\S]*paddingVertical: 12,/);
+});
+
 test("Calorie Tracker starts compact and launches each logging flow from one tile", () => {
   const tracker = read("components/trackers/CaloriesTracker.tsx");
   assert.match(tracker, /useState<LogTab \| null>\(null\)/);
