@@ -10,8 +10,20 @@ import { fonts } from "@/constants/fonts";
 
 // Onboarding progress header: back button, a gradient progress bar
 // inline, and a compact step pill, so progress reads at a glance without a
-// "Step N of M" caption row.
-export function StepHeader({ step, total, canBack = true }: { step: number; total: number; canBack?: boolean }) {
+// "Step N of M" caption row. `onBack` overrides the default history pop for
+// steps with an explicit destination (e.g. step 1 returns to the welcome
+// screen even when onboarding was entered without history).
+export function StepHeader({
+  step,
+  total,
+  canBack = true,
+  onBack,
+}: {
+  step: number;
+  total: number;
+  canBack?: boolean;
+  onBack?: () => void;
+}) {
   const colors = useColors();
   const styles = useThemedStyles(createStyles);
   const router = useRouter();
@@ -19,7 +31,13 @@ export function StepHeader({ step, total, canBack = true }: { step: number; tota
     <View style={styles.wrap}>
       <View style={styles.row}>
         {canBack ? (
-          <Pressable style={styles.back} onPress={() => router.back()} hitSlop={10}>
+          <Pressable
+            style={styles.back}
+            onPress={onBack ?? (() => router.back())}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
             <Ionicons name="chevron-back" size={22} color={colors.foreground} />
           </Pressable>
         ) : (

@@ -46,7 +46,13 @@ export default function GoalStep() {
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
       >
-        <StepHeader step={1} total={total} canBack={personalize} />
+        {/* Step 1's back always works: to Home in personalize mode (history
+            pop), and explicitly to the welcome screen in the signup flow. */}
+        <StepHeader
+          step={1}
+          total={total}
+          onBack={personalize ? undefined : () => router.replace("/welcome")}
+        />
         <Reveal index={0}>
           <Text style={styles.title}>What brings you here?</Text>
           <Text style={styles.subtitle}>Choose all that resonate. We'll shape your experience around them.</Text>

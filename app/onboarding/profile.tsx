@@ -5,16 +5,14 @@ import {
   StyleSheet,
   Pressable,
   Keyboard,
-  Platform,
   TextInput as NativeTextInput,
   type LayoutChangeEvent,
 } from "react-native";
-import { KeyboardAwareScrollView, KeyboardStickyView } from "react-native-keyboard-controller";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useRouter } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
-import { KeyboardFormToolbar } from "@/components/KeyboardFormToolbar";
 import { StepHeader } from "@/components/StepHeader";
 import { Reveal, Bouncy, OnboardDecor } from "@/components/onboarding/OnboardKit";
 import { useOnboardingAnswers } from "@/hooks/useOnboardingAnswers";
@@ -37,7 +35,6 @@ const GENDER = [
   { id: "other", label: "Other" },
 ] as const;
 
-const IOS_KEYBOARD_TOOLBAR_CLEARANCE = 44;
 const FOCUSED_FIELD_GAP = 12;
 const FOOTER_CONTENT_GAP = 16;
 const FOOTER_FALLBACK_HEIGHT = 82;
@@ -72,20 +69,25 @@ export default function ProfileStep() {
   const { answers: profile, save: updateProfile, ready } = useOnboardingAnswers();
   const [footerHeight, setFooterHeight] = useState(insets.bottom + FOOTER_FALLBACK_HEIGHT);
 
-  const [age, setAge] = useState(profile.age ? String(profile.age) : "");
-  const [weight, setWeight] = useState(profile.weight ? String(profile.weight) : "");
+  // The typed numeric fields deliberately start empty (placeholders only), even
+  // when the draft/profile already holds values: pre-filled numbers force the
+  // member to delete before typing. Selection controls below stay seeded since
+  // tapping a chip has no such friction.
+  const [age, setAge] = useState("");
+  const [weight, setWeight] = useState("");
   const [weightUnit, setWeightUnit] = useState<"kg" | "lbs">(profile.weightUnit);
-  const [goalWeight, setGoalWeight] = useState(profile.goalWeight ? String(profile.goalWeight) : "");
-  const [height, setHeight] = useState(profile.height ? String(profile.height) : "");
+  const [goalWeight, setGoalWeight] = useState("");
+  const [height, setHeight] = useState("");
   const [heightUnit, setHeightUnit] = useState<"cm" | "ft">(profile.heightUnit);
   const [activity, setActivity] = useState(profile.activityLevel);
   const [gender, setGender] = useState<"male" | "female" | "other">(profile.gender);
   const weightRef = useRef<NativeTextInput>(null);
   const goalWeightRef = useRef<NativeTextInput>(null);
   const heightRef = useRef<NativeTextInput>(null);
-  const toolbarClearance = Platform.OS === "ios" ? IOS_KEYBOARD_TOOLBAR_CLEARANCE : 0;
-  const keyboardBottomOffset = footerHeight + toolbarClearance + FOCUSED_FIELD_GAP;
-  const openedFooterOffset = toolbarClearance === 0 ? 0 : -toolbarClearance;
+  // The focused field only has to clear the keyboard; the Continue footer stays
+  // anchored at the screen bottom (covered while typing) and field navigation
+  // relies on the system return keys, so no toolbar clearance is needed.
+  const keyboardBottomOffset = FOCUSED_FIELD_GAP;
 
   const valid = age.trim() !== "" && weight.trim() !== "" && height.trim() !== "";
 
@@ -226,14 +228,12 @@ export default function ProfileStep() {
             </View>
           </View>
       </KeyboardAwareScrollView>
-      <KeyboardStickyView
+      <View
         style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}
-        offset={{ closed: 0, opened: openedFooterOffset }}
         onLayout={measureFooter}
       >
         <Button label="Continue" iconRight="arrow-forward" onPress={next} disabled={!valid || !ready} />
-      </KeyboardStickyView>
-      <KeyboardFormToolbar />
+      </View>
     </GradientBackground>
   );
 }

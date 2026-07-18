@@ -27,11 +27,16 @@ test("multi-field forms expose visual-order focus chaining and toolbar coverage"
   assert.match(onboarding, /weightRef\.current\?\.focus\(\)/);
   assert.match(onboarding, /goalWeightRef\.current\?\.focus\(\)/);
   assert.match(onboarding, /heightRef\.current\?\.focus\(\)/);
-  assert.match(progress, /dateInputRef\.current\?\.focus\(\)/);
+  // The weigh-in form is now a stepper + tappable date chip (no weight->date
+  // focus chain), so Progress' visual-order chaining is exercised by the photo
+  // details modal instead.
   assert.match(progress, /photoWeightRef\.current\?\.focus\(\)/);
-  for (const source of [login, signup, onboarding, progress]) {
+  // The onboarding profile step deliberately has no custom toolbar: its numeric
+  // fields rely on the system return keys (Done/Next) for navigation.
+  for (const source of [login, signup, progress]) {
     assert.ok(source.includes("<KeyboardFormToolbar"));
   }
+  assert.ok(!onboarding.includes("<KeyboardFormToolbar"));
 });
 
 test("meal text card owns the native drag-to-dismiss region and web fallback", () => {
@@ -73,7 +78,7 @@ test("numeric fields retain purpose-specific keyboards while multiline inputs ke
   assert.match(onboarding, /placeholder="28"[\s\S]{0,180}keyboardType="number-pad"/);
   assert.match(onboarding, /placeholder="65"[\s\S]{0,180}keyboardType="decimal-pad"/);
   assert.match(water, /placeholder="Custom amount \(ml\)"[\s\S]{0,180}keyboardType="number-pad"/);
-  assert.match(progress, /placeholder="e\.g\. 62\.4"[\s\S]{0,180}keyboardType="decimal-pad"/);
+  assert.match(progress, /keyboardType="decimal-pad"[\s\S]{0,120}style=\{styles\.stepInput\}/);
   assert.match(profile, /value=\{waterInput\}[\s\S]{0,220}keyboardType="decimal-pad"/);
   assert.match(profile, /value=\{calorieInput\}[\s\S]{0,220}keyboardType="number-pad"/);
   assert.match(compose, /placeholder="Share an update[\s\S]{0,240}multiline/);

@@ -102,40 +102,51 @@ async function renderProfile(ProfileStep: React.ComponentType) {
   return renderer;
 }
 
-test("onboarding profile reserves its measured sticky footer and platform toolbar clearance", async () => {
+// The Continue footer is a plain fixed View at the screen bottom: the keyboard
+// covers it while typing (it must NOT ride up over the focused field), so the
+// scroll's bottomOffset only clears the keyboard + iOS toolbar and never
+// includes the footer height. The measured footer still drives the scroll
+// content's bottom padding so content clears it when the keyboard is closed.
+test("onboarding profile keeps the Continue footer anchored (not keyboard-sticky)", async () => {
   const { default: ProfileStep } = await import("../app/onboarding/profile");
+
+  const findFooter = (renderer: TestRenderer.ReactTestRenderer) =>
+    renderer.root.findAll(
+      (node) => node.type === ("View" as any) && typeof node.props.onLayout === "function"
+    )[0];
 
   platform.OS = "ios";
   const ios = await renderProfile(ProfileStep);
-  let aware = ios.root.findByType("KeyboardAwareScrollView" as any);
-  let sticky = ios.root.findByType("KeyboardStickyView" as any);
 
-  assert.equal(aware.props.bottomOffset, 172);
-  assert.equal(sticky.props.offset.opened, -44);
+  // The sticky wrapper is gone entirely; the footer is a plain measured View.
+  assert.equal(ios.root.findAllByType("KeyboardStickyView" as any).length, 0);
+  let aware = ios.root.findByType("KeyboardAwareScrollView" as any);
+  // No custom toolbar anymore (system return keys handle navigation), so the
+  // focused field only keeps the small gap above the keyboard.
+  assert.equal(aware.props.bottomOffset, 12);
 
   await act(async () => {
-    sticky.props.onLayout({ nativeEvent: { layout: { height: 120 } } });
+    findFooter(ios).props.onLayout({ nativeEvent: { layout: { height: 120 } } });
   });
 
   aware = ios.root.findByType("KeyboardAwareScrollView" as any);
-  assert.equal(aware.props.bottomOffset, 176);
+  // Footer height feeds the resting content padding only, never the offset.
+  assert.equal(aware.props.bottomOffset, 12);
   assert.equal(aware.props.contentContainerStyle[1].paddingBottom, 136);
 
   await act(async () => ios.unmount());
 
   platform.OS = "android";
   const android = await renderProfile(ProfileStep);
-  sticky = android.root.findByType("KeyboardStickyView" as any);
+  assert.equal(android.root.findAllByType("KeyboardStickyView" as any).length, 0);
 
   await act(async () => {
-    sticky.props.onLayout({ nativeEvent: { layout: { height: 100 } } });
+    findFooter(android).props.onLayout({ nativeEvent: { layout: { height: 100 } } });
   });
 
   aware = android.root.findByType("KeyboardAwareScrollView" as any);
-  sticky = android.root.findByType("KeyboardStickyView" as any);
-  assert.equal(aware.props.bottomOffset, 112);
+  assert.equal(aware.props.bottomOffset, 12);
   assert.equal(aware.props.contentContainerStyle[1].paddingBottom, 116);
-  assert.equal(sticky.props.offset.opened, 0);
 
   await act(async () => android.unmount());
 });
