@@ -139,6 +139,7 @@ export default function Workouts() {
               intro="Find the right session for today and make it your own."
               points={[
                 "Browse every class, then filter by type and level to fit your mood.",
+                "Switch on For You to bring your best matches first, picked from the goals, level and equipment in your profile.",
                 "Save favorites so your go-to workouts are always one tap away.",
                 "Tap any workout to start a guided, step-by-step session.",
               ]}

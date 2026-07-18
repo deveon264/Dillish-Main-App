@@ -73,4 +73,37 @@ Focused comparisons were required because the hero typography/CTA alignment and 
 
 - P3: very long live streak nudges truncate to one line to protect the day-dot ribbon; this is acceptable and preserves the compact handoff composition.
 
+## Hero copy density follow-up — 2026-07-17
+
+### Evidence
+
+- Source visual truth: `C:\Users\LENOVO\.codex\codex-remote-attachments\019f6ea1-a347-7d23-97c0-2d7c1f7c8aae\9100B4FF-BFDB-48FC-BC56-E66A11235756\1-Photo-1.jpg`
+- Browser-rendered implementation: `artifacts/design-qa/hero-compact-390x844.png`
+- Viewport/state: 390×844 CSS pixels at 2× density, light theme, isolated signed-in verification member, Day 5 of the 4-Week Weight Loss Starter, Beginner Fat Burn hero.
+- Full-view comparison: `artifacts/design-qa/comparison-hero-compact-full.png`
+- Focused comparison: `artifacts/design-qa/comparison-hero-compact-focus.png`
+- Local preview: `http://localhost:8085`
+
+### Findings
+
+- No actionable P0, P1, or P2 findings remain in the requested hero-copy region.
+- Fonts and typography: the existing bundled Playfair Display/Figtree pairing is preserved. The title remains a single readable line at 28/32, the eyebrow remains uppercase with reduced 1.6 tracking, and metadata remains readable at 11.5/16.
+- Spacing and layout rhythm: eyebrow-to-title spacing is 4px; the metadata/CTA row begins 8px below the title; row gap is 10px; CTA vertical padding is 10px. The group is visibly tighter than the supplied circled state without crowding or overlap.
+- Colors and visual tokens: no color, gradient, shadow, or contrast tokens changed.
+- Image quality and asset fidelity: the production hero asset and crop are unchanged and remain sharp at 2× capture density.
+- Copy and content: the long program label, workout title, metadata, and CTA all remain live-data-driven and fit on one line in the verified state.
+- Chrome console/page errors: 0.
+
+### Comparison history
+
+1. Source finding — P2: the circled hero copy felt vertically loose, especially between the eyebrow, title, metadata, and tall CTA.
+2. Revision — reduced eyebrow size/line height/tracking, title size/line height, action-row margin/gap, metadata size, and CTA padding/text size.
+3. Post-fix evidence — the matched full and focused comparisons show a compact, aligned three-tier block with no clipping, wrapping, overlap, or tab-bar impact.
+
+### Verification
+
+- Focused Home polish tests: 5 passed, 0 failed.
+- Expo web export: passed.
+- Full suite: 652 passed, 3 environment-dependent skips, 2 unrelated existing Tracker meal-detail harness failures. Both isolated failures occur before Tracker renders because the test's React Native mock does not provide `Touchable.Mixin` required by `react-native-svg`; this follow-up changes only Home hero styles and its source-level regression test.
+
 final result: passed

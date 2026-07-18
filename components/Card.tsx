@@ -26,6 +26,12 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     borderColor: colors.cardBorder,
     borderRadius: colors.radius,
     padding: 18,
+    // Ambient lift so white cards read clearly against the cream canvas.
+    shadowColor: colors.foreground,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    elevation: 3,
   },
   elevated: { backgroundColor: colors.cardElevated },
 });

@@ -116,6 +116,8 @@ export default function Signup() {
   // while it's under development. Provisions a real throwaway account so
   // every feature works end-to-end. Remove this handler, the guestLoading
   // state, the button below, and the guestBtn/guestText styles before release.
+  // Guests land on /onboarding/name first to replace the "Guest" placeholder;
+  // that screen then applies the same landing rules as proceedAfterSignup.
   const continueAsGuest = async () => {
     setError(null);
     setGuestLoading(true);
@@ -123,7 +125,8 @@ export default function Signup() {
     const guestPassword = `Guest-${Math.random().toString(36).slice(2, 12)}9!`;
     const res = await signup("Guest", `guest-${suffix}@guest.florish.app`, guestPassword);
     if (res.ok) {
-      proceedAfterSignup(() => setGuestLoading(false));
+      setGuestLoading(false);
+      router.replace("/onboarding/name");
     } else {
       setGuestLoading(false);
       haptics.warning();
