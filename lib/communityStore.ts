@@ -29,8 +29,10 @@ export type CommunityPost = {
   type: PostType;
   body: string;
   // Unguessable lookup key for GET /api/community-photo?key=, or null when the
-  // post has no photo.
+  // post has no photo. Kept as the first of `photoKeys` for back-compat.
   photoKey: string | null;
+  // The full ordered set of photo keys (0 to 4). Empty for a text-only post.
+  photoKeys: string[];
   createdAt: number;
   author: CommunityAuthor;
   likeCount: number;
@@ -84,12 +86,25 @@ function mapAuthor(r: any): CommunityAuthor {
   };
 }
 
+// Resolve a post's image paths, preferring the multi-image array column and
+// falling back to the legacy single column (and legacy rows whose array is
+// empty). Nulls/blank entries are dropped.
+function postPaths(r: any): string[] {
+  const arr: unknown = r.photo_object_paths;
+  const list = Array.isArray(arr) && arr.length ? arr : r.photo_object_path ? [r.photo_object_path] : [];
+  return (list as unknown[]).filter((p): p is string => typeof p === "string" && p.length > 0);
+}
+
 function mapPost(r: any): CommunityPost {
+  const photoKeys = postPaths(r)
+    .map(keyFromPath)
+    .filter((k): k is string => !!k);
   return {
     id: r.id,
     type: r.type,
     body: r.body,
-    photoKey: keyFromPath(r.photo_object_path ?? null),
+    photoKey: photoKeys[0] ?? null,
+    photoKeys,
     createdAt: Number(r.created_at),
     author: mapAuthor(r),
     likeCount: Number(r.like_count),
@@ -116,7 +131,7 @@ function mapComment(r: any): CommunityComment {
 // what that viewer actually sees (the comment list and feed apply the same
 // filters).
 const POST_SELECT = `
-  SELECT p.id, p.type, p.body, p.photo_object_path, p.created_at, p.pinned,
+  SELECT p.id, p.type, p.body, p.photo_object_path, p.photo_object_paths, p.created_at, p.pinned,
     ${AUTHOR_SELECT},
     (SELECT COUNT(*) FROM community_likes l
        WHERE l.post_id = p.id
@@ -278,14 +293,17 @@ export async function createPost(input: {
   authorId: string;
   type: PostType;
   body: string;
-  photoObjectPath?: string | null;
+  // The full ordered set of image object paths (0 to 4). The first is also
+  // written to the legacy `photo_object_path` column for back-compat.
+  photoObjectPaths?: string[];
 }): Promise<CommunityPost | null> {
   await ensureSchema();
   const id = uuid();
+  const paths = input.photoObjectPaths ?? [];
   await getPool().query(
-    `INSERT INTO community_posts (id, author_id, type, body, photo_object_path, created_at)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
-    [id, input.authorId, input.type, input.body, input.photoObjectPath ?? null, Date.now()]
+    `INSERT INTO community_posts (id, author_id, type, body, photo_object_path, photo_object_paths, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [id, input.authorId, input.type, input.body, paths[0] ?? null, paths, Date.now()]
   );
   return getPost(id, input.authorId);
 }
@@ -299,13 +317,16 @@ export async function updatePost(input: {
   viewerId: string;
   type: PostType;
   body: string;
-  photo?: { objectPath: string | null };
+  // When present, replaces the post's images with this full ordered set (empty
+  // to clear). When omitted, the existing images are left untouched.
+  photo?: { objectPaths: string[] };
 }): Promise<CommunityPost | null> {
   await ensureSchema();
   if (input.photo !== undefined) {
+    const paths = input.photo.objectPaths;
     await getPool().query(
-      `UPDATE community_posts SET type = $2, body = $3, photo_object_path = $4 WHERE id = $1`,
-      [input.id, input.type, input.body, input.photo.objectPath]
+      `UPDATE community_posts SET type = $2, body = $3, photo_object_path = $4, photo_object_paths = $5 WHERE id = $1`,
+      [input.id, input.type, input.body, paths[0] ?? null, paths]
     );
   } else {
     await getPool().query(
@@ -316,20 +337,22 @@ export async function updatePost(input: {
   return getPost(input.id, input.viewerId);
 }
 
-// Lightweight read for authorization + photo cleanup before a delete.
+// Lightweight read for authorization + photo cleanup before a delete/edit.
+// `photoObjectPaths` is the de-duped union of the legacy single column and the
+// multi-image array, so callers can clean up every stored object.
 export async function getPostMeta(
   id: string
-): Promise<{ id: string; authorId: string; photoObjectPath: string | null } | null> {
+): Promise<{ id: string; authorId: string; photoObjectPaths: string[] } | null> {
   await ensureSchema();
   const { rows } = await getPool().query(
-    `SELECT id, author_id, photo_object_path FROM community_posts WHERE id = $1`,
+    `SELECT id, author_id, photo_object_path, photo_object_paths FROM community_posts WHERE id = $1`,
     [id]
   );
   if (!rows[0]) return null;
   return {
     id: rows[0].id,
     authorId: rows[0].author_id,
-    photoObjectPath: rows[0].photo_object_path ?? null,
+    photoObjectPaths: postPaths(rows[0]),
   };
 }
 
@@ -511,7 +534,7 @@ export async function listReports(opts: {
        ru.id AS reporter_id, ru.name AS reporter_name,
        CASE WHEN ru.avatar_object_path IS NULL THEN ru.avatar ELSE NULL END AS reporter_avatar,
        ru.avatar_object_path AS reporter_avatar_path,
-       p.id, p.type, p.body, p.photo_object_path, p.created_at,
+       p.id, p.type, p.body, p.photo_object_path, p.photo_object_paths, p.created_at,
        ${AUTHOR_SELECT},
        (SELECT COUNT(*) FROM community_likes l WHERE l.post_id = p.id) AS like_count,
        (SELECT COUNT(*) FROM community_comments c WHERE c.post_id = p.id) AS comment_count,

@@ -1,13 +1,13 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Bouncy as Pressable } from "@/components/Bouncy";
-import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
 import { Avatar } from "@/components/community/Avatar";
+import { PostPhotoGrid } from "@/components/community/PostPhotoGrid";
 import { POST_TYPE_META, POST_TYPE_TINT } from "@/components/community/postTypes";
-import { communityPhotoUri, timeAgo, type CommunityPost } from "@/lib/community";
+import { timeAgo, type CommunityPost } from "@/lib/community";
 import type { AppColors } from "@/constants/colors";
 import { useColors, useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
@@ -90,14 +90,8 @@ export function PostCard({ post, onPress, onLike, onComment, onMenu }: Props) {
 
       <Text style={styles.bodyText}>{post.body}</Text>
 
-      {post.photoKey ? (
-        <Image
-          source={{ uri: communityPhotoUri(post.photoKey) }}
-          style={styles.photo}
-          contentFit="cover"
-          transition={150}
-        />
-      ) : null}
+      <PostPhotoGrid keys={post.photoKeys ?? (post.photoKey ? [post.photoKey] : [])} />
+
 
       <View style={styles.footer}>
         <Pressable
@@ -202,13 +196,6 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
   },
   tagText: { fontFamily: fonts.sansBold, fontSize: 10, letterSpacing: 0.5 },
   bodyText: { fontFamily: fonts.sans, fontSize: 14, lineHeight: 22, color: "rgba(62, 39, 51, 0.85)", marginTop: 12 },
-  photo: {
-    width: "100%",
-    aspectRatio: 4 / 3,
-    borderRadius: colors.radiusSm,
-    backgroundColor: colors.blushSurface,
-    marginTop: 12,
-  },
   footer: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 12 },
   action: {
     flexDirection: "row",

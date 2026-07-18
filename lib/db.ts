@@ -172,6 +172,16 @@ export function ensureSchema(): Promise<void> {
           `ALTER TABLE community_posts ADD COLUMN IF NOT EXISTS pinned BOOLEAN NOT NULL DEFAULT FALSE`
         )
       )
+      // Multi-image posts (up to 4). Added after the single-photo release: the
+      // full ordered set of image object paths lives here, while the legacy
+      // `photo_object_path` keeps holding the first image so older readers and
+      // existing rows keep working. Backfill so existing environments pick it up
+      // without a manual migration.
+      .then(() =>
+        pool.query(
+          `ALTER TABLE community_posts ADD COLUMN IF NOT EXISTS photo_object_paths TEXT[] NOT NULL DEFAULT '{}'`
+        )
+      )
       .then(() =>
         pool.query(
           `CREATE TABLE IF NOT EXISTS community_comments (

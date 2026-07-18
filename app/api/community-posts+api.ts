@@ -13,10 +13,33 @@ import { deleteObject, getPrivateDir } from "@/lib/objectStorageServer";
 
 const MAX_BODY_CHARS = 2000;
 const PAGE_SIZE = 15;
+const MAX_PHOTOS = 4;
 
 // Same constraint the photo endpoint uses, so a client can't smuggle an
 // arbitrary object path in as a post's photo key.
 const KEY_RE = /^[a-f0-9-]{20,64}$/i;
+
+// Resolves the incoming photo keys (new `photoKeys` array, or the legacy single
+// `photoKey`) to ordered, de-duped object paths. Returns null when any key is
+// malformed so the route can reject it. Caps at MAX_PHOTOS.
+function resolvePhotoPaths(body: any): string[] | null {
+  const raw: unknown[] = Array.isArray(body?.photoKeys)
+    ? body.photoKeys
+    : typeof body?.photoKey === "string" && body.photoKey.trim()
+      ? [body.photoKey]
+      : [];
+  const paths: string[] = [];
+  const seen = new Set<string>();
+  for (const entry of raw.slice(0, MAX_PHOTOS)) {
+    const key = typeof entry === "string" ? entry.trim() : "";
+    if (!key) continue;
+    if (!KEY_RE.test(key)) return null;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    paths.push(`${getPrivateDir()}/community-photos/${key}`);
+  }
+  return paths;
+}
 
 // GET ?id=<id>  -> a single post.
 // GET (feed)    -> a page of posts, newest first, with an optional ?type filter
@@ -100,20 +123,16 @@ export async function POST(request: Request): Promise<Response> {
       return Response.json({ error: "Your post is a little too long" }, { status: 400 });
     }
 
-    let photoObjectPath: string | null = null;
-    const photoKey = typeof body?.photoKey === "string" ? body.photoKey.trim() : "";
-    if (photoKey) {
-      if (!KEY_RE.test(photoKey)) {
-        return Response.json({ error: "That photo could not be attached" }, { status: 400 });
-      }
-      photoObjectPath = `${getPrivateDir()}/community-photos/${photoKey}`;
+    const photoObjectPaths = resolvePhotoPaths(body);
+    if (photoObjectPaths === null) {
+      return Response.json({ error: "That photo could not be attached" }, { status: 400 });
     }
 
     const post = await createPost({
       authorId: session.sub,
       type,
       body: text,
-      photoObjectPath,
+      photoObjectPaths,
     });
     if (!post) return Response.json({ error: "Could not create post" }, { status: 500 });
     return Response.json({ post }, { status: 201 });
@@ -161,30 +180,32 @@ export async function PATCH(request: Request): Promise<Response> {
       return Response.json({ error: "Your post is a little too long" }, { status: 400 });
     }
 
-    // Resolve the photo change, if any. A new key replaces the photo; an explicit
-    // removePhoto clears it; omitting both leaves the existing photo untouched.
-    let photo: { objectPath: string | null } | undefined;
-    let oldToDelete: string | null = null;
-    const newKey = typeof body?.photoKey === "string" ? body.photoKey.trim() : "";
-    if (newKey) {
-      if (!KEY_RE.test(newKey)) {
-        return Response.json({ error: "That photo could not be attached" }, { status: 400 });
+    // Resolve the photo change, if any. `photoKeys` (or the legacy single
+    // `photoKey`) replaces the whole image set; `removePhoto` clears it; omitting
+    // all of them leaves the existing images untouched.
+    let photo: { objectPaths: string[] } | undefined;
+    let toDelete: string[] = [];
+    const hasKeysField = Array.isArray(body?.photoKeys);
+    const hasLegacyKey = typeof body?.photoKey === "string" && body.photoKey.trim().length > 0;
+    if (hasKeysField || hasLegacyKey || body?.removePhoto === true) {
+      let newPaths: string[] = [];
+      if (hasKeysField || hasLegacyKey) {
+        const resolved = resolvePhotoPaths(body);
+        if (resolved === null) {
+          return Response.json({ error: "That photo could not be attached" }, { status: 400 });
+        }
+        newPaths = resolved;
       }
-      const newPath = `${getPrivateDir()}/community-photos/${newKey}`;
-      photo = { objectPath: newPath };
-      if (meta.photoObjectPath && meta.photoObjectPath !== newPath) {
-        oldToDelete = meta.photoObjectPath;
-      }
-    } else if (body?.removePhoto === true) {
-      photo = { objectPath: null };
-      oldToDelete = meta.photoObjectPath;
+      photo = { objectPaths: newPaths };
+      const keep = new Set(newPaths);
+      toDelete = meta.photoObjectPaths.filter((p) => !keep.has(p));
     }
 
     const post = await updatePost({ id, viewerId: session.sub, type, body: text, photo });
     if (!post) return Response.json({ error: "Could not update post" }, { status: 500 });
 
-    if (oldToDelete) {
-      await deleteObject(oldToDelete).catch(() => {});
+    for (const path of toDelete) {
+      await deleteObject(path).catch(() => {});
     }
     return Response.json({ post });
   } catch (e: any) {
@@ -212,8 +233,8 @@ export async function DELETE(request: Request): Promise<Response> {
     }
 
     await deletePostCascade(id);
-    if (meta.photoObjectPath) {
-      await deleteObject(meta.photoObjectPath).catch(() => {});
+    for (const path of meta.photoObjectPaths) {
+      await deleteObject(path).catch(() => {});
     }
     return Response.json({ ok: true });
   } catch (e: any) {

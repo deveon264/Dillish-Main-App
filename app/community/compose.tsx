@@ -36,6 +36,9 @@ import { fonts } from "@/constants/fonts";
 import { haptics } from "@/lib/haptics";
 
 const MAX_CHARS = 2000;
+const MAX_PHOTOS = 4;
+
+type PickedPhoto = { uri: string; mime: string | null; key: string | null; isNew: boolean };
 
 export default function Compose() {
   const colors = useColors();
@@ -48,16 +51,10 @@ export default function Compose() {
 
   const [type, setType] = useState<PostType>("progress");
   const [text, setText] = useState("");
-  // The photo currently shown in the preview: a remote URL for the post's
-  // existing photo, or a local file URI for a freshly picked one.
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
-  const [photoMime, setPhotoMime] = useState<string | null>(null);
-  // True when photoUri is a newly picked local file that must be uploaded on
-  // save. False when it's the post's already-stored photo.
-  const [isNewPhoto, setIsNewPhoto] = useState(false);
-  // The post's original stored photo key, so on save we can tell whether the
-  // author cleared an existing photo.
-  const [originalPhotoKey, setOriginalPhotoKey] = useState<string | null>(null);
+  // The images attached to the post, in display order (up to MAX_PHOTOS). Each
+  // entry is either an already-stored image (`key` set, `isNew:false`) or a
+  // freshly picked local file (local `uri`, `isNew:true`) uploaded on save.
+  const [photos, setPhotos] = useState<PickedPhoto[]>([]);
 
   const [loading, setLoading] = useState(isEdit);
   const [submitting, setSubmitting] = useState(false);
@@ -73,11 +70,14 @@ export default function Compose() {
         if (cancelled) return;
         setType(post.type);
         setText(post.body);
-        setOriginalPhotoKey(post.photoKey);
-        if (post.photoKey) {
-          setPhotoUri(communityPhotoUri(post.photoKey));
-          setIsNewPhoto(false);
-        }
+        setPhotos(
+          (post.photoKeys ?? []).map((key) => ({
+            uri: communityPhotoUri(key),
+            mime: null,
+            key,
+            isNew: false,
+          }))
+        );
       } catch (e: any) {
         if (!cancelled) setError(e?.message ?? "Could not load this post.");
       } finally {
@@ -91,6 +91,8 @@ export default function Compose() {
 
   const pickFrom = async (fromCamera: boolean) => {
     setError(null);
+    const remaining = MAX_PHOTOS - photos.length;
+    if (remaining <= 0) return;
     try {
       const perm = fromCamera
         ? await ImagePicker.requestCameraPermissionsAsync()
@@ -100,19 +102,20 @@ export default function Compose() {
         setError("Permission is required to add a photo.");
         return;
       }
-      const opts: ImagePicker.ImagePickerOptions = {
-        mediaTypes: ["images"],
-        quality: 0.7,
-        allowsEditing: true,
-      };
+      // Camera adds one shot at a time (and can crop); the library allows
+      // selecting several at once, up to the remaining slots. `allowsEditing`
+      // and multi-selection can't be combined, so only the camera crops.
+      const opts: ImagePicker.ImagePickerOptions = fromCamera
+        ? { mediaTypes: ["images"], quality: 0.7, allowsEditing: true }
+        : { mediaTypes: ["images"], quality: 0.7, allowsMultipleSelection: true, selectionLimit: remaining };
       const res = fromCamera
         ? await ImagePicker.launchCameraAsync(opts)
         : await ImagePicker.launchImageLibraryAsync(opts);
-      if (res.canceled || !res.assets?.[0]) return;
-      const asset = res.assets[0];
-      setPhotoUri(asset.uri);
-      setPhotoMime(asset.mimeType ?? null);
-      setIsNewPhoto(true);
+      if (res.canceled || !res.assets?.length) return;
+      const picked: PickedPhoto[] = res.assets
+        .slice(0, remaining)
+        .map((a) => ({ uri: a.uri, mime: a.mimeType ?? null, key: null, isNew: true }));
+      setPhotos((prev) => [...prev, ...picked].slice(0, MAX_PHOTOS));
     } catch {
       haptics.warning();
       setError("Unable to open the camera or library on this device.");
@@ -121,6 +124,7 @@ export default function Compose() {
 
   const addPhoto = () => {
     setError(null);
+    if (photos.length >= MAX_PHOTOS) return;
     if (Platform.OS === "web") {
       pickFrom(false);
       return;
@@ -142,11 +146,9 @@ export default function Compose() {
     ]);
   };
 
-  const removePhoto = () => {
+  const removeAt = (index: number) => {
     haptics.warning();
-    setPhotoUri(null);
-    setPhotoMime(null);
-    setIsNewPhoto(false);
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
   const submit = async () => {
@@ -164,21 +166,15 @@ export default function Compose() {
     setSubmitting(true);
     setError(null);
     try {
+      // Upload any freshly picked images, keeping display order; existing images
+      // pass through their stored key. Promise.all preserves index order.
+      const photoKeys = await Promise.all(
+        photos.map((p) => (p.isNew ? uploadCommunityPhoto(p.uri, p.mime, token) : Promise.resolve(p.key!)))
+      );
       if (isEdit && id) {
-        let photoKey: string | undefined;
-        let removeExisting = false;
-        if (isNewPhoto && photoUri) {
-          photoKey = await uploadCommunityPhoto(photoUri, photoMime, token);
-        } else if (!photoUri && originalPhotoKey) {
-          removeExisting = true;
-        }
-        await updatePost({ token, id, type, text: body, photoKey, removePhoto: removeExisting });
+        await updatePost({ token, id, type, text: body, photoKeys });
       } else {
-        let photoKey: string | null = null;
-        if (photoUri) {
-          photoKey = await uploadCommunityPhoto(photoUri, photoMime, token);
-        }
-        await createPost({ token, type, text: body, photoKey });
+        await createPost({ token, type, text: body, photoKeys });
       }
       router.back();
     } catch (e: any) {
@@ -248,18 +244,29 @@ export default function Compose() {
               {text.length}/{MAX_CHARS}
             </Text>
 
-            {photoUri ? (
-              <View style={styles.previewWrap}>
-                <Image source={{ uri: photoUri }} style={styles.preview} contentFit="cover" />
-                <Pressable style={styles.removePhoto} onPress={removePhoto}>
-                  <Ionicons name="close" size={18} color={colors.onPrimaryStrong} />
-                </Pressable>
-              </View>
-            ) : (
+            {photos.length === 0 ? (
               <Pressable style={styles.addPhoto} onPress={addPhoto}>
                 <Ionicons name="image-outline" size={20} color={colors.accentDark} />
-                <Text style={styles.addPhotoText}>Add a photo (optional)</Text>
+                <Text style={styles.addPhotoText}>Add photos (optional)</Text>
               </Pressable>
+            ) : (
+              <View style={styles.photoGrid}>
+                {photos.map((p, i) => (
+                  <View key={`${p.uri}-${i}`} style={styles.thumbWrap}>
+                    <Image source={{ uri: p.uri }} style={styles.thumb} contentFit="cover" />
+                    <Pressable style={styles.removePhoto} onPress={() => removeAt(i)} hitSlop={6}>
+                      <Ionicons name="close" size={16} color={colors.onPrimaryStrong} />
+                    </Pressable>
+                  </View>
+                ))}
+                {photos.length < MAX_PHOTOS ? (
+                  <Pressable style={[styles.thumbWrap, styles.addTile]} onPress={addPhoto}>
+                    <Ionicons name="add" size={26} color={colors.accentDark} />
+                    <Text style={styles.addTileText}>Add more</Text>
+                    <Text style={styles.addTileHint}>{MAX_PHOTOS - photos.length} left</Text>
+                  </Pressable>
+                ) : null}
+              </View>
             )}
 
             {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -340,21 +347,35 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     backgroundColor: colors.accentTintFaint,
   },
   addPhotoText: { fontFamily: fonts.sansMedium, fontSize: 14, color: colors.accentDark },
-  previewWrap: { marginTop: 16, position: "relative" },
-  preview: {
-    width: "100%",
-    aspectRatio: 4 / 3,
-    borderRadius: colors.radiusLg,
+  photoGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 16 },
+  thumbWrap: {
+    width: "47.8%",
+    aspectRatio: 1,
+    borderRadius: colors.radiusSm,
+    overflow: "hidden",
+    backgroundColor: colors.accentTintFaint,
+    position: "relative",
+  },
+  thumb: { width: "100%", height: "100%" },
+  addTile: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: colors.accentBorderMd,
     backgroundColor: colors.accentTintFaint,
   },
+  addTileText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.accentDark },
+  addTileHint: { fontFamily: fonts.sans, fontSize: 11, color: colors.muted },
   removePhoto: {
     position: "absolute",
-    top: 10,
-    right: 10,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(74,46,51,0.55)",
+    top: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(74,46,51,0.6)",
     alignItems: "center",
     justifyContent: "center",
   },

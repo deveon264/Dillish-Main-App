@@ -123,6 +123,32 @@ test("a photo referenced by a community post is never deleted, even when old", a
   assert.equal(fake.objects.has(`${COMMUNITY_PREFIX}keep`), true);
 });
 
+test("all images of a multi-image post are kept, even the ones past the first", async () => {
+  const token = await adminToken();
+  // A 3-image post: the first also lives in the legacy single column; images 2
+  // and 3 live only in the array. None must be swept.
+  db.seedCommunityPost({
+    photo_object_path: `${COMMUNITY_PREFIX}img-1`,
+    photo_object_paths: [`${COMMUNITY_PREFIX}img-1`, `${COMMUNITY_PREFIX}img-2`, `${COMMUNITY_PREFIX}img-3`],
+  });
+  const fake = makeFake([
+    { path: `${COMMUNITY_PREFIX}img-1`, createdAt: OLD() },
+    { path: `${COMMUNITY_PREFIX}img-2`, createdAt: OLD() },
+    { path: `${COMMUNITY_PREFIX}img-3`, createdAt: OLD() },
+    { path: `${COMMUNITY_PREFIX}orphan`, createdAt: OLD() },
+  ]);
+
+  const res = await runCommunityPhotoCleanup(cleanupRequest(token), fake);
+  const body = await res.json();
+
+  assert.equal(body.referenced, 3);
+  assert.equal(body.orphans, 1);
+  assert.deepEqual(fake.deleted, [`${COMMUNITY_PREFIX}orphan`]);
+  assert.equal(fake.objects.has(`${COMMUNITY_PREFIX}img-1`), true);
+  assert.equal(fake.objects.has(`${COMMUNITY_PREFIX}img-2`), true);
+  assert.equal(fake.objects.has(`${COMMUNITY_PREFIX}img-3`), true);
+});
+
 test("recent (in-flight) photos are kept even when unreferenced", async () => {
   const token = await adminToken();
   const fake = makeFake([{ path: `${COMMUNITY_PREFIX}inflight`, createdAt: RECENT() }]);

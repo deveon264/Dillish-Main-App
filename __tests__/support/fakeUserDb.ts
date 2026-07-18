@@ -28,7 +28,7 @@ export type FakeDb = {
     e: Partial<Row> & { video_object_path: string }
   ) => Row;
   seedCommunityPost: (
-    p: Partial<Row> & { photo_object_path?: string | null }
+    p: Partial<Row> & { photo_object_path?: string | null; photo_object_paths?: string[] }
   ) => Row;
   seedReport: (
     r: Partial<Row> & { post_id: string; reporter_id: string }
@@ -179,6 +179,8 @@ export function installFakeDb(): FakeDb {
           type: post.type ?? "progress",
           body: post.body ?? "",
           photo_object_path: post.photo_object_path ?? null,
+          photo_object_paths:
+            post.photo_object_paths ?? (post.photo_object_path ? [post.photo_object_path] : []),
           created_at: post.created_at,
           author_id: author.id,
           author_name: author.name,
@@ -301,7 +303,7 @@ export function installFakeDb(): FakeDb {
     // getPostMeta: a single post's id/author/photo, used by notifyPostAuthor
     // and toggleLike. Must precede the generic community_posts handler, which
     // ignores the WHERE id filter.
-    if (/SELECT\s+id,\s*author_id,\s*photo_object_path\s+FROM\s+community_posts/i.test(sql)) {
+    if (/SELECT\s+id,\s*author_id,\s*photo_object_path(,\s*photo_object_paths)?\s+FROM\s+community_posts/i.test(sql)) {
       const post = communityPosts.find((p) => p.id === params[0]);
       return {
         rows: post
@@ -310,6 +312,8 @@ export function installFakeDb(): FakeDb {
                 id: post.id,
                 author_id: post.author_id,
                 photo_object_path: post.photo_object_path ?? null,
+                photo_object_paths:
+                  post.photo_object_paths ?? (post.photo_object_path ? [post.photo_object_path] : []),
               },
             ]
           : [],
@@ -351,6 +355,8 @@ export function installFakeDb(): FakeDb {
           type: post.type ?? "progress",
           body: post.body ?? "",
           photo_object_path: post.photo_object_path ?? null,
+          photo_object_paths:
+            post.photo_object_paths ?? (post.photo_object_path ? [post.photo_object_path] : []),
           created_at: post.created_at,
           author_id: author.id,
           author_name: author.name,
@@ -590,11 +596,16 @@ export function installFakeDb(): FakeDb {
     }
 
     // --- community_posts (photo paths the cleanup sweep reconciles against) -
+    // The sweep selects both the legacy single column and the multi-image array,
+    // keeping any post that references a photo through either.
     if (/FROM\s+community_posts/i.test(sql)) {
       const onlyWithPhoto = /photo_object_path\s+IS\s+NOT\s+NULL/i.test(sql);
       const rows = communityPosts
-        .filter((p) => !onlyWithPhoto || p.photo_object_path != null)
-        .map((p) => ({ photo_object_path: p.photo_object_path ?? null }));
+        .map((p) => ({
+          photo_object_path: p.photo_object_path ?? null,
+          photo_object_paths: (p.photo_object_paths ?? []) as string[],
+        }))
+        .filter((r) => !onlyWithPhoto || r.photo_object_path != null || r.photo_object_paths.length > 0);
       return { rows };
     }
 
@@ -873,6 +884,7 @@ export function installFakeDb(): FakeDb {
         type: p.type ?? "progress",
         body: p.body ?? "",
         photo_object_path: p.photo_object_path ?? null,
+        photo_object_paths: p.photo_object_paths ?? [],
         created_at: p.created_at ?? Date.now(),
         pinned: !!p.pinned,
       };

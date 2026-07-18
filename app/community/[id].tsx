@@ -9,7 +9,6 @@ import {
 } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { Bouncy as Pressable } from "@/components/Bouncy";
-import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { GradientBackground } from "@/components/GradientBackground";
@@ -18,6 +17,8 @@ import { PostDetailSkeleton } from "@/components/LoadingSkeletons";
 import { EmptyState } from "@/components/EmptyState";
 import { Avatar } from "@/components/community/Avatar";
 import { PostMenu } from "@/components/community/PostMenu";
+import { PostPhotoGrid } from "@/components/community/PostPhotoGrid";
+import { ImageViewer } from "@/components/community/ImageViewer";
 import { POST_TYPE_META } from "@/components/community/postTypes";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInsets } from "@/hooks/useInsets";
@@ -25,7 +26,6 @@ import { confirmAction, notify } from "@/lib/confirm";
 import {
   addComment,
   blockMember,
-  communityPhotoUri,
   deletePost,
   fetchComments,
   fetchPost,
@@ -57,6 +57,8 @@ export default function PostDetail() {
   const [posting, setPosting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuBusy, setMenuBusy] = useState(false);
+  // Index of the image open in the fullscreen viewer, or null when closed.
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const commentInputRef = useRef<TextInput>(null);
 
   const load = useCallback(async () => {
@@ -214,14 +216,11 @@ export default function PostDetail() {
 
       <Text style={styles.body}>{post.body}</Text>
 
-      {post.photoKey ? (
-        <Image
-          source={{ uri: communityPhotoUri(post.photoKey) }}
-          style={styles.photo}
-          contentFit="cover"
-          transition={150}
-        />
-      ) : null}
+      <PostPhotoGrid
+        keys={post.photoKeys ?? (post.photoKey ? [post.photoKey] : [])}
+        onPressImage={(i) => setViewerIndex(i)}
+      />
+
 
       <View style={styles.actions}>
         <Pressable hitSlop={8} onPress={onLike} style={styles.action}>
@@ -348,6 +347,11 @@ export default function PostDetail() {
         onDelete={onDelete}
         onTogglePin={onTogglePin}
       />
+      <ImageViewer
+        keys={post?.photoKeys ?? (post?.photoKey ? [post.photoKey] : [])}
+        index={viewerIndex}
+        onClose={() => setViewerIndex(null)}
+      />
     </GradientBackground>
   );
 }
@@ -389,13 +393,6 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
   },
   tagText: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.accentDark, letterSpacing: 0.2 },
   body: { fontFamily: fonts.sans, fontSize: 16, lineHeight: 24, color: colors.foreground, marginTop: 12 },
-  photo: {
-    width: "100%",
-    aspectRatio: 4 / 3,
-    borderRadius: colors.radius,
-    backgroundColor: colors.accentTintFaint,
-    marginTop: 14,
-  },
   actions: {
     flexDirection: "row",
     alignItems: "center",

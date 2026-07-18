@@ -27,7 +27,9 @@ export type CommunityPost = {
   id: string;
   type: PostType;
   body: string;
+  // First image key, kept for back-compat; `photoKeys` is the full ordered set.
   photoKey: string | null;
+  photoKeys: string[];
   createdAt: number;
   author: CommunityAuthor;
   likeCount: number;
@@ -181,26 +183,25 @@ export async function createPost(opts: {
   token: string;
   type: PostType;
   text: string;
-  photoKey?: string | null;
+  photoKeys?: string[];
 }): Promise<CommunityPost> {
   const { post } = await authed<{ post: CommunityPost }>(`/api/community-posts`, {
     token: opts.token,
     method: "POST",
-    body: { type: opts.type, text: opts.text, ...(opts.photoKey ? { photoKey: opts.photoKey } : {}) },
+    body: { type: opts.type, text: opts.text, photoKeys: opts.photoKeys ?? [] },
     fallback: "Could not share your post",
   });
   return post;
 }
 
-// Edits an existing post. Omit photoKey/removePhoto to keep the current photo;
-// pass a freshly uploaded photoKey to replace it, or removePhoto:true to clear.
+// Edits an existing post. Omit `photoKeys` to keep the current images; pass the
+// full desired ordered set to replace them (an empty array clears all photos).
 export async function updatePost(opts: {
   token: string;
   id: string;
   type: PostType;
   text: string;
-  photoKey?: string | null;
-  removePhoto?: boolean;
+  photoKeys?: string[];
 }): Promise<CommunityPost> {
   const { post } = await authed<{ post: CommunityPost }>(
     `/api/community-posts?id=${encodeURIComponent(opts.id)}`,
@@ -210,8 +211,7 @@ export async function updatePost(opts: {
       body: {
         type: opts.type,
         text: opts.text,
-        ...(opts.photoKey ? { photoKey: opts.photoKey } : {}),
-        ...(opts.removePhoto ? { removePhoto: true } : {}),
+        ...(opts.photoKeys ? { photoKeys: opts.photoKeys } : {}),
       },
       fallback: "Could not update your post",
     }
