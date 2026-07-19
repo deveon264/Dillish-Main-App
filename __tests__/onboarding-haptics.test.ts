@@ -79,10 +79,12 @@ Module._load = function patchedLoad(request: string, parent: unknown, isMain: bo
       ScrollView: "ScrollView",
       Pressable: "Pressable",
       Switch: "Switch",
+      Modal: "Modal",
       ActivityIndicator: "ActivityIndicator",
       KeyboardAvoidingView: "KeyboardAvoidingView",
       Platform: { OS: "ios" },
-      StyleSheet: { create: (value: unknown) => value, absoluteFill: {} },
+      useWindowDimensions: () => ({ width: 390, height: 844 }),
+      StyleSheet: { create: (value: unknown) => value, absoluteFill: {}, absoluteFillObject: {} },
       Animated: {
         View: "AnimatedView",
         Value: class Value {
@@ -107,7 +109,7 @@ Module._load = function patchedLoad(request: string, parent: unknown, isMain: bo
   if (request === "expo-image") return { Image: "Image" };
   if (request === "expo-linear-gradient") return { LinearGradient: "LinearGradient" };
   if (request === "@expo/vector-icons") return { Ionicons: host("Ionicons") };
-  if (request.endsWith(".webp")) return 1;
+  if (request.endsWith(".webp") || request.endsWith(".png")) return 1;
 
   if (request === "@/components/Button") return { Button: ScreenButton };
   if (request === "@/components/Bouncy") return { Bouncy: ScreenBouncy };
@@ -121,6 +123,13 @@ Module._load = function patchedLoad(request: string, parent: unknown, isMain: bo
   if (request === "@/components/PageHeader") {
     return { createPageHeaderStyles: () => ({ title: {}, titleAccent: {} }) };
   }
+  // The redesigned paywall composes these; only the hero (Skip/close) and the
+  // CTA button are exercised here, so the rest are stubbed to keep their native
+  // deps (expo-video, reanimated hooks) out of the test.
+  if (request === "@/components/paywall/FeatureCard") return { FeatureCard: () => null };
+  if (request === "@/components/paywall/PricingPlanCard") return { PricingPlanCard: () => null };
+  if (request === "@/components/paywall/TrustIndicatorRow") return { TrustIndicatorRow: () => null };
+  if (request === "@/components/paywall/PreviewModal") return { PreviewModal: () => null };
 
   if (request === "@/hooks/useInsets") return { useInsets: () => ({ top: 0, bottom: 0 }) };
   if (request === "@/hooks/useScale") return { useScale: () => ({ ms: (value: number) => value }) };
@@ -314,14 +323,14 @@ test("paywall primary success preserves optimistic ordering while Skip and Back 
   const { default: Paywall } = await import("../app/onboarding/paywall");
   const renderer = await render(Paywall);
 
-  await act(async () => button(renderer, "Start Free Trial").props.onPress());
+  await act(async () => button(renderer, "Start 7-Day Free Trial").props.onPress());
   assert.deepEqual(events, ["subscribe", "success", "replace:/onboarding/thank-you"]);
 
   events.length = 0;
   await act(async () => bouncyWithText(renderer, "Skip").props.onPress());
-  const back = renderer.root.findAllByType("ScreenBouncy" as any).find((node) =>
-    node.findAllByType("Ionicons" as any).some((icon) => icon.props.name === "arrow-back"),
+  const close = renderer.root.findAllByType("ScreenBouncy" as any).find((node) =>
+    node.findAllByType("Ionicons" as any).some((icon) => icon.props.name === "close"),
   )!;
-  await act(async () => back.props.onPress());
+  await act(async () => close.props.onPress());
   assert.deepEqual(events, ["replace:/onboarding/thank-you", "back"]);
 });
