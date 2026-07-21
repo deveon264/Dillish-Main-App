@@ -26,7 +26,7 @@ const createStyles = (colors: AppColors) =>
       lineHeight: 16,
       color: colors.muted,
       textAlign: "center",
-      marginTop: 12,
+      marginTop: 8,
     },
     emphasis: {
       fontFamily: fonts.sansMedium,

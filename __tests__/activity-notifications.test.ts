@@ -182,7 +182,7 @@ test("welcome card fires for a new member with no activity and sits on top", () 
   const card = out.find((n) => n.id === "welcome");
   assert.ok(card, "welcome card fires when the member has no activity at all");
   assert.equal(out[0].id, "welcome", "welcome sits at the top of the feed");
-  assert.equal(card.title, "Welcome to Florish! 🌸");
+  assert.equal(card.title, "Welcome to Shape! 🌸");
   assert.equal(card.tone, "accent");
   assert.equal(card.icon, "sparkles-outline");
 });

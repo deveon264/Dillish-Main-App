@@ -357,12 +357,12 @@ export default function WorkoutPlayer() {
   const sharePersonalBest = async () => {
     if (newBestToday == null) return;
     const days = newBestToday;
-    const message = `New personal best on Florish: a ${days}-day workout streak! Showing up for myself, one session at a time.`;
+    const message = `New personal best on Shape: a ${days}-day workout streak! Showing up for myself, one session at a time.`;
     try {
       if (Platform.OS === "web") {
         const nav: any = typeof navigator !== "undefined" ? navigator : undefined;
         if (nav?.share) {
-          await nav.share({ title: "My Florish streak", text: message });
+          await nav.share({ title: "My Shape streak", text: message });
         } else if (nav?.clipboard?.writeText) {
           await nav.clipboard.writeText(message);
           flashShareNote("Copied to clipboard");
@@ -915,7 +915,7 @@ export default function WorkoutPlayer() {
               </View>
               <View style={styles.metaItem}>
                 <Ionicons name="person-outline" size={15} color={colors.muted} />
-                <Text style={styles.metaText2}>With Dillish</Text>
+                <Text style={styles.metaText2}>With Ajay</Text>
               </View>
             </View>
 

@@ -106,7 +106,7 @@ export const colors = {
   streakCardGradient: ["#FBE7EE", "#FCEFEB", "#FDF6EE"] as Gradient3,
   // Gold gradient — streak pills and other celebratory fills.
   gradientGold: ["#D9A868", "#B58A55"] as Gradient2,
-  // Rose-gold gradient — Dillish halo / pinned-post border.
+  // Rose-gold gradient — Ajay halo / pinned-post border.
   gradientRoseGold: ["#E45D87", "#D9A868"] as Gradient2,
   // Muted bar track in BarChart.
   barTrackGradient: ["#F3DCE5", "#EFC2D2"] as Gradient2,

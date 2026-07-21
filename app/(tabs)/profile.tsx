@@ -478,7 +478,7 @@ export default function Profile() {
     { key: "workout", title: "Workout Reminders", sub: "Daily - tap time to change", chip: formatTime12(profile.workoutReminderTime) },
     { key: "hydration", title: "Hydration Reminders", sub: "Every 2 hours" },
     { key: "streak", title: "Streak Alerts", sub: "Don't break your streak!" },
-    { key: "content", title: "New Content Alerts", sub: "New workouts from Dillish" },
+    { key: "content", title: "New Content Alerts", sub: "New workouts from Ajay" },
     { key: "weekly", title: "Weekly Progress Report", sub: "Every Sunday evening" },
   ];
   const REST_DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
@@ -501,12 +501,12 @@ export default function Profile() {
     { key: "email", icon: "mail-outline", label: "Change Email", onPress: openEmailModal },
     { key: "password", icon: "lock-closed-outline", label: "Change Password", onPress: () => router.push("/forgot-password") },
     { key: "privacy", icon: "document-text-outline", label: "Privacy Policy", onPress: () => setInfoModal({ title: "Privacy Policy", body: PRIVACY_TEXT }) },
-    { key: "about", icon: "information-circle-outline", label: "About Florish", onPress: () => setInfoModal({ title: "About Florish", body: ABOUT_TEXT }) },
+    { key: "about", icon: "information-circle-outline", label: "About Shape", onPress: () => setInfoModal({ title: "About Shape", body: ABOUT_TEXT }) },
     { key: "support", icon: "headset-outline", label: "Support", onPress: () => setInfoModal({ title: "Support", body: SUPPORT_TEXT }) },
   ];
 
   const PLAN_FEATURES = [
-    "Unlimited workout videos with Dillish",
+    "Unlimited workout videos with Ajay",
     "AI-powered calorie tracking",
     "Hydration & progress tracking",
     "Private progress photo gallery",
@@ -525,7 +525,7 @@ export default function Profile() {
           style={styles.cover}
         >
           <View style={styles.coverGlow} pointerEvents="none" />
-          <Text style={styles.wordmark}>FLORISH</Text>
+          <Text style={styles.wordmark}>SHAPE</Text>
           {planActive ? (
             <LinearGradient
               colors={["#F6DDA9", "#DBA968"]}
@@ -864,8 +864,8 @@ export default function Profile() {
                 style={styles.inviteBtn}
                 onPress={() =>
                   shareText(
-                    "Join me on Florish and we both get a free week! Use my code AMARA10 when you sign up.",
-                    "Join me on Florish"
+                    "Join me on Shape and we both get a free week! Use my code AMARA10 when you sign up.",
+                    "Join me on Shape"
                   )
                 }
               >
@@ -931,8 +931,8 @@ export default function Profile() {
                 style={styles.shareBtn}
                 onPress={() =>
                   shareText(
-                    `I'm on a ${Math.max(1, streak)}-day streak on Florish! Showing up for myself, one session at a time.`,
-                    "My Florish streak"
+                    `I'm on a ${Math.max(1, streak)}-day streak on Shape! Showing up for myself, one session at a time.`,
+                    "My Shape streak"
                   )
                 }
               >
@@ -958,7 +958,7 @@ export default function Profile() {
               }}
               style={{ marginTop: 24 }}
             />
-            <Text style={styles.version}>Florish · v1.0</Text>
+            <Text style={styles.version}>Shape · v1.0</Text>
           </>
         ) : activeTab === "Plan" ? (
           <>
@@ -970,7 +970,7 @@ export default function Profile() {
                   contentFit="cover"
                 />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.planName}>{planActive ? "Florish Premium" : "No active plan"}</Text>
+                  <Text style={styles.planName}>{planActive ? "Shape Premium" : "No active plan"}</Text>
                   <Text style={styles.planCadence}>
                     {planActive ? `${currentPlan.name} Plan` : "Choose a plan to get started"}
                   </Text>
@@ -1211,10 +1211,10 @@ export default function Profile() {
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.historyWorkoutTitle} numberOfLines={1}>
-                          {workout?.title ?? "Dillish Workout"}
+                          {workout?.title ?? "Ajay Workout"}
                         </Text>
                         <Text style={styles.historyWorkoutSub}>
-                          with Dillish - {completion.durationMin} min - ~{completion.kcal} kcal
+                          with Ajay - {completion.durationMin} min - ~{completion.kcal} kcal
                         </Text>
                       </View>
                       <Text style={styles.historyWorkoutDay}>
@@ -1616,13 +1616,13 @@ const formatTime12 = (t: string) => {
 };
 
 const PRIVACY_TEXT =
-  "Florish respects your privacy. We collect only the information needed to run your account and personalize your workouts, nutrition, and progress tracking, such as your profile details, activity, and photos you choose to add.\n\nYour progress photos stay private to your account. We never sell your personal data. You can request deletion of your account and data at any time from Support.\n\nThis is placeholder copy for the demo build; the full, legally-reviewed policy will replace it before launch.";
+  "Shape respects your privacy. We collect only the information needed to run your account and personalize your workouts, nutrition, and progress tracking, such as your profile details, activity, and photos you choose to add.\n\nYour progress photos stay private to your account. We never sell your personal data. You can request deletion of your account and data at any time from Support.\n\nThis is placeholder copy for the demo build; the full, legally-reviewed policy will replace it before launch.";
 
 const ABOUT_TEXT =
-  "Everything you need to feel your best, in one place. Florish pairs Dillish's guided workouts with easy hydration and calorie tracking, progress photos, and a supportive community, so building better habits actually feels good.\n\nWe're here to help you show up for yourself, one session at a time.\n\nFlorish · v1.0";
+  "Everything you need to feel your best, in one place. Shape pairs Ajay's guided workouts with easy hydration and calorie tracking, progress photos, and a supportive community, so building better habits actually feels good.\n\nWe're here to help you show up for yourself, one session at a time.\n\nShape · v1.0";
 
 const SUPPORT_TEXT =
-  "Need a hand? We're here to help.\n\nEmail us at support@florish.app and we'll get back to you within 1–2 business days. Please include your account email and a short description of what's happening.\n\nThis is placeholder contact info for the demo build.";
+  "Need a hand? We're here to help.\n\nEmail us at support@shape.app and we'll get back to you within 1–2 business days. Please include your account email and a short description of what's happening.\n\nThis is placeholder contact info for the demo build.";
 
 function bmiCategory(b: number) {
   if (b < 18.5) return "Underweight";

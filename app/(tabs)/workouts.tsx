@@ -273,7 +273,7 @@ export default function Workouts() {
                         </View>
                         <View style={styles.metaItem}>
                           <Ionicons name="person-outline" size={14} color="#FFFFFF" />
-                          <Text style={styles.metaText}>With Dillish</Text>
+                          <Text style={styles.metaText}>With Ajay</Text>
                         </View>
                       </View>
                     </View>

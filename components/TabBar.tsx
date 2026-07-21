@@ -1,8 +1,7 @@
 import React, { useEffect } from "react";
-import { View, Text, StyleSheet, Pressable, Platform } from "react-native";
+import { View, Text, StyleSheet, Pressable } from "react-native";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
 import { Bouncy } from "@/components/Bouncy";
 import { useInsets } from "@/hooks/useInsets";
 import { useNotices } from "@/contexts/NoticesContext";
@@ -29,11 +28,12 @@ const ORDER = ["index", "workouts", "tracker", "community", "profile"];
 
 type TabBarProps = Pick<BottomTabBarProps, "state" | "navigation">;
 
-// Airy Studio floating tab bar: a frosted pill lifted off the bottom edge.
-// Every tab is an equal-width slot (flex: 1) that never changes size, so
-// switching tabs can never shift the layout or push icons off-screen. The
-// active tab fills its own slot with a pink pill; inactive tabs show a bare
-// line icon centered in their slot.
+// Fixed bottom tab bar: a solid, full-width bar anchored flush to the bottom
+// edge with a thin top divider (Twitter/Facebook style). Every tab is an
+// equal-width slot (flex: 1) that never changes size, so switching tabs can
+// never shift the layout or push icons off-screen. The active tab fills its own
+// slot with a pink pill; inactive tabs show a bare line icon centered in their
+// slot. (A glassy floating variant is a deliberate later step.)
 export function TabBar({ state, navigation }: TabBarProps) {
   const colors = useColors();
   const styles = useThemedStyles(createStyles);
@@ -51,18 +51,8 @@ export function TabBar({ state, navigation }: TabBarProps) {
   }, [activeRoute, refreshUnread]);
 
   return (
-    <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 12) + 2 }]}>
-      <View style={styles.bar}>
-        {/* Native frosted-glass blur — content scrolls through it on iOS. */}
-        <BlurView
-          intensity={Platform.OS === "android" ? 40 : 55}
-          tint="light"
-          experimentalBlurMethod="dimezisBlurView"
-          style={[StyleSheet.absoluteFill, styles.noTouch]}
-        />
-        {/* Warm translucent wash so the glass keeps the brand tone and reads
-            cleanly even where native blur is limited (web/older Android). */}
-        <View style={[StyleSheet.absoluteFill, styles.glassTint, styles.noTouch]} />
+    <View style={styles.wrap}>
+      <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
         <View style={styles.row}>
           {ORDER.map((name) => {
             const route = routesByName[name];
@@ -134,46 +124,38 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    paddingHorizontal: 20,
-    paddingTop: 8,
     backgroundColor: "transparent",
   },
   bar: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.tabBarGlassBorder,
-    // Clip the blur layer to the rounded pill.
-    overflow: "hidden",
+    // Opaque, full-width, flush to the bottom edge with a hairline top divider.
+    backgroundColor: colors.card,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.tabBarGlassBorder,
+    // Soft upward lift so content reads as passing beneath the bar.
     shadowColor: "#3E2733",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.14,
-    shadowRadius: 32,
-    elevation: 10,
-  },
-  glassTint: {
-    backgroundColor: colors.tabBarGlass,
-  },
-  noTouch: {
-    pointerEvents: "none",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 8,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 8,
+    paddingVertical: 4,
     paddingHorizontal: 6,
   },
   // Fixed equal-width slot: five of these always fill the row exactly.
   slot: {
     flex: 1,
-    height: 44,
+    height: 34,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 2,
   },
   pill: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
   },

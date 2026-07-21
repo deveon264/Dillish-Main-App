@@ -55,7 +55,7 @@ function greeting() {
 const SKY_BAND = 170;
 const SKY_FILL = 400;
 
-// Rotates daily with one polished, encouraging line from Dillish under the hero.
+// Rotates daily with one polished, encouraging line from Ajay under the hero.
 const QUOTES = [
   "Show up for yourself today. You are worth the care.",
   "Small steps repeated daily become real change.",
@@ -179,7 +179,7 @@ export default function Dashboard() {
   const heroEyebrow =
     todayPlan?.source === "program" && todayPlan.program && todayPlan.dayNumber
       ? `DAY ${todayPlan.dayNumber} OF YOUR ${todayPlan.program.title.toUpperCase()}`
-      : "TODAY'S WORKOUT WITH DILLISH";
+      : "TODAY'S WORKOUT WITH AJAY";
   const heroCtaText =
     todayPlan?.source === "program" && todayPlan.dayNumber
       ? `Start Day ${todayPlan.dayNumber}`
@@ -228,7 +228,7 @@ export default function Dashboard() {
       <StatusBar style="dark" />
       <Animated.ScrollView
         ref={scrollRef}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 110 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 54 }}
         showsVerticalScrollIndicator={false}
         refreshControl={refreshControl}
         onScroll={onHeroScroll}
@@ -419,7 +419,7 @@ export default function Dashboard() {
           <View style={styles.polishQuote}>
             <Text style={styles.polishQuoteMark}>“</Text>
             <Text style={styles.polishQuoteText}>
-              {dailyQuote()} <Text style={styles.polishQuoteBy}>– DILLISH&apos;S QUOTE OF THE DAY</Text>
+              {dailyQuote()} <Text style={styles.polishQuoteBy}>– AJAY&apos;S QUOTE OF THE DAY</Text>
             </Text>
           </View>
 
@@ -438,24 +438,6 @@ export default function Dashboard() {
                   motion="timing"
                   pressedScale={0.96}
                   style={styles.polishFilledButton}
-                  onPress={() => router.navigate("/(tabs)/tracker?mode=water")}
-                  accessibilityRole="button"
-                  accessibilityLabel="Log water"
-                >
-                  <LinearGradient
-                    colors={colors.gradient}
-                    start={{ x: 0.5, y: 0 }}
-                    end={{ x: 0.5, y: 1 }}
-                    style={styles.polishFilledButtonInner}
-                  >
-                    <Text style={styles.polishFilledButtonText}>Log water</Text>
-                    <PillGloss />
-                  </LinearGradient>
-                </Pressable>
-                <Pressable
-                  motion="timing"
-                  pressedScale={0.96}
-                  style={styles.polishFilledButton}
                   onPress={() => router.navigate("/(tabs)/tracker?mode=calories")}
                   accessibilityRole="button"
                   accessibilityLabel="Log meal"
@@ -467,6 +449,24 @@ export default function Dashboard() {
                     style={styles.polishFilledButtonInner}
                   >
                     <Text style={styles.polishFilledButtonText}>Log meal</Text>
+                    <PillGloss />
+                  </LinearGradient>
+                </Pressable>
+                <Pressable
+                  motion="timing"
+                  pressedScale={0.96}
+                  style={styles.polishFilledButton}
+                  onPress={() => router.navigate("/(tabs)/tracker?mode=water")}
+                  accessibilityRole="button"
+                  accessibilityLabel="Log water"
+                >
+                  <LinearGradient
+                    colors={colors.gradient}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 1 }}
+                    style={styles.polishFilledButtonInner}
+                  >
+                    <Text style={styles.polishFilledButtonText}>Log water</Text>
                     <PillGloss />
                   </LinearGradient>
                 </Pressable>
@@ -658,7 +658,7 @@ function WelcomeModal({
         <StructuralPressable style={styles.welcomeCard} onPress={(e) => e.stopPropagation()}>
           <View style={styles.welcomeHead}>
             <Logo showText={false} size="sm" />
-            <Text style={styles.welcomeTitle}>Welcome to Florish 🌸</Text>
+            <Text style={styles.welcomeTitle}>Welcome to Shape 🌸</Text>
           </View>
           <Text style={styles.welcomeBody}>
             We're so glad you're here, {name}. Your plan is ready and your journey starts today,

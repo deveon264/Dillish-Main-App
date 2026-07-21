@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, StyleSheet, ScrollView, type LayoutChangeEvent } from "react-native";
+import { View, StyleSheet, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { useInsets } from "@/hooks/useInsets";
 import { useSubscription } from "@/contexts/SubscriptionContext";
@@ -19,7 +19,7 @@ import { PreviewModal } from "@/components/paywall/PreviewModal";
 // Plans are shown recommended-first. Billing sub-labels are presentation copy;
 // every price, period, and savings number still comes from the shared catalog
 // (lib/subscription) so the paywall can never drift from the Plan tab or billing.
-const DISPLAY_ORDER: PlanKey[] = ["yearly", "monthly", "weekly"];
+const DISPLAY_ORDER: PlanKey[] = ["yearly", "monthly"];
 
 const BILLING_COPY: Record<PlanKey, string> = {
   yearly: "Billed annually",
@@ -44,7 +44,6 @@ export default function Paywall() {
 
   const [selected, setSelected] = useState<PlanKey>("yearly");
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [footerHeight, setFooterHeight] = useState(200);
 
   // Every exit from the paywall routes through the thank-you video, which plays
   // once (or skips straight through when none is set) and then hands off to the
@@ -66,70 +65,70 @@ export default function Paywall() {
     setSelected(key);
   };
 
-  const onFooterLayout = (e: LayoutChangeEvent) => {
-    setFooterHeight(e.nativeEvent.layout.height);
-  };
-
   // Fall back to the catalog's own order if DISPLAY_ORDER ever drifts out of
   // sync with the catalog, so every plan still renders exactly once.
   const order = DISPLAY_ORDER.every((k) => CATALOG[k]) ? DISPLAY_ORDER : PLAN_ORDER;
 
+  // The hero and the CTA stay pinned; only the plan list between them scrolls,
+  // and only when a device's safe-area insets leave too little room. On a tall
+  // screen nothing scrolls - everything is visible at once (per the reference).
   return (
     <View style={styles.root}>
       <ScreenEntrance style={styles.fill}>
-        <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingBottom: footerHeight + 20 }]}
-          showsVerticalScrollIndicator={false}
-        >
+        <View style={styles.column}>
           <PaywallHero
             onClose={() => router.back()}
             onSkip={proceed}
             onWatchPreview={() => setPreviewOpen(true)}
           />
 
-          <FeatureCard />
+          <ScrollView
+            style={styles.mid}
+            contentContainerStyle={styles.midContent}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
+            <FeatureCard />
 
-          <View style={styles.plans}>
-            {order.map((key) => {
-              const info = CATALOG[key];
-              const featured = key === "yearly";
-              const save = featured ? info.fullLabel.match(/Save\s+\d+%/i)?.[0] : undefined;
-              return (
-                <PricingPlanCard
-                  key={key}
-                  name={info.name}
-                  billing={BILLING_COPY[key]}
-                  priceMain={info.amountLabel}
-                  priceSuffix={featured ? undefined : info.periodLabel}
-                  featured={featured}
-                  savePill={save}
-                  perMonth={featured ? perMonthLabel(info.amountLabel) : undefined}
-                  cancelNote={featured ? "Cancel anytime" : undefined}
-                  tagline={featured ? "Most popular choice" : undefined}
-                  selected={selected === key}
-                  onSelect={() => onSelect(key)}
-                />
-              );
-            })}
-          </View>
+            <View style={styles.plans}>
+              {order.map((key) => {
+                const info = CATALOG[key];
+                const featured = key === "yearly";
+                const save = featured ? info.fullLabel.match(/Save\s+\d+%/i)?.[0] : undefined;
+                return (
+                  <PricingPlanCard
+                    key={key}
+                    name={info.name}
+                    billing={BILLING_COPY[key]}
+                    priceMain={info.amountLabel}
+                    priceSuffix={featured ? undefined : info.periodLabel}
+                    featured={featured}
+                    savePill={save}
+                    perMonth={featured ? perMonthLabel(info.amountLabel) : undefined}
+                    cancelNote={featured ? "Cancel anytime" : undefined}
+                    tagline={featured ? "Most popular choice" : undefined}
+                    selected={selected === key}
+                    onSelect={() => onSelect(key)}
+                  />
+                );
+              })}
+            </View>
 
-          <View style={styles.trust}>
-            <TrustIndicatorRow />
+            <View style={styles.trust}>
+              <TrustIndicatorRow />
+            </View>
+          </ScrollView>
+
+          <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
+            <PaywallCTA
+              label={`Start ${TRIAL_DAYS}-Day Free Trial`}
+              note="No payment today. Cancel anytime."
+              onPress={subscribeAndProceed}
+            />
+            <LegalFooter />
           </View>
-        </ScrollView>
+        </View>
       </ScreenEntrance>
-
-      <View
-        style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}
-        onLayout={onFooterLayout}
-      >
-        <PaywallCTA
-          label={`Start ${TRIAL_DAYS}-Day Free Trial`}
-          note="No payment today. Cancel anytime."
-          onPress={subscribeAndProceed}
-        />
-        <LegalFooter />
-      </View>
 
       <PreviewModal visible={previewOpen} onClose={() => setPreviewOpen(false)} />
     </View>
@@ -140,18 +139,15 @@ const createStyles = (colors: AppColors) =>
   StyleSheet.create({
     root: { flex: 1, backgroundColor: colors.background },
     fill: { flex: 1 },
-    scroll: { paddingHorizontal: 0 },
-    plans: { marginTop: 24, paddingHorizontal: 20, gap: 12 },
-    trust: { marginTop: 22, paddingHorizontal: 24 },
+    column: { flex: 1 },
+    // The scrollable middle takes whatever height is left between the fixed hero
+    // and the fixed CTA; on a tall screen its content fits with room to spare.
+    mid: { flex: 1 },
+    midContent: { paddingTop: 12, paddingBottom: 8 },
+    plans: { marginTop: 8, paddingHorizontal: 20, gap: 8 },
+    trust: { marginTop: 8, paddingHorizontal: 24 },
     footer: {
-      position: "absolute",
-      left: 0,
-      right: 0,
-      bottom: 0,
       paddingHorizontal: 24,
-      paddingTop: 14,
-      backgroundColor: colors.card,
-      borderTopWidth: 1,
-      borderTopColor: colors.cardBorder,
+      paddingTop: 10,
     },
   });

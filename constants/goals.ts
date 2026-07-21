@@ -14,8 +14,6 @@ export const GOALS: GoalOption[] = [
   { id: "lose-weight", label: "Lose Weight", desc: "Shed gently, feel light", icon: "trending-down-outline" },
   { id: "tone", label: "Tone & Sculpt", desc: "Define and strengthen", icon: "body-outline" },
   { id: "strength", label: "Build Strength", desc: "Grow power and stamina", icon: "barbell-outline" },
-  { id: "flexibility", label: "Improve Flexibility", desc: "Move with ease", icon: "accessibility-outline" },
-  { id: "wellness", label: "Mindful Wellness", desc: "Balance body and mind", icon: "leaf-outline" },
   { id: "energy", label: "Boost Energy", desc: "Feel vibrant daily", icon: "flash-outline" },
 ];
 

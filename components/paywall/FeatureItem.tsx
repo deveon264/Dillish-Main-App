@@ -19,7 +19,7 @@ export function FeatureItem({ icon, lines }: FeatureItemProps) {
   return (
     <View style={styles.item}>
       <View style={styles.chip}>
-        <Ionicons name={icon} size={22} color={colors.accent} />
+        <Ionicons name={icon} size={18} color={colors.accent} />
       </View>
       <Text style={styles.label}>
         {lines[0]}
@@ -37,18 +37,18 @@ const createStyles = (colors: AppColors) =>
       paddingHorizontal: 4,
     },
     chip: {
-      width: 46,
-      height: 46,
-      borderRadius: 15,
+      width: 32,
+      height: 32,
+      borderRadius: 11,
       backgroundColor: colors.accentTint,
       alignItems: "center",
       justifyContent: "center",
-      marginBottom: 10,
+      marginBottom: 4,
     },
     label: {
       fontFamily: fonts.sansSemibold,
-      fontSize: 13,
-      lineHeight: 17,
+      fontSize: 12,
+      lineHeight: 15,
       color: colors.foreground,
       textAlign: "center",
     },

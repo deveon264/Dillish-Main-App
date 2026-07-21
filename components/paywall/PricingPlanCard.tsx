@@ -77,8 +77,8 @@ export function PricingPlanCard(props: PricingPlanCardProps) {
       pressedScale={0.985}
       style={[
         styles.card,
-        featured ? styles.cardFeatured : styles.cardPlain,
-        selected && !featured && styles.cardPlainSelected,
+        featured && styles.cardFeaturedPad,
+        selected ? styles.cardSelected : styles.cardUnselected,
       ]}
       accessibilityRole="radio"
       accessibilityState={{ selected }}
@@ -159,21 +159,21 @@ const createStyles = (colors: AppColors) =>
   StyleSheet.create({
     card: {
       borderRadius: colors.radiusLg,
-      padding: 18,
-    },
-    cardFeatured: {
-      backgroundColor: colors.blushSurface,
+      padding: 11,
+      // Constant border width so height never jumps when selection toggles.
       borderWidth: 1.5,
-      borderColor: colors.primary,
-      paddingTop: 22,
     },
-    cardPlain: {
+    // Extra top room on the Yearly card for its BEST VALUE badge (unrelated to
+    // selection, so it never moves).
+    cardFeaturedPad: { paddingTop: 12 },
+    // The soft-pink highlight follows the selected plan, not the Yearly identity.
+    cardSelected: {
+      backgroundColor: colors.blushSurface,
+      borderColor: colors.primary,
+    },
+    cardUnselected: {
       backgroundColor: colors.card,
-      borderWidth: 1,
       borderColor: colors.cardBorder,
-    },
-    cardPlainSelected: {
-      borderColor: colors.primary,
     },
     badge: {
       position: "absolute",
@@ -202,22 +202,22 @@ const createStyles = (colors: AppColors) =>
     radioOn: { borderColor: colors.primary },
     radioDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.primary },
     left: { flex: 1, marginLeft: 14 },
-    name: { fontFamily: fonts.serifSemibold, fontSize: 22, color: colors.foreground },
+    name: { fontFamily: fonts.serifSemibold, fontSize: 20, color: colors.foreground },
     billing: { fontFamily: fonts.sans, fontSize: 13, color: colors.muted, marginTop: 2 },
     cancelNote: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.primary, marginTop: 3 },
     // Featured price cluster.
     priceCol: { alignItems: "center" },
-    priceMain: { fontFamily: fonts.serifSemibold, fontSize: 26, color: colors.foreground },
+    priceMain: { fontFamily: fonts.serifSemibold, fontSize: 22, color: colors.foreground },
     savePill: {
       backgroundColor: colors.primary,
       borderRadius: 999,
-      paddingHorizontal: 10,
-      paddingVertical: 3,
-      marginTop: 6,
+      paddingHorizontal: 9,
+      paddingVertical: 2,
+      marginTop: 5,
     },
     savePillText: {
       fontFamily: fonts.sansBold,
-      fontSize: 11,
+      fontSize: 10,
       color: colors.onPrimaryStrong,
     },
     vDivider: {
@@ -237,8 +237,8 @@ const createStyles = (colors: AppColors) =>
     hDivider: {
       height: 1,
       backgroundColor: colors.cardBorder,
-      marginTop: 16,
-      marginBottom: 12,
+      marginTop: 7,
+      marginBottom: 6,
     },
     taglineRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 },
     tagline: { fontFamily: fonts.sansSemibold, fontSize: 14, color: colors.primary },

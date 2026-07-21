@@ -37,11 +37,9 @@ const createStyles = (colors: AppColors) =>
       borderRadius: 28,
       borderWidth: 1,
       borderColor: colors.cardBorder,
-      paddingVertical: 22,
+      paddingVertical: 6,
       paddingHorizontal: 8,
       marginHorizontal: 16,
-      // Overlap the hero above.
-      marginTop: -34,
       shadowColor: colors.foreground,
       shadowOffset: { width: 0, height: 12 },
       shadowOpacity: 0.08,

@@ -48,7 +48,7 @@ export function Logo({
               },
             ]}
           >
-            Florish
+            Shape
           </Text>
         ) : null}
       </View>

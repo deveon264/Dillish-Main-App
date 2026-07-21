@@ -12,7 +12,7 @@ export function AppShellSkeleton() {
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top + 20 }]}>
-      <SkeletonGroup label="Loading Florish" style={styles.shell}>
+      <SkeletonGroup label="Loading Shape" style={styles.shell}>
         <View style={styles.headerRow}>
           <View style={{ flex: 1, gap: 8 }}>
             <SkeletonBlock style={styles.eyebrow} />

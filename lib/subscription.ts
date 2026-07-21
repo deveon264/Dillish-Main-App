@@ -76,9 +76,9 @@ export const PLANS: Record<PlanKey, PlanInfo> = {
   yearly: {
     key: "yearly",
     name: "Yearly",
-    amountLabel: "$39.99",
+    amountLabel: "$35.99",
     periodLabel: "/ year",
-    fullLabel: "$39.99 / year · Save 33%",
+    fullLabel: "$35.99 / year · Save 40%",
     periodDays: 365,
     best: true,
   },

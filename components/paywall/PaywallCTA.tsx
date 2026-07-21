@@ -30,6 +30,6 @@ const createStyles = (colors: AppColors) =>
       fontSize: 13,
       color: colors.primary,
       textAlign: "center",
-      marginTop: 10,
+      marginTop: 7,
     },
   });
