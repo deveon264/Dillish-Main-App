@@ -81,7 +81,7 @@ export default function NameStep() {
         <Reveal index={0}>
           <Text style={styles.title}>What should we call you?</Text>
           <Text style={styles.subtitle}>
-            This is how Shape will greet you. You can change it anytime in your profile.
+            This is how Florish will greet you. You can change it anytime in your profile.
           </Text>
         </Reveal>
         <Reveal index={1}>

@@ -124,6 +124,7 @@ export default function ExercisePlayer() {
               style={styles.poster}
               contentFit="cover"
               transition={150}
+              cachePolicy="memory-disk"
               pointerEvents="none"
               onError={() => setPosterError(true)}
             />

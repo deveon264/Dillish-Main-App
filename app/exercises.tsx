@@ -94,7 +94,7 @@ export default function ExerciseLibrary() {
       >
         <PageHeader
           variant="compact"
-          eyebrow="SHAPE"
+          eyebrow="FLORISH"
           title="Exercise"
           accent="Videos"
           leading={
@@ -175,6 +175,7 @@ export default function ExerciseLibrary() {
                               style={styles.thumbImg}
                               contentFit="cover"
                               transition={200}
+                              cachePolicy="memory-disk"
                               onError={() => setPosterErrors((prev) => ({ ...prev, [item.id]: true }))}
                             />
                           ) : localImage ? (

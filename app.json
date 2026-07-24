@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Shape Fitness",
+    "name": "Florish Fitness",
     "slug": "florish-fitness",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -46,14 +46,14 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Shape needs access to your photos to set a profile picture.",
-          "cameraPermission": "Shape needs access to your camera to take a profile photo."
+          "photosPermission": "Florish needs access to your photos to set a profile picture.",
+          "cameraPermission": "Florish needs access to your camera to take a profile photo."
         }
       ],
       [
         "expo-camera",
         {
-          "cameraPermission": "Shape needs access to your camera to scan food barcodes.",
+          "cameraPermission": "Florish needs access to your camera to scan food barcodes.",
           "barcodeScannerEnabled": true
         }
       ],
@@ -61,7 +61,7 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "Shape uses the microphone so you can log meals by voice."
+          "microphonePermission": "Florish uses the microphone so you can log meals by voice."
         }
       ]
     ],

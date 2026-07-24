@@ -985,7 +985,7 @@ export function CaloriesTracker({ header }: { header?: React.ReactNode }) {
             </View>
             <View style={styles.polishMealEmptyCopy}>
               <Text style={styles.polishMealEmptyTitle}>No meals logged yet</Text>
-              <Text style={styles.polishMealEmptyDescription}>Describe what you ate and Shape will estimate the nutrition.</Text>
+              <Text style={styles.polishMealEmptyDescription}>Describe what you ate and Florish will estimate the nutrition.</Text>
             </View>
             <Pressable
               motion="timing"

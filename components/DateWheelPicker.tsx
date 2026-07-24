@@ -15,7 +15,7 @@ import { useThemedStyles } from "@/hooks/useColors";
 import { fonts } from "@/constants/fonts";
 import { haptics } from "@/lib/haptics";
 
-// A Shape-styled bottom-sheet date picker: three snap-scrolling wheels
+// A Florish-styled bottom-sheet date picker: three snap-scrolling wheels
 // (Day / Month / Year) with a center highlight band, instead of typing
 // dd/mm/yyyy on a keyboard. Pure JS (ScrollView + snapToInterval), so it feels
 // and looks identical on iOS, Android, and web, and needs no native module.

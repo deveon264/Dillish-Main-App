@@ -55,7 +55,7 @@ function greeting() {
 const SKY_BAND = 170;
 const SKY_FILL = 400;
 
-// Rotates daily with one polished, encouraging line from Ajay under the hero.
+// Rotates daily with one polished, encouraging line from Dillish under the hero.
 const QUOTES = [
   "Show up for yourself today. You are worth the care.",
   "Small steps repeated daily become real change.",
@@ -179,7 +179,7 @@ export default function Dashboard() {
   const heroEyebrow =
     todayPlan?.source === "program" && todayPlan.program && todayPlan.dayNumber
       ? `DAY ${todayPlan.dayNumber} OF YOUR ${todayPlan.program.title.toUpperCase()}`
-      : "TODAY'S WORKOUT WITH AJAY";
+      : "TODAY'S WORKOUT WITH DILLISH";
   const heroCtaText =
     todayPlan?.source === "program" && todayPlan.dayNumber
       ? `Start Day ${todayPlan.dayNumber}`
@@ -419,7 +419,7 @@ export default function Dashboard() {
           <View style={styles.polishQuote}>
             <Text style={styles.polishQuoteMark}>“</Text>
             <Text style={styles.polishQuoteText}>
-              {dailyQuote()} <Text style={styles.polishQuoteBy}>– AJAY&apos;S QUOTE OF THE DAY</Text>
+              {dailyQuote()} <Text style={styles.polishQuoteBy}>– DILLISH&apos;S QUOTE OF THE DAY</Text>
             </Text>
           </View>
 
@@ -658,7 +658,7 @@ function WelcomeModal({
         <StructuralPressable style={styles.welcomeCard} onPress={(e) => e.stopPropagation()}>
           <View style={styles.welcomeHead}>
             <Logo showText={false} size="sm" />
-            <Text style={styles.welcomeTitle}>Welcome to Shape 🌸</Text>
+            <Text style={styles.welcomeTitle}>Welcome to Florish 🌸</Text>
           </View>
           <Text style={styles.welcomeBody}>
             We're so glad you're here, {name}. Your plan is ready and your journey starts today,

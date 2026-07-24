@@ -51,8 +51,8 @@ const fontMap: Record<string, number> = {
 
 // Warmed into the image cache while the splash screen is up (alongside fonts),
 // so the welcome screen paints its hero on first frame instead of flashing the
-// cream background. Tiny (~68KB); failures never block app startup.
-const welcomeHeroSource = require("@/assets/images/photos/welcomehero.webp");
+// cream background. Failures never block app startup.
+const welcomeHeroSource = require("@/assets/images/photos/welcomehero-4k.webp");
 
 export default function RootLayout() {
   const [ready, setReady] = useState(false);

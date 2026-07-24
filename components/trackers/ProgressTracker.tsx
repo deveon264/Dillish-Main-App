@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system/legacy";
 import { GradientBackground } from "@/components/GradientBackground";
 import { useScrollDecor } from "@/components/BackgroundDecor";
 import { MotionListItem } from "@/components/Motion";
@@ -61,6 +62,23 @@ const parseDateInput = (s: string): number | null => {
   if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day) return null;
   return d.getTime();
 };
+
+// Progress photos must persist for months, so copy the picked file into the
+// app's document dir and store that path. Storing the raw base64 instead froze
+// the screen: addPhoto re-serializes the whole gallery to AsyncStorage on every
+// save, and multi-MB base64 strings can also exceed its value-size limit.
+async function persistProgressPhoto(srcUri: string): Promise<string> {
+  if (Platform.OS === "web" || !FileSystem.documentDirectory) return srcUri;
+  try {
+    const dir = FileSystem.documentDirectory + "progress-photos/";
+    await FileSystem.makeDirectoryAsync(dir, { intermediates: true }).catch(() => {});
+    const dest = `${dir}${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+    await FileSystem.copyAsync({ from: srcUri, to: dest });
+    return dest;
+  } catch {
+    return srcUri; // fall back to the picker uri if the copy fails
+  }
+}
 
 // The full Progress screen, now hosted inside the Tracker tab's "Progress"
 // segment. It renders the shared header supplied by the parent (PageHeader +
@@ -202,15 +220,13 @@ export function ProgressTracker({ header }: { header?: React.ReactNode }) {
       const opts: ImagePicker.ImagePickerOptions = {
         mediaTypes: ["images"],
         quality: 0.6,
-        base64: true,
         allowsEditing: true,
       };
       const res = fromCamera
         ? await ImagePicker.launchCameraAsync(opts)
         : await ImagePicker.launchImageLibraryAsync(opts);
       if (res.canceled || !res.assets?.[0]) return;
-      const asset = res.assets[0];
-      const uri = asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
+      const uri = await persistProgressPhoto(res.assets[0].uri);
       setPendingPhotoUri(uri);
       setPhotoDateInput(fmtDateInput(new Date()));
       setPhotoWeightInput(current != null ? current.toFixed(1) : "");
@@ -747,9 +763,18 @@ export function ProgressTracker({ header }: { header?: React.ReactNode }) {
             </View>
           </View>
         </KeyboardAvoidingView>
+        {/* Nested inside the photo sheet: two sibling <Modal>s can't both be
+            presented on iOS, so the photo-date wheel must live within this one. */}
+        <DateWheelPicker
+          visible={dateTarget === "photo"}
+          value={pickerValue}
+          maximumDate={new Date()}
+          onConfirm={onPickDate}
+          onClose={() => setDateTarget(null)}
+        />
       </Modal>
       <DateWheelPicker
-        visible={dateTarget != null}
+        visible={dateTarget === "weigh"}
         value={pickerValue}
         maximumDate={new Date()}
         onConfirm={onPickDate}

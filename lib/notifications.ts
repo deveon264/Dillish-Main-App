@@ -68,7 +68,7 @@ export function buildNotifications(args: {
       id: "welcome",
       icon: "sparkles-outline",
       tone: "accent",
-      title: "Welcome to Shape! 🌸",
+      title: "Welcome to Florish! 🌸",
       body: "We're so glad you're here. This is the start of your fitness journey, one beautiful session at a time.",
       ts: now + 2,
     });
