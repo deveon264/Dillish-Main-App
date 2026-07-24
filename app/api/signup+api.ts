@@ -2,6 +2,7 @@ import { isAdminEmail } from "@/constants/admin";
 import { verifyPasscode, mintSessionToken } from "@/lib/adminAuth";
 import { hashPassword } from "@/lib/userAuth";
 import { createUser, emailTaken, toPublicUser } from "@/lib/userStore";
+import { rateLimit, clientIp, tooMany } from "@/lib/rateLimit";
 
 function logAuthError(scope: string, e: any) {
   const code = e?.code ? ` code=${e.code}` : "";
@@ -21,6 +22,11 @@ const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 // signing up with that email.
 export async function POST(request: Request): Promise<Response> {
   try {
+    // Throttle account creation per source IP to curb spam signups; generous
+    // enough for shared carrier/NAT addresses.
+    const ipRl = await rateLimit(`signup:ip:${clientIp(request)}`, { limit: 10, windowSec: 3600 });
+    if (!ipRl.ok) return tooMany(ipRl.retryAfterSec);
+
     let body: any;
     try {
       body = await request.json();

@@ -1,3 +1,6 @@
+import { requireSession } from "@/lib/adminAuth";
+import { rateLimit, tooMany } from "@/lib/rateLimit";
+
 type Nutrition = {
   name: string;
   kcal: number;
@@ -117,5 +120,9 @@ export async function foodBarcodePost(
 }
 
 export async function POST(request: Request): Promise<Response> {
+  const session = await requireSession(request);
+  if (!session) return Response.json({ error: "Sign in to use this feature." }, { status: 401 });
+  const rl = await rateLimit(`ai:food-barcode:${session.sub}`, { limit: 60, windowSec: 3600 });
+  if (!rl.ok) return tooMany(rl.retryAfterSec);
   return foodBarcodePost(request);
 }

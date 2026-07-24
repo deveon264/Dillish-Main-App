@@ -1,4 +1,6 @@
 import OpenAI, { toFile } from "openai";
+import { requireSession } from "@/lib/adminAuth";
+import { rateLimit, tooMany } from "@/lib/rateLimit";
 
 type Env = Record<string, string | undefined>;
 
@@ -13,8 +15,9 @@ export type TranscribeDeps = {
 
 // Speech-to-text for voice meal logging. The client records a short m4a clip,
 // sends it here as base64, and feeds the returned transcript through the
-// existing /api/analyze text path. Unauthenticated by design, matching
-// /api/analyze and /api/food-photo.
+// existing /api/analyze text path. The POST wrapper below requires a signed-in
+// session and rate-limits per user, so this paid endpoint can't be abused to
+// run up the provider bill.
 export async function transcribePost(request: Request, deps: TranscribeDeps = {}): Promise<Response> {
   const env = deps.env ?? process.env;
   const apiKey = env.OPENAI_API_KEY ?? env.AI_INTEGRATIONS_OPENAI_API_KEY;
@@ -104,5 +107,9 @@ export async function transcribePost(request: Request, deps: TranscribeDeps = {}
 }
 
 export async function POST(request: Request): Promise<Response> {
+  const session = await requireSession(request);
+  if (!session) return Response.json({ error: "Sign in to use this feature." }, { status: 401 });
+  const rl = await rateLimit(`ai:transcribe:${session.sub}`, { limit: 40, windowSec: 3600 });
+  if (!rl.ok) return tooMany(rl.retryAfterSec);
   return transcribePost(request);
 }

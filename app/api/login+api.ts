@@ -1,6 +1,7 @@
 import { mintSessionToken } from "@/lib/adminAuth";
 import { verifyPassword } from "@/lib/userAuth";
 import { getUserByEmail, toPublicUser } from "@/lib/userStore";
+import { rateLimit, clientIp, tooMany } from "@/lib/rateLimit";
 
 function logAuthError(scope: string, e: any) {
   const code = e?.code ? ` code=${e.code}` : "";
@@ -13,6 +14,11 @@ function logAuthError(scope: string, e: any) {
 // whether the email is unknown or the password is wrong, so neither is leaked.
 export async function POST(request: Request): Promise<Response> {
   try {
+    // Generous per-IP cap so shared carrier/NAT addresses aren't locked out;
+    // the tight per-email cap below is the real brute-force guard.
+    const ipRl = await rateLimit(`login:ip:${clientIp(request)}`, { limit: 30, windowSec: 900 });
+    if (!ipRl.ok) return tooMany(ipRl.retryAfterSec);
+
     let body: any;
     try {
       body = await request.json();
@@ -25,6 +31,11 @@ export async function POST(request: Request): Promise<Response> {
     if (!email || !password) {
       return Response.json({ error: "Incorrect email or password" }, { status: 401 });
     }
+
+    // Counts every attempt (success or fail) against this specific account, so
+    // guessing one account's password is throttled regardless of source IP.
+    const emailRl = await rateLimit(`login:email:${email}`, { limit: 6, windowSec: 900 });
+    if (!emailRl.ok) return tooMany(emailRl.retryAfterSec);
 
     const user = await getUserByEmail(email);
     if (!user || !(await verifyPassword(password, user.password_hash))) {

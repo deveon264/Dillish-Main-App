@@ -332,6 +332,18 @@ export function ensureSchema(): Promise<void> {
              ON community_likes (post_id)`
         )
       )
+      // Application-level rate limiting (lib/rateLimit.ts): one fixed-window
+      // counter row per bucket key. Shared across requests/instances so auth
+      // brute-force and AI cost-abuse limits actually hold.
+      .then(() =>
+        pool.query(
+          `CREATE TABLE IF NOT EXISTS rate_limits (
+            bucket TEXT PRIMARY KEY,
+            count INT NOT NULL,
+            reset_at BIGINT NOT NULL
+          )`
+        )
+      )
       .then(() => undefined)
       .catch((e: any) => {
         // Schema bootstrap failed — almost always the DB being unreachable,

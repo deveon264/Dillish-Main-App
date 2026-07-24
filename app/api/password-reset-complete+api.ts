@@ -1,6 +1,7 @@
 import { verifyResetToken, resetTokenMatchesPassword, mintSessionToken } from "@/lib/adminAuth";
 import { hashPassword } from "@/lib/userAuth";
 import { getUserById, updateUserPassword, toPublicUser } from "@/lib/userStore";
+import { rateLimit, clientIp, tooMany } from "@/lib/rateLimit";
 
 // Completes a password reset. Given a valid reset token and a new password, it
 // sets the new password and issues a fresh session token so the member is
@@ -9,6 +10,10 @@ import { getUserById, updateUserPassword, toPublicUser } from "@/lib/userStore";
 // older one) no longer verifies.
 export async function POST(request: Request): Promise<Response> {
   try {
+    // Cap attempts per IP so a reset token can't be brute-forced at speed.
+    const ipRl = await rateLimit(`pwresetc:ip:${clientIp(request)}`, { limit: 15, windowSec: 3600 });
+    if (!ipRl.ok) return tooMany(ipRl.retryAfterSec);
+
     let body: any;
     try {
       body = await request.json();

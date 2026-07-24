@@ -1,5 +1,6 @@
 import { mintResetToken } from "@/lib/adminAuth";
 import { getUserByEmail } from "@/lib/userStore";
+import { rateLimit, clientIp, tooMany } from "@/lib/rateLimit";
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -26,6 +27,13 @@ export async function POST(request: Request): Promise<Response> {
     if (!EMAIL_RE.test(email)) {
       return Response.json({ error: "Enter a valid email" }, { status: 400 });
     }
+
+    // Throttle by IP and by target email so this endpoint can't be used to spam
+    // reset tokens or probe accounts at scale.
+    const ipRl = await rateLimit(`pwreset:ip:${clientIp(request)}`, { limit: 10, windowSec: 3600 });
+    if (!ipRl.ok) return tooMany(ipRl.retryAfterSec);
+    const emailRl = await rateLimit(`pwreset:email:${email}`, { limit: 4, windowSec: 3600 });
+    if (!emailRl.ok) return tooMany(emailRl.retryAfterSec);
 
     const user = await getUserByEmail(email);
     // Generic acknowledgement either way so the endpoint can't be used to probe

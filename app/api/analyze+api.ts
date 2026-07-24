@@ -1,4 +1,6 @@
 import OpenAI from "openai";
+import { requireSession } from "@/lib/adminAuth";
+import { rateLimit, tooMany } from "@/lib/rateLimit";
 
 type Nutrition = {
   name: string;
@@ -156,5 +158,9 @@ export async function analyzeMealPost(request: Request, deps: AnalyzeDeps = {}):
 }
 
 export async function POST(request: Request): Promise<Response> {
+  const session = await requireSession(request);
+  if (!session) return Response.json({ error: "Sign in to use this feature." }, { status: 401 });
+  const rl = await rateLimit(`ai:analyze:${session.sub}`, { limit: 40, windowSec: 3600 });
+  if (!rl.ok) return tooMany(rl.retryAfterSec);
   return analyzeMealPost(request);
 }
